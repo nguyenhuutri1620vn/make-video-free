@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -26,11 +28,16 @@ def test_half_alpha_is_premultiplied() -> None:
 
 def test_mask_of_ellipse() -> None:
     cv = Canvas(100, 100)
-    cv.color((255, 255, 255)).ellipse(50, 50, 30, 30).fill()
+    cv.color((255, 255, 255)).ellipse(50, 50, 30, 10).fill()
     m = cv.mask()
     assert m[50, 50] == 1
     assert m[2, 2] == 0
     assert m.dtype == np.float32
+    # rx=30 along x, ry=10 along y: swapped radii would invert these probes
+    assert m[50, 75] == 1
+    assert m[50, 90] == 0
+    assert m[35, 50] == 0
+    assert m[58, 50] == 1
 
 
 def test_vgrad_endpoints() -> None:
@@ -91,12 +98,29 @@ def test_transforms_and_stroke() -> None:
     cv.save()
     cv.translate(20, 20)
     cv.scale(2, 2)
-    cv.rotate(0.0)
-    cv.color(GOLD).M(-5, 0).L(5, 0).stroke(2)
+    cv.rotate(math.pi / 2)
+    # horizontal stroke in local space, thin enough to tell axes apart
+    cv.color(GOLD).M(-8, 0).L(8, 0).stroke(2)
     cv.restore()
     m = cv.mask()
     assert m[20, 20] == 1
+    assert m[8, 20] == 1  # vertical extent: 16 local units * 2 scale / 2 = +-16
+    assert m[32, 20] == 1
+    assert m[20, 8] == 0  # no horizontal extent after rotation
+    assert m[20, 32] == 0
     assert m[5, 5] == 0
+
+
+def test_zero_radius_ellipse_is_noop_and_canvas_stays_usable() -> None:
+    cv = Canvas(10, 10)
+    cv.color(GOLD).ellipse(5, 5, 0, 3).fill()
+    cv.ellipse(5, 5, 3, 0).fill()
+    cv.ellipse(5, 5, -2, 2).fill()
+    assert cv.mask().max() == 0
+    cv.rect(0, 0, 10, 10).fill()
+    assert cv.mask()[5, 5] == 1
+    cv.save()
+    cv.restore()
 
 
 def test_new_path_discards_and_keep_preserves() -> None:

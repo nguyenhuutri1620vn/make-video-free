@@ -75,6 +75,8 @@ class Canvas:
         return self
 
     def ellipse(self, cx: float, cy: float, rx: float, ry: float) -> Canvas:
+        if rx <= 0 or ry <= 0:
+            return self  # degenerate: a non-invertible scale would poison the context
         self._cr.new_sub_path()
         self._cr.save()
         self._cr.translate(cx, cy)
