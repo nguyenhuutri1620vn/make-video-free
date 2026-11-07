@@ -21,6 +21,15 @@ def repo_root() -> Path:
     return REPO_ROOT
 
 
+@pytest.fixture(scope="session")
+def theme() -> Any:
+    """The shipped ``son_mai`` theme, loaded once per session."""
+    from history_shorts.config import load_theme
+
+    loaded, _warnings = load_theme(REPO_ROOT / "themes" / "son_mai" / "theme.json")
+    return loaded
+
+
 @pytest.fixture
 def tmp_theme(tmp_path: Path) -> Callable[..., Path]:
     """Factory: copy the default theme directory into ``tmp_path``, edit it, return theme.json.
