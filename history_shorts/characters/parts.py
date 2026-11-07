@@ -96,15 +96,17 @@ def _flag(cv: Canvas, palette: Palette) -> None:
 def _oar(cv: Canvas, palette: Palette) -> None:
     (x0, y0), (x1, y1) = OAR_SHAFT
     cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(1.0)
-    cv.color(palette["brown_lt"]).M(25, 0).C(28, 4, 29, 12, 27.5, 16).C(25.5, 14, 24, 6, 25, 0).Z()
+    bx, by = OAR_BLADE_TOP
+    cv.color(palette["brown_lt"]).M(bx, by).C(28, 4, 29, 12, 27.5, 16).C(
+        25.5, 14, 24, 6, bx, by
+    ).Z()
     cv.fill()
 
 
 def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     """Shaft and head of the prop behind the body."""
-    if style.prop in ("spear", "flag"):
-        segment = shaft_segment(style.prop)
-        assert segment is not None
+    segment = shaft_segment(style.prop)
+    if segment is not None and style.prop != "oar":
         (x0, y0), (x1, y1) = segment
         cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
     if style.prop == "spear":
@@ -117,9 +119,8 @@ def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
 
 def prop_front(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     """Shaft segment drawn over the near arm so the hand visibly grips the prop."""
-    if style.prop in ("spear", "flag"):
-        segment = shaft_segment(style.prop)
-        assert segment is not None
+    segment = shaft_segment(style.prop)
+    if segment is not None and style.prop != "oar":
         (x0, y0), (x1, y1) = segment
         cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
         cv.color(palette["gold_lt"], 0.5).M(x0 - 0.2, y0).L(x1 - 0.2, y1).stroke(0.25)
