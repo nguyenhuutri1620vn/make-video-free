@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -14,7 +15,7 @@ from PIL import Image
 from history_shorts.cli import main
 from history_shorts.compose import DrawContext, SceneStyle, default_style
 from history_shorts.config import Script, Slide, Theme, load_script
-from history_shorts.output import default_out_path, slides_dir, slugify
+from history_shorts.output import default_out_path, slides_dir, slugify, stale_slides
 from history_shorts.primitives import FloatImage
 from history_shorts.render import render_slides
 
@@ -62,6 +63,22 @@ def test_slugify() -> None:
 )
 def test_slugify_edges(title: str, expected: str) -> None:
     assert slugify(title) == expected
+
+
+def test_slugify_caps_length_at_a_word_boundary() -> None:
+    title = " ".join(["trưng"] * 40)  # slug "trung-trung-..." is 239 characters
+    slug = slugify(title)
+    assert len(slug) <= 80
+    assert slug == "-".join(["trung"] * 13)  # 77 characters, cut between words
+    assert not slug.endswith("-")
+
+
+def test_slugify_cap_edge_cases() -> None:
+    assert slugify("a" * 200) == "a" * 80  # no hyphen to cut at
+    exact = "-".join(["abcd"] * 16)  # 79 characters
+    assert slugify(exact) == exact
+    boundary = "a" * 79 + " b"  # the 80th character of the slug is "-"
+    assert slugify(boundary) == "a" * 79
 
 
 def test_default_out_path_and_slides_dir(repo_root: Path) -> None:
@@ -117,45 +134,70 @@ def test_debug_safe_zone_changes_output(
     assert plain[0].read_bytes() != debug[0].read_bytes()
 
 
-def test_stale_pngs_are_kept_and_logged(
-    tmp_path: Path,
-    tmp_script: ScriptFactory,
-    theme: Theme,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_stale_pngs_are_left_alone(tmp_path: Path, tmp_script: ScriptFactory, theme: Theme) -> None:
     script = load(tmp_script(slides=TWO_SLIDES))
     directory = tmp_path / "slides"
     directory.mkdir()
     (directory / "03.png").write_bytes(b"old")
     (directory / "07.png").write_bytes(b"old")
     (directory / "notes.txt").write_bytes(b"keep")
-    with caplog.at_level("WARNING", logger="history_shorts"):
-        render_slides(script, theme, tmp_path / "v.mp4", debug_safe_zone=False)
+    render_slides(script, theme, tmp_path / "v.mp4", debug_safe_zone=False)
     assert (directory / "03.png").read_bytes() == b"old"
     assert (directory / "07.png").read_bytes() == b"old"
     assert (directory / "notes.txt").read_bytes() == b"keep"
-    assert "03.png" in caplog.text
-    assert "07.png" in caplog.text
+    assert [p.name for p in stale_slides(directory, 2)] == ["03.png", "07.png"]
 
 
-def test_existing_png_is_replaced_atomically(
+def _one_slide_with_old_png(
+    tmp_path: Path, tmp_script: ScriptFactory, theme: Theme
+) -> tuple[Script, Path]:
+    script = load(tmp_script(slides=[{"title": "A"}]))
+    directory = tmp_path / "slides"
+    directory.mkdir()
+    (directory / "01.png").write_bytes(b"old")
+    return script, directory
+
+
+def test_failed_save_leaves_old_png_and_removes_partial_tmp(
     tmp_path: Path,
     tmp_script: ScriptFactory,
     theme: Theme,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    script = load(tmp_script(slides=[{"title": "A"}]))
-    directory = tmp_path / "slides"
-    directory.mkdir()
-    (directory / "01.png").write_bytes(b"old")
+    script, directory = _one_slide_with_old_png(tmp_path, tmp_script, theme)
+    partial: list[Path] = []
 
-    def broken_save(self: Image.Image, *args: Any, **kwargs: Any) -> NoReturn:
+    def broken_save(self: Image.Image, fp: Any, *args: Any, **kwargs: Any) -> NoReturn:
+        Path(fp).write_bytes(b"partial")  # a half-written file, as a full disk would leave
+        partial.append(Path(fp))
         raise OSError("disk full")
 
     monkeypatch.setattr(Image.Image, "save", broken_save)
     with pytest.raises(OSError, match="disk full"):
         render_slides(script, theme, tmp_path / "v.mp4", debug_safe_zone=False)
-    assert pngs(directory) == ["01.png"]  # the old file is untouched and no .tmp remains
+    assert [p.name for p in partial] == ["01.png.tmp"]  # the partial file really existed
+    assert pngs(directory) == ["01.png"]
+    assert (directory / "01.png").read_bytes() == b"old"
+
+
+def test_failed_replace_leaves_old_png_and_removes_tmp(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    theme: Theme,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    script, directory = _one_slide_with_old_png(tmp_path, tmp_script, theme)
+    seen_tmp: list[bool] = []
+
+    def broken_replace(src: Any, dst: Any) -> NoReturn:
+        seen_tmp.append(Path(src).is_file())  # the save succeeded before the rename failed
+        raise OSError("rename failed")
+
+    monkeypatch.setattr("history_shorts.render.os.replace", broken_replace)
+    with pytest.raises(OSError, match="rename failed"):
+        render_slides(script, theme, tmp_path / "v.mp4", debug_safe_zone=False)
+    assert seen_tmp == [True]
+    assert pngs(directory) == ["01.png"]
     assert (directory / "01.png").read_bytes() == b"old"
 
 
@@ -375,3 +417,49 @@ def test_cli_render_matches_api_bytes(
     for path in api:
         other = tmp_path / "b" / "slides" / path.name
         assert other.read_bytes() == path.read_bytes()
+
+
+def test_zero_valued_ignored_flags_still_warn(
+    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = tmp_script(slides=[{"title": "A"}])
+    argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
+    code, text = run([*argv, "--jobs", "0", "--music-volume", "0"], capsys)
+    assert code == 0
+    assert "WARN --music-volume is not implemented yet" in text
+    assert "WARN --jobs is not implemented yet" in text
+    code, text = run(argv, capsys)  # nothing given, nothing to warn about
+    assert "not implemented" not in text
+
+
+def test_out_parent_is_a_file_reports_write_error(
+    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
+) -> None:
+    blocker = tmp_path / "blocker"
+    blocker.write_text("not a directory", encoding="utf-8")
+    script = tmp_script(slides=[{"title": "A"}])
+    argv = ["render", "--script", str(script), "--preview", "--out", str(blocker / "v.mp4")]
+    code, text = run(argv, capsys)
+    assert code == 1
+    line = next(ln for ln in text.splitlines() if ln.startswith("ERROR "))
+    assert line.startswith(f"ERROR cannot write slides to {blocker / 'slides'}: ")
+    assert "internal" not in text
+    assert blocker.read_text(encoding="utf-8") == "not a directory"
+
+
+@pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="needs POSIX permissions")
+def test_unwritable_out_dir_reports_write_error(
+    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
+) -> None:
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o500)
+    try:
+        script = tmp_script(slides=[{"title": "A"}])
+        argv = ["render", "--script", str(script), "--preview", "--out", str(locked / "v.mp4")]
+        code, text = run(argv, capsys)
+    finally:
+        locked.chmod(0o700)
+    assert code == 1
+    assert f"ERROR cannot write slides to {locked / 'slides'}: " in text
+    assert "Permission denied" in text

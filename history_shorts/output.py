@@ -12,6 +12,7 @@ from history_shorts.config import Script
 DEFAULT_OUT_DIR: Final = "output"
 SLIDES_DIRNAME: Final = "slides"
 FALLBACK_SLUG: Final = "video"
+MAX_SLUG_LENGTH: Final = 80
 _NON_ALNUM: Final = re.compile(r"[^a-z0-9]+")
 
 
@@ -20,7 +21,18 @@ def slugify(title: str) -> str:
     decomposed = unicodedata.normalize("NFD", title)
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     ascii_like = stripped.replace("đ", "d").replace("Đ", "D").lower()
-    return _NON_ALNUM.sub("-", ascii_like).strip("-") or FALLBACK_SLUG
+    slug = _NON_ALNUM.sub("-", ascii_like).strip("-")
+    return _cap(slug) or FALLBACK_SLUG
+
+
+def _cap(slug: str) -> str:
+    """Cut ``slug`` to ``MAX_SLUG_LENGTH`` characters, at a ``-`` when there is one."""
+    if len(slug) <= MAX_SLUG_LENGTH:
+        return slug
+    head = slug[:MAX_SLUG_LENGTH]
+    if slug[MAX_SLUG_LENGTH] != "-":
+        head = head.rpartition("-")[0] or head
+    return head.rstrip("-")
 
 
 def default_out_path(script: Script) -> Path:

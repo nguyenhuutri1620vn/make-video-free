@@ -125,7 +125,7 @@ def _warn_ignored_flags(args: argparse.Namespace) -> None:
             ("--keep-temp", args.keep_temp),
             ("--jobs", args.jobs),
         )
-        if value not in (None, False)
+        if value is not None and value is not False
     ]
     for flag in given:
         print(f"WARN {flag} is not implemented yet (milestone M5); ignored")
@@ -162,9 +162,13 @@ def _cmd_render(args: argparse.Namespace) -> int:
     _warn_ignored_flags(args)
     out: Path = args.out if args.out is not None else default_out_path(script)
     started = time.perf_counter()
-    paths = render_slides(script, theme, out, debug_safe_zone=args.debug_safe_zone)
-    elapsed = time.perf_counter() - started
     directory = slides_dir(out)
+    try:
+        paths = render_slides(script, theme, out, debug_safe_zone=args.debug_safe_zone)
+    except OSError as exc:
+        print(f"ERROR cannot write slides to {directory}: {exc.strerror or exc}")
+        return EXIT_ERROR
+    elapsed = time.perf_counter() - started
     _warn_stale_slides(directory, len(paths))
     noun = "slide" if len(paths) == 1 else "slides"
     print(f"Rendered {len(paths)} {noun} to {directory} in {elapsed:.1f} s")

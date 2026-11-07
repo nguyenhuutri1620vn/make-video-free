@@ -19,7 +19,7 @@ from history_shorts.compose import (
     render_slide,
 )
 from history_shorts.config import Script, Slide, Theme
-from history_shorts.output import slide_path, slides_dir, stale_slides
+from history_shorts.output import slide_path, slides_dir
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def render_slides(
 
     ``expand`` maps a slide to its scene style and drawing callback; without it every slide
     is chrome and text on the plain lacquer ground. Stale ``NN.png`` files beyond the slide
-    count are logged and left alone.
+    count are left alone (the CLI reports them).
     """
     directory = slides_dir(out)
     directory.mkdir(parents=True, exist_ok=True)
@@ -66,8 +66,4 @@ def render_slides(
         log.debug(
             "slide %d rendered in %.2f s: %s", index + 1, time.perf_counter() - started, target
         )
-    stale = stale_slides(directory, len(script.slides))
-    if stale:
-        names = ", ".join(p.name for p in stale)
-        log.warning("stale slide PNGs left in place in %s: %s", directory, names)
     return written
