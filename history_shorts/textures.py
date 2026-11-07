@@ -49,8 +49,16 @@ def noise(h: int, w: int, sigma: float, rng: Generator) -> FloatMask:
     return np.asarray(n / (np.abs(n).max() + 1e-6), dtype=np.float32)
 
 
+def _cover(size: int, factor: int) -> int:
+    """Smallest coarse size whose upsample by ``factor`` covers ``size`` pixels."""
+    return max(1, -(-size // factor))
+
+
 def _upsample(small: FloatMask, factor: int, h: int, w: int) -> FloatMask:
-    """Nearest-neighbour upsample by an integer factor, cropped to (h, w)."""
+    """Nearest-neighbour upsample by an integer factor, cropped to (h, w).
+
+    ``small`` must be at least ``ceil(h / factor)`` by ``ceil(w / factor)``.
+    """
     big = np.kron(small, np.ones((factor, factor), dtype=np.float32))
     return np.asarray(big[:h, :w], dtype=np.float32)
 
@@ -77,7 +85,12 @@ def lacquer_ground(
         y * GROUND_BOTTOM_BLEND
     )
     base = np.broadcast_to(base, (height, width, 3)).copy()
-    low = noise(height // GROUND_NOISE_SCALE, width // GROUND_NOISE_SCALE, GROUND_NOISE_SIGMA, rng)
+    low = noise(
+        _cover(height, GROUND_NOISE_SCALE),
+        _cover(width, GROUND_NOISE_SCALE),
+        GROUND_NOISE_SIGMA,
+        rng,
+    )
     low = _upsample(low, GROUND_NOISE_SCALE, height, width)
     base *= (1 + GROUND_NOISE_AMOUNT * low)[..., None]
     return np.asarray(np.clip(base, 0, 1), dtype=np.float32)
@@ -103,7 +116,9 @@ def gold_leaf(
     g *= (1 + GOLD_GRAIN_AMOUNT * noise(height, width, GOLD_GRAIN_SIGMA, rng))[..., None]
     seam = ((xx % tile) < GOLD_SEAM_WIDTH) | ((yy % tile) < GOLD_SEAM_WIDTH)
     g[seam] *= GOLD_SEAM_DARKEN
-    wear = noise(height // GOLD_WORN_SCALE, width // GOLD_WORN_SCALE, GOLD_WORN_SIGMA, rng)
+    wear = noise(
+        _cover(height, GOLD_WORN_SCALE), _cover(width, GOLD_WORN_SCALE), GOLD_WORN_SIGMA, rng
+    )
     wear = _upsample(wear, GOLD_WORN_SCALE, height, width)
     near_seam = binary_dilation(seam, iterations=GOLD_WORN_DILATE)
     worn_mask = (wear > 1 - worn * GOLD_WORN_SPREAD) & near_seam
