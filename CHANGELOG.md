@@ -12,6 +12,15 @@ Exit criteria met: AC-08 (Vietnamese glyph check) and AC-11 (`validate` reports 
 - Task 6: typed pycairo canvas wrapper.
 - Task 7: `validate` command with cross-file checks (theme font glyphs, glyphs used by the script, text fit and shrink warnings, palette keys in character overrides) and the runtime import check with per-OS install hints (exit 1).
 
+## M2 — Textures & chrome
+
+Slides now render end to end with chrome and text only (scenes arrive in M4). Covers AC-09 and AC-12 (partial: chrome and text, no scenes yet).
+
+- Task 8: lacquer ground, gold leaf, eggshell and finish textures (deterministic, mask-contained).
+- Task 9: compositing core and FR-21 slide assembly (`compose.py`).
+- Task 10: frame, corner scrolls, waves, seal, tag pill, optional progress bar and footer.
+- Task 11: `render --preview` writes `<out dir>/slides/NN.png` (1-based, atomic per file, never deletes stale files, which are reported as `WARN`). `render` validates first (exit 3 on errors) and accepts every spec §7 flag; `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted and ignored with a `WARN`. Without `--preview` it renders the PNGs, then exits 1 with "video assembly is not implemented yet (milestone M5)". New modules: `output.py` (slug, default output path), `render.py`.
+
 ## Unreleased
 
 ### Docs

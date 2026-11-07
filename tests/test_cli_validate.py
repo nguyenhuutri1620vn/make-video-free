@@ -394,12 +394,12 @@ def test_missing_other_runtime_module_hint(
     assert 'pip install -e ".[dev]"' in out
 
 
-@pytest.mark.parametrize("command", ["render", "gallery"])
+@pytest.mark.parametrize("argv", [["render", "--script", "x.json"], ["gallery"]])
 def test_other_commands_also_check_runtime(
-    command: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    argv: list[str], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr("history_shorts.cli._import_module", raise_for("scipy"))
-    code, out = run([command], capsys)
+    code, out = run(argv, capsys)
     assert code == 1
     assert "scipy" in out
 

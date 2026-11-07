@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import logging
 import sys
+import time
 from pathlib import Path
 from types import ModuleType
 
@@ -88,7 +90,8 @@ def _print_report(issues: list[Issue]) -> int:
 # --------------------------------------------------------------------------------------
 
 
-def _cmd_validate(args: argparse.Namespace) -> int:
+def _load_and_check(args: argparse.Namespace) -> tuple[Script | None, Theme | None, list[Issue]]:
+    """Load theme and script (each may fail on its own), then run the cross-file checks."""
     from history_shorts import checks  # imports Pillow: only after the runtime check passed
 
     issues: list[Issue] = []
@@ -106,12 +109,102 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         issues.extend(exc.issues.items)
     if theme is not None and script is not None:
         issues.extend(checks.check_all(script, theme))
-    return _print_report(issues)
+    return script, theme, issues
+
+
+def _cmd_validate(args: argparse.Namespace) -> int:
+    return _print_report(_load_and_check(args)[2])
+
+
+def _warn_ignored_flags(args: argparse.Namespace) -> None:
+    given = [
+        flag
+        for flag, value in (
+            ("--music", args.music),
+            ("--music-volume", args.music_volume),
+            ("--keep-temp", args.keep_temp),
+            ("--jobs", args.jobs),
+        )
+        if value not in (None, False)
+    ]
+    for flag in given:
+        print(f"WARN {flag} is not implemented yet (milestone M5); ignored")
+
+
+def _warn_stale_slides(directory: Path, slide_count: int) -> None:
+    from history_shorts.output import stale_slides
+
+    stale = stale_slides(directory, slide_count)
+    if stale:
+        names = ", ".join(p.name for p in stale)
+        print(f"WARN stale slide PNGs left in place in {directory}: {names}")
+
+
+def _print_sources(script: Script) -> None:
+    if script.sources:
+        print("Sources:")
+        for number, source in enumerate(script.sources, start=1):
+            print(f"[{number}] {source}")
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
+    from history_shorts.output import default_out_path, slides_dir
+    from history_shorts.render import render_slides
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.ERROR,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
+    script, theme, issues = _load_and_check(args)
+    code = _print_report(issues)
+    if code != EXIT_OK or script is None or theme is None:
+        return code
+    _warn_ignored_flags(args)
+    out: Path = args.out if args.out is not None else default_out_path(script)
+    started = time.perf_counter()
+    paths = render_slides(script, theme, out, debug_safe_zone=args.debug_safe_zone)
+    elapsed = time.perf_counter() - started
+    directory = slides_dir(out)
+    _warn_stale_slides(directory, len(paths))
+    noun = "slide" if len(paths) == 1 else "slides"
+    print(f"Rendered {len(paths)} {noun} to {directory} in {elapsed:.1f} s")
+    _print_sources(script)
+    if not args.preview:
+        print("ERROR video assembly is not implemented yet (milestone M5)")
+        return EXIT_ERROR
+    return EXIT_OK
 
 
 def _cmd_stub(args: argparse.Namespace) -> int:
     print(f"history-shorts {args.command}: not implemented yet")
     return EXIT_ERROR
+
+
+def _add_theme_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--theme", type=Path, default=DEFAULT_THEME, help="path to theme.json (default: son_mai)"
+    )
+
+
+def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    render = sub.add_parser("render", help="render slide PNGs (video assembly comes in M5)")
+    render.add_argument("--script", type=Path, required=True, help="path to script.json")
+    _add_theme_option(render)
+    render.add_argument(
+        "--out", type=Path, default=None, help="output video path (default: output/<slug>.mp4)"
+    )
+    render.add_argument("--music", type=Path, default=None, help="background music (not yet used)")
+    render.add_argument(
+        "--music-volume", type=float, default=None, help="music volume (not yet used)"
+    )
+    render.add_argument("--preview", action="store_true", help="write slide PNGs only, no video")
+    render.add_argument("--keep-temp", action="store_true", help="keep temp files (not yet used)")
+    render.add_argument("--jobs", type=int, default=None, help="parallel encodes (not yet used)")
+    render.add_argument(
+        "--debug-safe-zone", action="store_true", help="outline the safe zone and regions"
+    )
+    render.add_argument("--verbose", action="store_true", help="log per-slide timing")
+    render.set_defaults(run=_cmd_render)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -121,13 +214,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"history-shorts {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="{render,validate,gallery}")
-    for name in ("render", "gallery"):
-        sub.add_parser(name, help=f"{name} (not implemented yet)").set_defaults(run=_cmd_stub)
+    _add_render_parser(sub)
+    sub.add_parser("gallery", help="gallery (not implemented yet)").set_defaults(run=_cmd_stub)
     validate = sub.add_parser("validate", help="check a script and theme without rendering")
     validate.add_argument("--script", type=Path, required=True, help="path to script.json")
-    validate.add_argument(
-        "--theme", type=Path, default=DEFAULT_THEME, help="path to theme.json (default: son_mai)"
-    )
+    _add_theme_option(validate)
     validate.set_defaults(run=_cmd_validate)
     return parser
 

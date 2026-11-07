@@ -23,6 +23,5 @@ def test_no_subcommand_is_usage_error() -> None:
     assert exc.value.code == 2
 
 
-@pytest.mark.parametrize("command", ["render", "gallery"])
-def test_stub_subcommands_return_one(command: str) -> None:
-    assert main([command]) == 1
+def test_gallery_stub_returns_one() -> None:
+    assert main(["gallery"]) == 1

@@ -20,6 +20,18 @@ Known issue: Homebrew `freetype` 2.15.0 bottles link `/usr/lib/libhvf.dylib`, wh
 brew reinstall --build-from-source freetype
 ```
 
+## Usage
+
+```bash
+python -m history_shorts validate --script examples/nu_tuong/script.json
+python -m history_shorts render --script examples/nu_tuong/script.json --preview
+python -m history_shorts render --script examples/me_linh/script.json --preview --out output/me_linh.mp4 --debug-safe-zone
+```
+
+`render --preview` validates the script first (exit 3 and nothing written on any error), then writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; the video itself is not produced yet (milestone M5), so without `--preview` the command renders the PNGs and then exits 1 with a clear message. Slides are chrome and text only until the scenes arrive in M4.
+
+PNGs are written atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted but ignored for now (a `WARN` says so). `--verbose` logs the time per slide; `--debug-safe-zone` outlines the safe zone and regions.
+
 ## Fonts
 
 Liberation Serif 2.1.5 (SIL Open Font License 1.1; licence text in `themes/son_mai/fonts/LICENSE`), copied from the official release tarball:
