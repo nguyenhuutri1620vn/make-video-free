@@ -172,3 +172,22 @@ def test_draw_text_title_has_shadow_subtitle_does_not(theme: Theme, make_slide: 
     is_shadow = (np.asarray(img) == np.array(theme.palette["shadow"], dtype=np.uint8)).all(axis=2)
     assert is_shadow[1170:1330].any()  # title rows
     assert not is_shadow[1330:].any()  # subtitle rows: no shadow
+
+
+_TWO_LINE_SUBTITLE = "Cuộc khởi nghĩa của hai chị em đã làm rung chuyển cả vùng đất Giao Chỉ"
+
+
+def test_two_line_subtitle_after_one_line_title_is_all_gold_lt(
+    theme: Theme, make_slide: MakeSlide
+) -> None:  # §8.4
+    plan = plan_text(make_slide("Mê Linh", _TWO_LINE_SUBTITLE), theme)
+    colors = [ln.color_key for ln in plan.lines if ln.font_key == "subtitle"]
+    assert len(colors) == 2 and set(colors) == {"gold_lt"}
+
+
+def test_two_line_subtitle_after_two_line_title_is_all_egg(
+    theme: Theme, make_slide: MakeSlide
+) -> None:  # §8.4
+    plan = plan_text(make_slide("Mê Linh\nnăm 40", _TWO_LINE_SUBTITLE), theme)
+    colors = [ln.color_key for ln in plan.lines if ln.font_key == "subtitle"]
+    assert len(colors) == 2 and set(colors) == {"egg"}

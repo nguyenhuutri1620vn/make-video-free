@@ -7,6 +7,7 @@ and shrinking follow FR-25; placement follows spec §8.2 and typography §8.4.
 from __future__ import annotations
 
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -182,7 +183,7 @@ def _place(
     size: int,
     top: int,
     step: int,
-    first_color: int,
+    colors: Sequence[str],
     key: FontKey,
 ) -> list[TextLine]:
     font = _font(path, size)
@@ -192,7 +193,7 @@ def _place(
             x=TEXT_CENTER_X - font.getlength(line) / 2,
             y=top + i * step,
             size=size,
-            color_key=TITLE_COLOR_CYCLE[(first_color + i) % len(TITLE_COLOR_CYCLE)],
+            color_key=colors[i % len(colors)],
             font_key=key,
         )
         for i, line in enumerate(lines)
@@ -225,7 +226,7 @@ def plan_text(slide: Slide, theme: Theme) -> TextPlan:
         title_size,
         title_top,
         round(title_size * TITLE_STEP_RATIO),
-        0,
+        TITLE_COLOR_CYCLE,
         "title",
     )
     title_box = _bounds(title, theme.fonts.title, SHADOW_OFFSET)
@@ -241,7 +242,7 @@ def plan_text(slide: Slide, theme: Theme) -> TextPlan:
             sub_size,
             sub_top,
             round(sub_size * SUBTITLE_STEP_RATIO),
-            len(title_lines),
+            (TITLE_COLOR_CYCLE[len(title_lines) % len(TITLE_COLOR_CYCLE)],),
             "subtitle",
         )
         subtitle_box = _bounds(subtitle, theme.fonts.subtitle, 0)
