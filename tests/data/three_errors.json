@@ -1,0 +1,13 @@
+{
+  "schema_version": "2.0",
+  "title": "Three errors",
+  "sources": ["Nguồn thử nghiệm"],
+  "slides": [
+    { "tag": "A", "subtitle": "Missing title" },
+    { "title": "Too long", "duration": 99 },
+    {
+      "title": "Bad layer",
+      "scene": { "layers": [ { "type": "sun", "x": 2000, "y": 650, "r": 300 } ] }
+    }
+  ]
+}
