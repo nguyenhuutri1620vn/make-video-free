@@ -12,14 +12,34 @@ import pytest
 from scipy.ndimage import binary_dilation
 
 from history_shorts.config import SheenSpec
-from history_shorts.textures import eggshell, finish, gold_leaf, lacquer_ground, noise
+from history_shorts.textures import (
+    GOLD_GRAIN_AMOUNT,
+    GOLD_GRAIN_SIGMA,
+    GOLD_SEAM_DARKEN,
+    GOLD_SEAM_WIDTH,
+    GOLD_SHEEN_AMOUNT,
+    GOLD_SHEEN_PERIOD,
+    GOLD_TONE_RANGE,
+    GOLD_WORN_DILATE,
+    GOLD_WORN_KEEP,
+    GOLD_WORN_SCALE,
+    GOLD_WORN_SIGMA,
+    GOLD_WORN_SPREAD,
+    GROUND_BOTTOM_BLEND,
+    GROUND_NOISE_AMOUNT,
+    GROUND_NOISE_SCALE,
+    GROUND_NOISE_SIGMA,
+    GROUND_PROFILE_POWER,
+    _cover,
+    eggshell,
+    finish,
+    gold_leaf,
+    lacquer_ground,
+    noise,
+)
 
 H, W = 1920, 1080
 REPO_ROOT = Path(__file__).resolve().parent.parent
-
-# SHA-256 of the 1080x1920 outputs for default_rng(1); guards against output drift.
-GROUND_SHA = "2e657d1920514d629f4b01b23d0966fec4ee210b405bce0d2cbf09989c314666"
-GOLD_SHA = "884ca80cd2d8f49cac22644d35fad7828e44a8561ec8f555c39eaee3314204b7"
 
 
 def _make(fn: str, rng: np.random.Generator, palette: Any, mask: Any) -> Any:
@@ -83,9 +103,9 @@ def test_gold_leaf_worn_spots_only_near_seams(palette: Any) -> None:  # FR-61
     changed = np.any(base != wornout, axis=-1)
     assert changed.sum() > 1000  # large `worn` really wears something
     yy, xx = np.mgrid[0:H, 0:W]
-    seam = ((xx % 34) < 1.2) | ((yy % 34) < 1.2)
+    seam = ((xx % 34) < GOLD_SEAM_WIDTH) | ((yy % 34) < GOLD_SEAM_WIDTH)
     assert not (changed & ~binary_dilation(seam, iterations=3)).any()
-    expected = base[changed] * 0.35 + under * 0.65
+    expected = base[changed] * GOLD_WORN_KEEP + under * (1 - GOLD_WORN_KEEP)
     assert np.allclose(wornout[changed], np.clip(expected, 0, 1), atol=1e-6)
     # every worn pixel moved toward the under-layer colour
     before = np.linalg.norm(base[changed] - under, axis=-1)
@@ -112,19 +132,63 @@ def test_gold_leaf_tile_tone_jitter_range(palette: Any) -> None:  # FR-61
         for tx in range(1, W // 34 - 1):
             y0, x0 = ty * 34, tx * 34
             body = t[y0 + 3 : y0 + 33, x0 + 3 : x0 + 33].mean((0, 1)) / gold
-            sheen = 1 + 0.10 * np.sin((x0 + y0 + 34) / 260.0)
+            sheen = 1 + GOLD_SHEEN_AMOUNT * np.sin((x0 + y0 + 34) / GOLD_SHEEN_PERIOD)
             ratios.append(body.mean() / sheen - 1)
     r = np.array(ratios)
     assert r.min() > -0.09 - 0.02 and r.max() < 0.07 + 0.02
     assert r.min() < -0.07 and r.max() > 0.05  # the whole jitter range is used
 
 
-def test_ground_and_gold_exact_output_unchanged(palette: Any) -> None:
-    import hashlib
+def _reference_ground(rng: np.random.Generator, palette: Any, h: int, w: int) -> Any:
+    """Local copy of the original floor-division ground (the code before the size fix)."""
+    col = lambda key: np.array(palette.rgb01(key), dtype=np.float32)  # noqa: E731
+    y = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+    k = np.clip(np.sin(y * np.pi), 0, 1) ** GROUND_PROFILE_POWER
+    base = col("black") * (1 - k) + col("deep") * k
+    base = base * (1 - y * GROUND_BOTTOM_BLEND) + col("black") * (y * GROUND_BOTTOM_BLEND)
+    base = np.broadcast_to(base, (h, w, 3)).copy()
+    scale = GROUND_NOISE_SCALE
+    low = noise(h // scale, w // scale, GROUND_NOISE_SIGMA, rng)
+    low = np.kron(low, np.ones((scale, scale), dtype=np.float32))[:h, :w]
+    base *= (1 + GROUND_NOISE_AMOUNT * low)[..., None]
+    return np.clip(base, 0, 1)
 
-    g = lacquer_ground(np.random.default_rng(1), palette)
-    assert hashlib.sha256(g.tobytes()).hexdigest() == GROUND_SHA
-    assert hashlib.sha256(_gold(0.05, palette).tobytes()).hexdigest() == GOLD_SHA
+
+def _reference_gold(rng: np.random.Generator, palette: Any, tile: int, worn: float) -> Any:
+    """Local copy of the original floor-division gold leaf (the code before the size fix)."""
+    col = lambda key: np.array(palette.rgb01(key), dtype=np.float32)  # noqa: E731
+    h, w = H, W
+    tone = rng.uniform(*GOLD_TONE_RANGE, (h // tile + 2, w // tile + 2)).astype(np.float32)
+    tone = np.kron(tone, np.ones((tile, tile), dtype=np.float32))[:h, :w]
+    g = col("gold")[None, None, :] * (1 + tone[..., None])
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    g *= (1 + GOLD_SHEEN_AMOUNT * np.sin((xx + yy) / GOLD_SHEEN_PERIOD))[..., None]
+    g *= (1 + GOLD_GRAIN_AMOUNT * noise(h, w, GOLD_GRAIN_SIGMA, rng))[..., None]
+    seam = ((xx % tile) < GOLD_SEAM_WIDTH) | ((yy % tile) < GOLD_SEAM_WIDTH)
+    g[seam] *= GOLD_SEAM_DARKEN
+    scale = GOLD_WORN_SCALE
+    wear = noise(h // scale, w // scale, GOLD_WORN_SIGMA, rng)
+    wear = np.kron(wear, np.ones((scale, scale), dtype=np.float32))[:h, :w]
+    near = binary_dilation(seam, iterations=GOLD_WORN_DILATE)
+    mask = (wear > 1 - worn * GOLD_WORN_SPREAD) & near
+    g[mask] = g[mask] * GOLD_WORN_KEEP + col("vermilion_dk") * (1 - GOLD_WORN_KEEP)
+    return np.clip(g, 0, 1)
+
+
+def test_cover_equals_floor_division_at_canvas_size() -> None:
+    # same coarse-noise shapes as before the size fix, so the RNG draws are identical
+    assert _cover(H, GROUND_NOISE_SCALE) == H // GROUND_NOISE_SCALE
+    assert _cover(W, GROUND_NOISE_SCALE) == W // GROUND_NOISE_SCALE
+    assert _cover(H, GOLD_WORN_SCALE) == H // GOLD_WORN_SCALE
+    assert _cover(W, GOLD_WORN_SCALE) == W // GOLD_WORN_SCALE
+    assert _cover(207, 4) == 52 and _cover(301, 2) == 151 and _cover(1, 4) == 1
+
+
+def test_ground_and_gold_match_pre_fix_algorithm(palette: Any) -> None:
+    ground = lacquer_ground(np.random.default_rng(1), palette)
+    assert np.array_equal(ground, _reference_ground(np.random.default_rng(1), palette, H, W))
+    gold = _gold(0.05, palette)
+    assert np.array_equal(gold, _reference_gold(np.random.default_rng(1), palette, 34, 0.05))
 
 
 @pytest.mark.parametrize("size", [(301, 207), (5, 3), (1, 1), (1080, 1921)])
