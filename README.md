@@ -20,6 +20,18 @@ Known issue: Homebrew `freetype` 2.15.0 bottles link `/usr/lib/libhvf.dylib`, wh
 brew reinstall --build-from-source freetype
 ```
 
+## Fonts
+
+Liberation Serif 2.1.5 (SIL Open Font License 1.1; licence text in `themes/son_mai/fonts/LICENSE`), copied from the official release tarball:
+
+`https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz` (linked from the release page `https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5`; tarball SHA-256 `7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0`)
+
+| File in `themes/son_mai/fonts/` | SHA-256 |
+|---|---|
+| `LiberationSerif-Bold.ttf` | `d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce` |
+| `LiberationSerif-Italic.ttf` | `0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e` |
+| `LICENSE` | `93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b` |
+
 ## Decisions
 
 Owner decisions recorded in the spec (v2.0.1), one line each:

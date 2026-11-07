@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "history-shorts"
+version = "2.0.0"
+description = "Offline CLI that renders Vietnamese-history lacquer-style (son mai) vertical videos."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pycairo>=1.25",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "Pillow>=10.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
+
+[project.scripts]
+history-shorts = "history_shorts.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["history_shorts*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.mypy]
+strict = true
+files = ["history_shorts"]
+
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "ffmpeg: end-to-end tests that need FFmpeg and ffprobe on PATH",
+    "slow: slow tests",
+]

@@ -1,0 +1,8 @@
+# Dev pins (spec section 16, R-02). These need Python >= 3.11.
+pycairo==1.29.2
+numpy==2.4.6
+scipy==1.17.1
+Pillow==13.0.0
+pytest==9.2.0
+ruff==0.17.4
+mypy==2.4.1
