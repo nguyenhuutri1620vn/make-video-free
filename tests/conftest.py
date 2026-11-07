@@ -137,3 +137,13 @@ def make_slide() -> Callable[..., Any]:
         return Slide(**values)
 
     return make
+
+
+@pytest.fixture
+def script_one_slide(tmp_script: Callable[..., Path]) -> Any:
+    """A loaded ``Script`` with one slide that has a title and a subtitle."""
+    from history_shorts.config import load_script
+
+    path = tmp_script(slides=[{"title": "Hai Bà Trưng khởi nghĩa", "subtitle": "Năm 40"}])
+    script, _warnings = load_script(path)
+    return script
