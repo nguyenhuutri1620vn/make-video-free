@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterator
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -20,64 +20,157 @@ from history_shorts.errors import (
 from history_shorts.primitives import Box
 
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "history_shorts"
+CLI_PATH = PACKAGE_DIR / "cli.py"
 FORBIDDEN = {"requests", "httpx", "urllib.request", "http.client", "socket"}
-
-
-def _sources() -> Iterator[tuple[Path, ast.AST]]:
-    files = sorted(PACKAGE_DIR.rglob("*.py"))
-    assert files, "no package sources found"
-    for path in files:
-        yield path, ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+# "urllib" itself is flagged too: any bare import or "from urllib import ..." is rejected.
+FORBIDDEN_ROOTS = FORBIDDEN | {"urllib"}
+DYNAMIC_IMPORTERS = {"__import__", "importlib.import_module", "import_module"}
+SHELL_CALLS = {"os.system", "os.popen"}
 
 
 def _is_forbidden(name: str) -> bool:
-    return any(name == bad or name.startswith(bad + ".") for bad in FORBIDDEN)
+    return any(name == bad or name.startswith(bad + ".") for bad in FORBIDDEN_ROOTS)
+
+
+def _dotted(node: ast.expr) -> str:
+    """Dotted name of a Name/Attribute chain, or "" for anything else."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _dotted(node.value)
+        return f"{base}.{node.attr}" if base else ""
+    return ""
+
+
+def find_network_imports(source: str, filename: str) -> list[str]:
+    violations: list[str] = []
+    for node in ast.walk(ast.parse(source, filename=filename)):
+        names: list[str] = []
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            names = [module] + [f"{module}.{alias.name}" for alias in node.names]
+        elif isinstance(node, ast.Call) and _dotted(node.func) in DYNAMIC_IMPORTERS:
+            first = node.args[0] if node.args else None
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                names = [first.value]
+        violations += [f"{filename}:{node.lineno}: {n}" for n in names if _is_forbidden(n)]
+    return violations
+
+
+def find_shell_usage(source: str, filename: str) -> list[str]:
+    violations: list[str] = []
+    for node in ast.walk(ast.parse(source, filename=filename)):
+        if isinstance(node, ast.ImportFrom) and node.module == "os":
+            violations += [
+                f"{filename}:{node.lineno}: from os import {a.name}"
+                for a in node.names
+                if f"os.{a.name}" in SHELL_CALLS
+            ]
+        if not isinstance(node, ast.Call):
+            continue
+        if _dotted(node.func) in SHELL_CALLS:
+            violations.append(f"{filename}:{node.lineno}: {_dotted(node.func)}")
+        for kw in node.keywords:
+            is_false = isinstance(kw.value, ast.Constant) and kw.value.value is False
+            hides_shell = (
+                kw.arg is None
+                and isinstance(kw.value, ast.Dict)
+                and any(isinstance(k, ast.Constant) and k.value == "shell" for k in kw.value.keys)
+            )
+            if (kw.arg == "shell" and not is_false) or hides_shell:
+                violations.append(f"{filename}:{node.lineno}: shell keyword")
+    return violations
+
+
+def find_prints(source: str, filename: str) -> list[str]:
+    """Flag print() calls everywhere except in exactly history_shorts/cli.py."""
+    if Path(filename) == CLI_PATH:
+        return []
+    return [
+        f"{filename}:{node.lineno}: print"
+        for node in ast.walk(ast.parse(source, filename=filename))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "print"
+    ]
+
+
+def _scan(check: Callable[[str, str], list[str]]) -> list[str]:
+    files = sorted(PACKAGE_DIR.rglob("*.py"))
+    assert files, "no package sources found"
+    return [v for f in files for v in check(f.read_text(encoding="utf-8"), str(f))]
 
 
 def test_no_network_imports() -> None:
-    offenders: list[str] = []
-    for path, tree in _sources():
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom):
-                module = node.module or ""
-                names = [module] + [f"{module}.{alias.name}" for alias in node.names]
-            else:
-                continue
-            offenders += [f"{path.name}: {n}" for n in names if _is_forbidden(n)]
-    assert not offenders, offenders
+    assert not _scan(find_network_imports)
 
 
 def test_no_shell_true() -> None:
-    offenders: list[str] = []
-    for path, tree in _sources():
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            for kw in node.keywords:
-                if (
-                    kw.arg == "shell"
-                    and isinstance(kw.value, ast.Constant)
-                    and kw.value.value is True
-                ):
-                    offenders.append(f"{path.name}:{node.lineno}")
-    assert not offenders, offenders
+    assert not _scan(find_shell_usage)
 
 
 def test_only_cli_prints() -> None:
-    offenders: list[str] = []
-    for path, tree in _sources():
-        if path.name == "cli.py":
-            continue
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "print"
-            ):
-                offenders.append(f"{path.name}:{node.lineno}")
-    assert not offenders, offenders
+    assert not _scan(find_prints)
+
+
+NETWORK_BAD = [
+    "from urllib import request",
+    "from urllib import parse",
+    "import urllib",
+    "import socket as s",
+    "import urllib.request as r",
+    "from http import client",
+    "import http.client",
+    "from socket import socket",
+    "import requests",
+    '__import__("socket")',
+    'importlib.import_module("socket")',
+]
+SHELL_BAD = [
+    "subprocess.run(x, shell=True)",
+    "subprocess.run(x, shell=flag)",
+    "subprocess.run(x, shell=1)",
+    'subprocess.run(x, shell="yes")',
+    'subprocess.run(x, **{"shell": True})',
+    'os.system("ls")',
+    'os.popen("ls")',
+    "from os import system",
+]
+CLEAN = """
+import subprocess
+import importlib
+from http import HTTPStatus
+
+def run(cmd: list[str]) -> None:
+    subprocess.run(cmd, shell=False, check=True)
+    importlib.import_module("json")
+    __import__("json")
+"""
+
+
+@pytest.mark.parametrize("snippet", NETWORK_BAD)
+def test_network_guard_flags_violation(snippet: str) -> None:
+    assert find_network_imports(snippet, "bad.py")
+
+
+@pytest.mark.parametrize("snippet", SHELL_BAD)
+def test_shell_guard_flags_violation(snippet: str) -> None:
+    assert find_shell_usage(snippet, "bad.py")
+
+
+def test_print_guard_flags_non_cli_file() -> None:
+    assert find_prints('print("x")', str(PACKAGE_DIR / "other.py"))
+    # Only the top-level cli.py is exempt, not any cli.py at depth.
+    assert find_prints('print("x")', str(PACKAGE_DIR / "sub" / "cli.py"))
+    assert not find_prints('print("x")', str(CLI_PATH))
+
+
+def test_guards_accept_clean_snippet() -> None:
+    assert not find_network_imports(CLEAN, "ok.py")
+    assert not find_shell_usage(CLEAN, "ok.py")
+    assert not find_prints(CLEAN, "ok.py")
 
 
 def test_box_intersects_and_inside() -> None:
