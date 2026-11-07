@@ -21,6 +21,8 @@ from .textures import finish, lacquer_ground
 GROUND_LAYER: Final = 0  # scene layer k uses k + 1
 FINISH_LAYER: Final = 999
 
+# The float buffer is converted to a PIL image lazily, at the first Pillow step ("seal" once
+# Task 10 lands; "title" until then). "ground" through "frame" work on the float32 buffer.
 SLIDE_STEPS: Final = (
     "ground",
     "scene",
@@ -133,16 +135,19 @@ class SlideState:
         self.text_plan: TextPlan | None = None
 
     def array(self) -> FloatImage:
-        assert self._buffer is not None, "float buffer already converted to a PIL image"
+        if self._buffer is None:
+            raise RuntimeError("float step after PIL conversion: the buffer is already an image")
         return self._buffer
 
     def set_array(self, buffer: FloatImage) -> None:
-        assert self._image is None, "float buffer already converted to a PIL image"
+        if self._image is not None:
+            raise RuntimeError("float step after PIL conversion: the buffer is already an image")
         self._buffer = buffer
 
     def image(self) -> Image.Image:
         if self._image is None:
-            assert self._buffer is not None
+            if self._buffer is None:
+                raise RuntimeError("slide state holds neither a buffer nor an image")
             self._image = Image.fromarray(
                 (np.clip(self._buffer, 0, 1) * 255).astype(np.uint8), "RGB"
             )
@@ -169,7 +174,13 @@ def _step_scene(ctx: SlideContext, state: SlideState) -> None:
     if ctx.draw_scene is None:
         return
     draw_ctx = DrawContext(ctx.theme, ctx.theme.palette, ctx.style.seed, ctx.slide_index)
-    state.set_array(ctx.draw_scene(state.array(), draw_ctx))
+    result = ctx.draw_scene(state.array(), draw_ctx)
+    expected = (CANVAS_H, CANVAS_W, 3)
+    if result.dtype != np.float32:
+        raise TypeError(f"scene callback must return float32, got {result.dtype}")
+    if result.shape != expected:
+        raise ValueError(f"scene callback must return shape {expected}, got {result.shape}")
+    state.set_array(result)
 
 
 def _step_finish(ctx: SlideContext, state: SlideState) -> None:

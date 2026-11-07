@@ -27,6 +27,7 @@ from history_shorts.compose import (
 )
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
+from history_shorts.text import plan_text
 
 
 def test_over_uses_premultiplied_alpha() -> None:
@@ -187,7 +188,48 @@ def test_image_is_converted_once_and_float_steps_cannot_follow(
     image = state.image()
     assert isinstance(image, Image.Image)
     assert state.image() is image
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError, match="after PIL conversion"):
         state.array()
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError, match="after PIL conversion"):
         state.set_array(arr)
+
+
+def test_step_registry_covers_all_steps() -> None:
+    assert set(compose.STEP_FUNCTIONS) == set(SLIDE_STEPS)
+
+
+@pytest.mark.parametrize(
+    ("bad", "error"),
+    [
+        (np.zeros((CANVAS_H, CANVAS_W, 3), np.float64), TypeError),
+        (np.zeros((CANVAS_H, CANVAS_W), np.float32), ValueError),
+        (np.zeros((10, 10, 3), np.float32), ValueError),
+    ],
+)
+def test_scene_callback_result_is_validated(
+    theme: Any, script_one_slide: Any, bad: Any, error: type[Exception]
+) -> None:
+    ctx = SlideContext(script_one_slide, theme, 0, default_style(theme), lambda img, dc: bad, False)
+    with pytest.raises(error):
+        render_slide(ctx)
+
+
+def test_text_is_drawn_after_finish_and_carries_no_grain(theme: Any, script_one_slide: Any) -> None:
+    base = default_style(theme)
+    other = replace(base, seed=base.seed + 1)  # different ground and grain RNG
+    a = np.asarray(
+        render_slide(SlideContext(script_one_slide, theme, 0, base, None, False))
+    ).astype(int)
+    b = np.asarray(
+        render_slide(SlideContext(script_one_slide, theme, 0, other, None, False))
+    ).astype(int)
+    plan = plan_text(script_one_slide.slides[0], theme)
+    title_color = np.array(theme.palette[plan.lines[0].color_key])
+    box = plan.title_box
+    ys, xs = slice(int(box.y0), int(box.y1)), slice(int(box.x0), int(box.x1))
+    interior = (a[ys, xs] == title_color).all(axis=-1)
+    assert interior.sum() > 500  # glyph interiors hold the exact palette colour
+    # the same pixels are exactly the palette colour in the render with other grain
+    assert (b[ys, xs][interior] == title_color).all()
+    # while the background (outside the text boxes) does differ between the two renders
+    assert (a[300:900] != b[300:900]).any()
