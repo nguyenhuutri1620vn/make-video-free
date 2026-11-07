@@ -4,10 +4,10 @@
 |--------------|-----------------------------------------------------------------------|
 | Document     | Raw Requirements Specification                                        |
 | Project      | history-shorts                                                        |
-| Version      | 2.0                                                                   |
+| Version      | 2.0.1 (amended)                                                       |
 | Status       | Approved for implementation                                           |
 | Owner        | Tri Nguyen                                                            |
-| Last updated | 2026-11-07                                                            |
+| Last updated | 2026-11-07 (owner decisions recorded; see §6.2, §6.3, §8, §16, App. A) |
 | Implementer  | Claude Code (working rules in `CLAUDE.md`)                            |
 | Supersedes   | v1.1 (Pillow-only renderer, crackle effect, single static motif)      |
 
@@ -178,7 +178,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-41 | Drawing order: long hair (back) → prop shaft and head (back) → robe → belt and sash → sleeves → prop shaft (front, through the hand) → hand → neck → face → features → front hair → bun and hairpin → headwrap → crest. | M |
 | FR-42 | Robe: crossed-collar (*giao lĩnh*) silhouette with flared hem, vertical gradient, back-fold shadow, ivory under-collar, lapel trim line, hem band with dots, thin gold outline. | M |
 | FR-43 | Face: ivory oval, faint pink cheeks, thin brows, downcast closed-eye arcs, tiny nose line, small vermilion lips. No other detail.     | M   |
-| FR-44 | Hands: fist shape with three finger lines and a thumb line, gripping the prop shaft, which passes in front of the sleeve.           | M   |
+| FR-44 | Hands: fist shape with three finger lines and a thumb line, gripping the prop shaft, which passes in front of the sleeve. This holds for `flag`, `spear`, and `oar`. The oar shaft is the line through the hand centre (17.3, −60.5) and the blade top (25, 0), drawn from y −78 to y 6, with a front shaft segment drawn like the spear and flag. | M |
 | FR-45 | Roles (presets): `leader` (vermilion robe, gold trim, gold headwrap, fan crest, flag); `general` (dark vermilion, dark-gold trim, red headwrap, spear); `general_alt` (brown robe, red trim, spear); `boat_crew` (jade robe, oar). Any field can be overridden. | M |
 | FR-46 | Props: `flag` (swallow-tail banner with gold border, inner lines, roundel, finial), `spear` (leaf blade and red tassel), `oar`, `none`. | M |
 | FR-47 | Formations: `centre_pair` (two front leaders 565 px, middle pair 475 px, outer pair 420 px at x ≈ 432/648, 285/795, 150/930), `line`, `v_shape`. Back rows drawn first. Outer characters face outward so props never cross the centre. | M |
@@ -196,8 +196,8 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-62 | **Eggshell inlay:** jittered-grid seed points with cell size `cell` px; nearest/second-nearest distance via `scipy.spatial.cKDTree`; gap where `d2 − d1 < gap` (default 1.0 px) coloured warm dark brown; fragment tones jittered −16 %…+2 % around warm ivory. Computed only inside the mask's bounding box. | M |
 | FR-63 | **Sheen:** additive warm radial highlight `(1 − d/r)²` with strength ≤ 0.10, position per template.                                 | M   |
 | FR-64 | **Grain:** multiplicative fine Gaussian noise ±2.5 %.                                                                                | M   |
-| FR-65 | Every texture takes a `numpy.random.Generator` seeded from theme seed + slide index + layer index; no global RNG.                   | M   |
-| FR-66 | Eggshell regions are rendered once per slide and cached by (mask hash, parameters) during a render run.                             | S   |
+| FR-65 | Every texture takes a `numpy.random.Generator` seeded from theme seed + slide index + layer index; no global RNG. Exception: the eggshell RNG is `default_rng([seed, layer_index, mask_crc32])`, independent of slide index, so identical cloud and hill layers look the same on every slide. | M |
+| FR-66 | Eggshell regions are cached by (mask hash, parameters) during a render run. Because the eggshell RNG does not depend on the slide index (FR-65), identical masks hit the cache across slides. | S |
 
 ### 5.7 Chrome
 
@@ -264,13 +264,32 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `schema_version` | string    | yes | `"2.0"`.                                                                                                |
 | `name`           | string    | yes |                                                                                                         |
 | `seed`           | integer   | yes | Base seed for all textures.                                                                             |
-| `palette`        | map → RGB | yes | Required keys: `black`, `deep`, `vermilion`, `vermilion_dk`, `gold`, `gold_lt`, `gold_dk`, `egg`, `brown`, `brown_lt`, `skin_line`, `pink`, `jade`. Values `[r,g,b]` 0–255. |
+| `palette`        | map → RGB | yes | Required keys: `black`, `deep`, `vermilion`, `vermilion_dk`, `gold`, `gold_lt`, `gold_dk`, `egg`, `brown`, `brown_lt`, `skin_line`, `pink`, `jade`. Values `[r,g,b]` 0–255. Optional keys: see the table below; each falls back to a required key when absent. |
 | `fonts`          | object    | yes | `title` (bold serif), `subtitle` (italic serif), `tag` (bold serif). Paths relative to theme file.     |
 | `type_scale`     | object    | yes | `tag`, `title`, `title_min`, `subtitle`, `subtitle_min` (px).                                          |
-| `textures`       | object    | no  | `gold_leaf {tile, worn}`, `eggshell {cell, gap}`, `sheen {strength}`, `grain {strength}`.              |
+| `textures`       | object    | no  | `gold_leaf {tile, worn}`, `eggshell {cell, gap}`, `sheen {x, y, r, strength}`, `grain {strength}`. Sheen default `{x: 330, y: 760, r: 620, strength: 0.10}` (from prototype `lac.finish`). |
 | `chrome`         | object    | no  | `frame`, `seal {lines, x, y, size}`, `tag {cx, y}`, `waves {y, rows}`, `progress_bar`, `footer`.        |
 | `transition`     | object    | no  | `fade_in`, `fade_out` (s).                                                                             |
 | `video`          | object    | no  | `fps` (30), `crf` (20).                                                                                |
+
+**Optional palette keys.** The 13 required keys stay required. The following 14 keys are optional; when absent, each falls back to the required key shown.
+
+| Optional key          | `son_mai` value | Fallback       | Used by                          |
+|-----------------------|-----------------|----------------|----------------------------------|
+| `robe_general_dk`     | [70, 14, 10]    | `vermilion_dk` | role `general` robe shadow       |
+| `robe_general_alt_dk` | [56, 28, 16]    | `brown`        | role `general_alt` robe shadow   |
+| `robe_crew_dk`        | [30, 50, 42]    | `jade`         | role `boat_crew` robe shadow     |
+| `egg_tone`            | [226, 212, 184] | `egg`          | eggshell fragments               |
+| `egg_gap`             | [58, 30, 20]    | `brown`        | eggshell gaps                    |
+| `sheen`               | [255, 210, 160] | `gold_lt`      | finish sheen                     |
+| `shadow`              | [10, 4, 2]      | `black`        | title drop shadow                |
+| `deep_warm`           | [70, 20, 12]    | `deep`         | landscape ground mid             |
+| `mountain_base`       | [60, 14, 10]    | `deep`         | far mountains gradient end       |
+| `peak_base`           | [44, 11, 8]     | `deep`         | gradient peaks bottom            |
+| `river_top`           | [40, 12, 8]     | `deep`         | river band top                   |
+| `hull_dk`             | [40, 20, 12]    | `black`        | boat hull bottom                 |
+| `leaf_dk`             | [24, 40, 34]    | `jade`         | lotus leaf                       |
+| `petal_tip`           | [240, 170, 150] | `pink`         | lotus petal tip                  |
 
 **Default theme `themes/son_mai/theme.json`** (values from the approved prototype):
 
@@ -284,7 +303,12 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
     "vermilion": [176, 36, 24], "vermilion_dk": [112, 22, 14],
     "gold": [212, 166, 76], "gold_lt": [242, 210, 130], "gold_dk": [138, 96, 40],
     "egg": [236, 225, 200], "brown": [92, 50, 28], "brown_lt": [128, 74, 40],
-    "skin_line": [96, 52, 32], "pink": [224, 140, 120], "jade": [52, 84, 70]
+    "skin_line": [96, 52, 32], "pink": [224, 140, 120], "jade": [52, 84, 70],
+    "robe_general_dk": [70, 14, 10], "robe_general_alt_dk": [56, 28, 16], "robe_crew_dk": [30, 50, 42],
+    "egg_tone": [226, 212, 184], "egg_gap": [58, 30, 20], "sheen": [255, 210, 160],
+    "shadow": [10, 4, 2], "deep_warm": [70, 20, 12], "mountain_base": [60, 14, 10],
+    "peak_base": [44, 11, 8], "river_top": [40, 12, 8], "hull_dk": [40, 20, 12],
+    "leaf_dk": [24, 40, 34], "petal_tip": [240, 170, 150]
   },
   "fonts": {
     "title": "fonts/LiberationSerif-Bold.ttf",
@@ -295,7 +319,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
   "textures": {
     "gold_leaf": { "tile": 34, "worn": 0.05 },
     "eggshell": { "cell": 16, "gap": 1.0 },
-    "sheen": { "strength": 0.10 },
+    "sheen": { "x": 330, "y": 760, "r": 620, "strength": 0.10 },
     "grain": { "strength": 0.025 }
   },
   "chrome": {
@@ -332,14 +356,14 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 
 | `type`       | Fields                                                                                  | Texture        |
 |--------------|-----------------------------------------------------------------------------------------|----------------|
-| `sun`/`moon` | `x`, `y`, `r`, `rings` (0–2)                                                            | gold leaf      |
-| `clouds`     | `items: [{x, y, scale, flip}]`, `outline` (`gold` \| `gold_dk`)                          | eggshell       |
+| `sun`/`moon` | `x`, `y`, `r`, `rings` (0–2); optional `tile`, `worn`                                   | gold leaf      |
+| `clouds`     | `items: [{x, y, scale, flip}]`, `outline` (`gold` \| `gold_dk`); optional `cell`, `gap`   | eggshell       |
 | `mountains`  | `y`, `amp` — rolling far range, gradient fill, gold ridge                              | flat gradient  |
-| `peaks`      | `y`, `items: [{x, height, width}]`, `fill` (`gradient` \| `eggshell`)                   | per `fill`     |
-| `hills`      | `side` (`left` \| `right`), `base`, `top`                                               | eggshell       |
+| `peaks`      | `y`, `items: [{x, height, width}]`, `fill` (`gradient` \| `eggshell`); with `fill: eggshell`, optional `cell`, `gap` | per `fill` |
+| `hills`      | `side` (`left` \| `right`), `base`, `top`; optional `cell`, `gap`                       | eggshell       |
 | `river`      | `y`, `height`                                                                           | flat + strokes |
 | `ground`     | `y`, `height`                                                                           | flat + strokes |
-| `characters` | `formation` or explicit `items: [{role, x, baseline, height, facing, ...overrides}]`   | —              |
+| `characters` | `formation` or explicit `items: [{role, x, baseline, height, facing, ...overrides}]`; `baseline` (default 1100) | — |
 | `boat`       | `x`, `y`, `scale`, `crew: [Character]`                                                  | —              |
 | `birds`      | `items: [{x, y, scale}]`                                                                | —              |
 | `lotus`      | `x`, `y`, `scale`                                                                       | —              |
@@ -354,6 +378,8 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `prop`     | enum   | no  | preset          | `flag` \| `spear` \| `oar` \| `none`.                      |
 | `crest`    | bool   | no  | preset          | Fan crest on the bun.                                      |
 | `x`, `baseline`, `height` | number | no | formation | Explicit placement.                                   |
+
+Optional texture overrides (`tile`, `worn`, `cell`, `gap`) take the same units as the corresponding `textures` entries in the theme and override them for that layer only. Boat `crew` items follow the Character contract above; their `x`, `baseline`, and `height` are canvas pixels, and when omitted they are computed from the boat's slots.
 
 ---
 
@@ -401,14 +427,24 @@ Default theme: `themes/son_mai/theme.json`. Default output: `output/<slug(title)
 
 Text is centred on x = 505 (the safe zone's centre), not 540.
 
+**Safe-zone check (FR-26).** The check applies to text, the seal, the tag pill, and character head boxes. Robes and props may extend past the safe zone.
+
+**Title placement.** A one-line title has its top at y 1215. A two-line title has its line tops at 1190 and 1190 + step, where step = round(size × 102 / 92).
+
+**Subtitle placement.** The first subtitle line's top = last title line top + 128. Additional subtitle lines step by round(size × 56 / 46).
+
+**Progress bar (off by default).** y 1540, height 4, x 80–930. Track in `gold_dk` at alpha 0.4; fill in `gold` for (i + 1) / n of the track.
+
+**Footer (off by default).** `tag` font, `gold_dk`, centred at x 540, top at y 1830.
+
 ### 8.3 Line weights (at canvas scale)
 
 Frame 5 / 1.5 px; scene outlines 1.8–2.5 px gold; character outlines 0.5 unit (≈ 2.8 px at 565 px height); facial lines 0.3–0.45 unit. Never use pure black (#000) for strokes; darkest stroke colour is `palette.black`.
 
 ### 8.4 Typography
 
-- Title: Liberation Serif Bold, `type_scale.title`, first line `egg`, second line `gold_lt`, 3 px drop shadow in `#0A0402`.
-- Subtitle: Liberation Serif Italic, `egg` or `gold_lt`, no shadow.
+- Title: Liberation Serif Bold, `type_scale.title`, first line `egg`, second line `gold_lt`, 3 px drop shadow in `palette.shadow` (`#0A0402` in `son_mai`).
+- Subtitle: Liberation Serif Italic, no shadow. The colour continues the title alternation: two title lines (`egg`, `gold_lt`) give an `egg` subtitle; one title line gives a `gold_lt` subtitle. Placement: §8.2.
 - Tag: Liberation Serif Bold in the pill.
 - Glyph check string: `ĂÂĐÊÔƠƯăâđêôơư` plus every tone mark on `aeiouy` and their circumflex/horn/breve forms, both cases.
 - Emoji are not supported in rendered text; validation rejects them.
@@ -560,7 +596,7 @@ history-shorts/
 | AC-04 | First slide of `me_linh` matches `scene_landscape.png` likewise.                                                           | FR-32, 35–36   |
 | AC-05 | No crossing peak outlines and no texture outside its mask (automated).                                                     | FR-35–36       |
 | AC-06 | No character overlaps seal, tag, text, or another head (automated).                                                        | FR-48          |
-| AC-07 | Every role × facing × prop renders; hands sit on shafts (automated).                                                       | FR-40–46       |
+| AC-07 | Every role × facing × prop renders; hands sit on shafts, including the `oar` shaft through (17.3, −60.5) and (25, 0) (automated). | FR-40–46       |
 | AC-08 | Vietnamese text renders with zero missing glyphs.                                                                          | §8.4           |
 | AC-09 | Changing `palette.gold` changes all gold elements with no code change.                                                     | C-07           |
 | AC-10 | `--preview` creates PNGs and never spawns FFmpeg.                                                                          | FR-02          |
@@ -603,9 +639,26 @@ Every milestone ends with green tests and a CHANGELOG entry. Visual milestones (
 | ID   | Item                                                                                       | Mitigation / default                                                              |
 |------|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
 | R-01 | Company machine may block installing pycairo, scipy, or FFmpeg.                            | Verify in M1; document conda / portable FFmpeg options in README.                 |
-| R-02 | Cairo or numpy version changes alter pixels and break snapshots.                          | Pin versions in `pyproject.toml`; baselines keyed by versions.                    |
+| R-02 | Cairo or numpy version changes alter pixels and break snapshots.                          | `pyproject.toml` declares ranges valid on Python 3.10 (`numpy>=1.26`, `scipy>=1.11`, `Pillow>=10.1`, `pycairo>=1.25`). `constraints.txt` pins the dev versions (pycairo 1.29.2, numpy 2.4.6, scipy 1.17.1, Pillow 13.0.0); those pins need Python ≥ 3.11, so snapshot baselines exist only for pinned sets. |
 | R-03 | All characters share one face and silhouette.                                              | FR-49 variation now; SVG-authored parts later (FR-51).                            |
 | R-04 | Eggshell computation is slow on large masks.                                               | Bounding-box restriction (FR-62) and caching (FR-66).                             |
 | R-05 | Close-up portrait composition (prototype sample 2) was not approved.                      | Out of scope for v2.0; revisit with redesigned face and hands.                    |
 | Q-01 | Should the legacy bronze theme be migrated to the v2 engine?                               | Default: no; keep in `docs/reference/legacy/` only.                               |
 | Q-02 | Should text appear inside scenes (banners, scrolls)?                                       | Default: no for v2.0.                                                             |
+
+---
+
+## Appendix A — v2.1 storyboard (planned, not in v2.0)
+
+Recorded so later work does not contradict it. Nothing here is implemented in v2.0, and C-01 and C-02 stay unchanged.
+
+**A.1 Narration.** The owner runs VoiceStudio separately; history-shorts runs no TTS (C-01). Planned behaviour:
+
+- Export one narration `.txt` per segment, using `[pause Nms]` markers and no custom emotion tags.
+- Mix the owner's voice files into the video.
+- Duck the music under the voice.
+- Fit each slide's duration to the length of its voice file.
+
+**A.2 Motions.** Pan, pop-up name cards, colour-tone shift, split screen.
+
+**A.3 Poses.** Kneeling and riding an elephant (see FR-50).

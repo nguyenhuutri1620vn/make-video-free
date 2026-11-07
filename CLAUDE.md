@@ -80,6 +80,7 @@ Data flows one way: `config` → `scene.templates` (expand) → `compose` → PN
 - **Text last**: Pillow draws seal text, tag, title, subtitle after `finish()`, so sheen and grain never touch text.
 - **Strokes**: darkest stroke colour is `palette.black`; never pure `#000`. Facial and finger lines use `skin_line` with partial alpha.
 - **Determinism**: derive every RNG as `np.random.default_rng([theme.seed, slide_index, layer_index])`. No global `random`, no time-based seeds, no unordered set iteration in drawing.
+  Exception: eggshell uses `np.random.default_rng([theme.seed, layer_index, mask_crc32])`, independent of slide index, so identical cloud/hill layers look the same on every slide and the cache gets hits.
 - **Fonts**: Liberation Serif Bold (title, tag, seal) and Italic (subtitle), from `themes/son_mai/fonts/`. Run the Vietnamese glyph check in `validate`. Reject emoji.
 
 ## Characters
