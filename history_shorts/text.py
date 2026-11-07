@@ -60,6 +60,11 @@ def _font(path: Path, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(path), size)
 
 
+def font(path: Path, size: int) -> ImageFont.FreeTypeFont:
+    """The cached TrueType font at ``size`` px (shared with the chrome module)."""
+    return _font(path, size)
+
+
 def _glyph_signature(font: ImageFont.FreeTypeFont, ch: str) -> tuple[tuple[int, int], bytes]:
     mask = font.getmask(ch)
     return (mask.size, bytes(mask))

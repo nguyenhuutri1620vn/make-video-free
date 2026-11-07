@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Final
 
+from history_shorts.chrome import tag_box, tag_too_wide
 from history_shorts.config import (
     BoatLayer,
     CharactersLayer,
@@ -37,6 +38,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     _check_theme_fonts(theme, issues)
     _check_used_glyphs(script, theme, issues)
     _check_text_fit(script, theme, issues)
+    _check_tag_width(script, theme, issues)
     _check_palette_refs(script, theme, issues)
     return issues.items
 
@@ -107,6 +109,22 @@ def _check_slide_text(name: str, index: int, slide: Slide, theme: Theme, issues:
         sizes = [ln.size for ln in plan.lines if ln.font_key == field]
         if sizes and sizes[0] < full_size:
             issues.warning(name, f"slides[{index}].{field}", f"text auto-shrunk to {sizes[0]} px")
+
+
+# --------------------------------------------------------------------------------------
+# Tag pill (FR-70)
+# --------------------------------------------------------------------------------------
+
+
+def _check_tag_width(script: Script, theme: Theme, issues: Issues) -> None:
+    for index, slide in enumerate(script.slides):
+        box = tag_box(slide.tag, theme)
+        if box is not None and tag_too_wide(box, theme):
+            issues.error(
+                script.path.name,
+                f"slides[{index}].tag",
+                f"tag too wide ({round(box.width)} px); shorten it",
+            )
 
 
 # --------------------------------------------------------------------------------------

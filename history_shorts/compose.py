@@ -11,6 +11,7 @@ import numpy as np
 from numpy.random import Generator, default_rng
 from PIL import Image, ImageDraw
 
+from . import chrome
 from .canvas import Canvas
 from .config import Palette, Script, SheenSpec, Theme
 from .layout import CANVAS_H, CANVAS_W, REGIONS, SAFE_ZONE
@@ -21,8 +22,8 @@ from .textures import finish, lacquer_ground
 GROUND_LAYER: Final = 0  # scene layer k uses k + 1
 FINISH_LAYER: Final = 999
 
-# The float buffer is converted to a PIL image lazily, at the first Pillow step ("seal" once
-# Task 10 lands; "title" until then). "ground" through "frame" work on the float32 buffer.
+# The float buffer is converted to a PIL image lazily, at the first Pillow step ("seal").
+# "ground" through "frame" work on the float32 buffer.
 SLIDE_STEPS: Final = (
     "ground",
     "scene",
@@ -210,22 +211,51 @@ def _step_subtitle(ctx: SlideContext, state: SlideState) -> None:
     _draw_lines(ctx, state, "subtitle")
 
 
-def _step_pending_chrome(ctx: SlideContext, state: SlideState) -> None:
-    """Placeholder for a chrome step; Task 10 (chrome.py) replaces its ``STEP_FUNCTIONS`` entry."""
+def _overlay(state: SlideState, draw: Callable[[Canvas], None]) -> None:
+    cv = Canvas(CANVAS_W, CANVAS_H)
+    draw(cv)
+    state.set_array(over(state.array(), cv))
+
+
+def _step_waves(ctx: SlideContext, state: SlideState) -> None:
+    _overlay(state, lambda cv: chrome.draw_waves(cv, ctx.theme.palette, ctx.theme.chrome.waves))
+
+
+def _step_frame(ctx: SlideContext, state: SlideState) -> None:
+    if ctx.theme.chrome.frame:
+        _overlay(state, lambda cv: chrome.draw_frame(cv, ctx.theme.palette))
+
+
+def _step_seal(ctx: SlideContext, state: SlideState) -> None:
+    chrome.draw_seal(state.image(), ctx.theme)
+
+
+def _step_tag(ctx: SlideContext, state: SlideState) -> None:
+    chrome.draw_tag(state.image(), ctx.script.slides[ctx.slide_index].tag, ctx.theme)
+
+
+def _step_progress_bar(ctx: SlideContext, state: SlideState) -> None:
+    if ctx.theme.chrome.progress_bar:
+        chrome.draw_progress_bar(state.image(), ctx.theme, ctx.slide_index, len(ctx.script.slides))
+
+
+def _step_footer(ctx: SlideContext, state: SlideState) -> None:
+    if ctx.theme.chrome.footer.enabled:
+        chrome.draw_footer(state.image(), ctx.theme)
 
 
 STEP_FUNCTIONS: Mapping[str, StepFunction] = {
     "ground": _step_ground,
     "scene": _step_scene,
-    "waves": _step_pending_chrome,  # TODO(task 10): chrome.waves
+    "waves": _step_waves,
     "finish": _step_finish,
-    "frame": _step_pending_chrome,  # TODO(task 10): chrome.frame (Cairo, float buffer)
-    "seal": _step_pending_chrome,  # TODO(task 10): chrome.seal (Pillow)
-    "tag": _step_pending_chrome,  # TODO(task 10): chrome.tag (Pillow)
+    "frame": _step_frame,
+    "seal": _step_seal,
+    "tag": _step_tag,
     "title": _step_title,
     "subtitle": _step_subtitle,
-    "progress_bar": _step_pending_chrome,  # TODO(task 10): chrome.progress_bar
-    "footer": _step_pending_chrome,  # TODO(task 10): chrome.footer
+    "progress_bar": _step_progress_bar,
+    "footer": _step_footer,
 }
 
 

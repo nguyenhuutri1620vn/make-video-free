@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -202,6 +203,20 @@ def test_shrunk_title_warns_with_size(tmp_script: ScriptFactory, theme: Theme) -
     assert (path, severity) == ("slides[0].title", "warning")
     assert message.startswith("text auto-shrunk to ")
     assert message.endswith(" px")
+
+
+def test_tag_that_fits_is_clean(tmp_script: ScriptFactory, theme: Theme) -> None:
+    script, _ = load(tmp_script, theme, slides=[{"tag": "NĂM 40 SAU CÔNG NGUYÊN", "title": "A"}])
+    assert checks.check_all(script, theme) == []
+
+
+def test_tag_too_wide_is_error_with_width(tmp_script: ScriptFactory, theme: Theme) -> None:
+    long_tag = "W" * 28
+    script, _ = load(tmp_script, theme, slides=[{"title": "A"}, {"tag": long_tag, "title": "A"}])
+    ((file, path, message, severity),) = messages(script, theme)
+    assert (file, path, severity) == ("script.json", "slides[1].tag", "error")
+    match = re.fullmatch(r"tag too wide \((\d+) px\); shorten it", message)
+    assert match and int(match.group(1)) > 700
 
 
 def test_missing_theme_font_glyphs_are_listed(
