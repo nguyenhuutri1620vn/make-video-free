@@ -30,6 +30,24 @@ def theme() -> Any:
     return loaded
 
 
+@pytest.fixture(scope="session")
+def palette(theme: Any) -> Any:
+    """The default theme's palette."""
+    return theme.palette
+
+
+@pytest.fixture(scope="session")
+def cloud_mask() -> Any:
+    """A 1080x1920 float mask holding a cloud-like blob (overlapping ellipses)."""
+    from history_shorts.canvas import Canvas
+
+    cv = Canvas(1080, 1920)
+    cv.color((255, 255, 255))
+    for cx, cy, rx, ry in [(400, 600, 220, 110), (560, 560, 180, 120), (700, 620, 200, 100)]:
+        cv.ellipse(cx, cy, rx, ry).fill()
+    return cv.mask()
+
+
 @pytest.fixture
 def tmp_theme(tmp_path: Path) -> Callable[..., Path]:
     """Factory: copy the default theme directory into ``tmp_path``, edit it, return theme.json.
