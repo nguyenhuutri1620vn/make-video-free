@@ -148,8 +148,8 @@ class CharactersLayer:
     """
 
     formation: Formation | None
-    items: tuple[CharacterSpec, ...]
     baseline: float = DEFAULT_BASELINE
+    items: tuple[CharacterSpec, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

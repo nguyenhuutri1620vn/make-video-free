@@ -31,11 +31,13 @@ def is_int(value: object) -> bool:
 
 
 def is_number(value: object) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-    )
+    """A finite int or float (not bool). Ints beyond float range are not numbers."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 class Ctx:

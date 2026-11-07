@@ -494,9 +494,25 @@ def test_layer_defaults(tmp_script: ScriptFactory) -> None:
     assert isinstance(peaks, PeaksLayer) and peaks.fill == "gradient"
 
 
-def test_character_baseline_precedence_is_documented() -> None:
-    doc = CharactersLayer.__doc__ or ""
-    assert "baseline" in doc and "item" in doc and "1100" in doc
+def test_character_baseline_precedence(tmp_script: ScriptFactory) -> None:
+    scene = _layer_scene(
+        tmp_script,
+        {"type": "characters", "items": [{"role": "leader", "x": 100}]},
+        {"type": "characters", "baseline": 900, "items": [{"role": "leader", "baseline": 800}]},
+    )
+    plain, explicit = scene.layers
+    assert isinstance(plain, CharactersLayer) and isinstance(explicit, CharactersLayer)
+    assert plain.items[0].baseline is None  # item without baseline: resolved later
+    assert plain.baseline == 1100  # layer default
+    assert explicit.baseline == 900  # explicit layer baseline preserved
+    assert explicit.items[0].baseline == 800  # item's own baseline preserved
+
+
+def test_characters_layer_positional_field_order() -> None:
+    specs = (CharacterSpec(role="leader"),)
+    layer = CharactersLayer("centre_pair", 1100, specs)
+    assert (layer.formation, layer.baseline, layer.items) == ("centre_pair", 1100, specs)
+    assert CharactersLayer("line").items == () and CharactersLayer("line").baseline == 1100
 
 
 def test_layer_types_registry() -> None:
@@ -648,3 +664,103 @@ def test_layer_coordinate_boundaries_are_inclusive(tmp_script: ScriptFactory) ->
         {"type": "lotus", "x": 1080, "y": 1920, "scale": 0.1},
     )
     assert len(scene.layers) == 2
+
+
+# -- numeric edge cases: no crash, always a path-tracked error ---------------------------
+
+HUGE = 10**400  # beyond float range
+
+_NUMERIC_BAD_VALUES = [
+    pytest.param(float("nan"), id="NaN"),
+    pytest.param(float("inf"), id="Infinity"),
+    pytest.param(True, id="bool"),
+    pytest.param(HUGE, id="huge-int"),
+]
+
+
+def _edge_script(tmp_script: ScriptFactory, where: str, key: str, value: object) -> Path:
+    """A script with ``value`` at ``key`` in a slide / layer / character / template."""
+    slide: dict[str, Any] = {"title": "A"}
+    layer = {"type": "lotus", "x": 1, "y": 1, "scale": 1}
+    character = {"role": "leader"}
+    if where == "slide":
+        slide[key] = value
+    elif where == "layer":
+        slide["scene"] = {"layers": [{**layer, key: value}]}
+    elif where == "character":
+        slide["scene"] = {"template": "group", "characters": [{**character, key: value}]}
+    else:
+        slide["scene"] = {"template": "group", key: value}
+    return tmp_script(slides=[slide])
+
+
+@pytest.mark.parametrize("value", _NUMERIC_BAD_VALUES)
+@pytest.mark.parametrize(
+    ("where", "key", "path", "msg"),
+    [
+        ("slide", "duration", "slides[0].duration", "must be 0.5–15"),
+        ("layer", "x", "slides[0].scene.layers[0].x", "must be 0–1080"),
+        ("layer", "y", "slides[0].scene.layers[0].y", "must be 0–1920"),
+        ("layer", "scale", "slides[0].scene.layers[0].scale", "must be > 0"),
+        ("character", "x", "slides[0].scene.characters[0].x", "must be 0–1080"),
+        ("character", "height", "slides[0].scene.characters[0].height", "must be > 0"),
+    ],
+)
+def test_bad_numbers_are_validation_errors(
+    tmp_script: ScriptFactory, where: str, key: str, path: str, msg: str, value: object
+) -> None:
+    assert _errors(_edge_script(tmp_script, where, key, value)) == [f"script.json › {path}: {msg}"]
+
+
+@pytest.mark.parametrize(
+    ("where", "key", "value", "path", "msg"),
+    [
+        ("slide", "source", True, "slides[0].source", "must be an integer ≥ 0"),
+        ("slide", "source", HUGE, "slides[0].source", "index out of range (sources has 1 item)"),
+        ("character", "seed", True, "slides[0].scene.characters[0].seed", "must be an integer ≥ 0"),
+        (
+            "character",
+            "seed",
+            float("nan"),
+            "slides[0].scene.characters[0].seed",
+            "must be an integer ≥ 0",
+        ),
+        ("template", "seed", True, "slides[0].scene.seed", "must be an integer ≥ 0"),
+        ("layer", "rings", True, "slides[0].scene.layers[0].rings", "must be an integer 0–2"),
+        ("character", "facing", True, "slides[0].scene.characters[0].facing", "must be -1 or 1"),
+    ],
+)
+def test_bad_integers_are_validation_errors(
+    tmp_script: ScriptFactory, where: str, key: str, value: object, path: str, msg: str
+) -> None:
+    if where == "layer":  # rings only exists on sun/moon
+        slide = {
+            "title": "A",
+            "scene": {"layers": [{"type": "sun", "x": 1, "y": 1, "r": 1, key: value}]},
+        }
+        script = tmp_script(slides=[slide])
+    else:
+        script = _edge_script(tmp_script, where, key, value)
+    assert _errors(script) == [f"script.json › {path}: {msg}"]
+
+
+def test_bool_where_number_expected_in_ctx() -> None:
+    from history_shorts.errors import Issues
+    from history_shorts.validation import Ctx, is_number
+
+    assert not is_number(True) and not is_number(HUGE) and is_number(10**300)
+    issues = Issues()
+    Ctx("f", issues).num({"a": HUGE}, "a")
+    assert [i.format() for i in issues.errors] == ["f › a: must be a number"]
+
+
+# -- cascades ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("sources", [[1], ["ok", ""], "not a list", {"a": 1}])
+def test_invalid_sources_do_not_cascade_into_source_index_errors(
+    tmp_script: ScriptFactory, sources: object
+) -> None:
+    errors = _errors(tmp_script(sources=sources, slides=[{"title": "A", "source": 0}]))
+    assert errors and all(e.startswith("script.json › sources") for e in errors)
+    assert not any("index out of range" in e for e in errors)

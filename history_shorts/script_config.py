@@ -134,32 +134,43 @@ def _text(
     return value
 
 
-def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...]:
+def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...] | None:
+    """The citations, or None when ``sources`` itself is invalid (errors recorded).
+
+    None tells slides to skip their ``source`` range check: with a broken ``sources`` list
+    the length is unknown and a range error would be a spurious follow-on.
+    """
     if "sources" not in obj:
         ctx.at("sources").warning("missing: factual claims cannot be traced to a source")
         return ()
     sources: list[str] = []
+    valid = True
     for child, raw in ctx.at("sources").items(obj["sources"]):
         if isinstance(raw, str) and raw:
             sources.append(unicodedata.normalize("NFC", raw))
         else:
             child.error("must be a non-empty string")
-    if not sources and isinstance(obj["sources"], list) and not obj["sources"]:
+            valid = False
+    if not valid or not isinstance(obj["sources"], list):
+        return None
+    if not sources:
         ctx.at("sources").warning("empty: factual claims cannot be traced to a source")
     return tuple(sources)
 
 
-def _parse_source_index(ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...]) -> int | None:
+def _parse_source_index(
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
+) -> int | None:
     if "source" not in obj:
         return None
     index = ctx.int_(obj, "source", lo=0)
-    if is_int(obj["source"]) and index >= len(sources):
+    if sources is not None and is_int(obj["source"]) and index >= len(sources):
         noun = "item" if len(sources) == 1 else "items"
         ctx.at("source").error(f"index out of range (sources has {len(sources)} {noun})")
     return index
 
 
-def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...]) -> Slide | None:
+def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...] | None) -> Slide | None:
     if not isinstance(raw, dict):
         ctx.error("must be an object")
         return None
@@ -187,7 +198,9 @@ def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...]) -> Slide | Non
     )
 
 
-def _parse_slides(ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...]) -> tuple[Slide, ...]:
+def _parse_slides(
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
+) -> tuple[Slide, ...]:
     slides_ctx = ctx.at("slides")
     if "slides" not in obj:
         slides_ctx.missing()
@@ -221,7 +234,7 @@ def _parse_script(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Script:
     slides = _parse_slides(ctx, data, sources)
     if not ctx.issues.errors:
         _check_total_duration(ctx, slides)
-    return Script(version, title, sources, slides, path)
+    return Script(version, title, sources or (), slides, path)
 
 
 def load_script(path: Path) -> tuple[Script, list[Issue]]:
