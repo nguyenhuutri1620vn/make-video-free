@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "title": "Hai Bà Trưng khởi nghĩa ở Mê Linh",
+  "sources": [
+    "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
+    "Phạm Diệp, Hậu Hán thư, quyển 24 (Mã Viện truyện) và quyển 86 (Nam Man truyện)."
+  ],
+  "slides": [
+    {
+      "tag": "KHỞI NGHĨA HAI BÀ TRƯNG",
+      "title": "Mê Linh, năm 40",
+      "subtitle": "Nơi cuộc khởi nghĩa bắt đầu",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "landscape",
+        "boats": [
+          { "x": 290, "y": 1056, "scale": 1.5,
+            "crew": [ { "role": "leader", "facing": 1 }, { "role": "boat_crew", "facing": -1 } ] },
+          { "x": 780, "y": 1104, "scale": 1.25,
+            "crew": [ { "role": "general" }, { "role": "boat_crew" } ] }
+        ]
+      }
+    },
+    {
+      "tag": "MÊ LINH",
+      "title": "Con gái Lạc tướng",
+      "subtitle": "Theo Đại Việt sử ký toàn thư, Trưng Trắc và Trưng Nhị là con gái Lạc tướng huyện Mê Linh.",
+      "claim": true,
+      "source": 0,
+      "scene": { "template": "landscape", "boats": [] }
+    },
+    {
+      "tag": "GIAO CHỈ",
+      "title": "Thái thú Tô Định",
+      "subtitle": "Sử cũ chép Thái thú Giao Chỉ là Tô Định dùng pháp luật hà khắc ràng buộc người Việt.",
+      "claim": true,
+      "source": 1
+    },
+    {
+      "tag": "KHỞI NGHĨA HAI BÀ TRƯNG",
+      "title": "Sáu mươi lăm thành",
+      "subtitle": "Tô Định bỏ chạy; sử chép Hai Bà lấy được 65 thành ở Lĩnh Nam.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "landscape",
+        "moon": false,
+        "boats": [
+          { "x": 540, "y": 1080, "scale": 1.5,
+            "crew": [ { "role": "leader", "facing": 1 }, { "role": "boat_crew", "facing": -1 } ] }
+        ]
+      }
+    },
+    {
+      "tag": "TRƯNG VƯƠNG",
+      "title": "Trưng Vương",
+      "subtitle": "Trưng Trắc lên ngôi vua, đóng đô ở Mê Linh.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "group",
+        "characters": [ { "role": "leader" }, { "role": "leader" } ]
+      }
+    },
+    {
+      "tag": "GHI NHỚ",
+      "title": "Ghi nhớ\nHai Bà Trưng",
+      "subtitle": "Năm 43, cuộc khởi nghĩa thất bại trước quân Mã Viện; Hai Bà được nhân dân thờ phụng.",
+      "claim": true,
+      "source": 0
+    }
+  ]
+}
