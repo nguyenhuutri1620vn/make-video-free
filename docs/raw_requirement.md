@@ -154,7 +154,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-23 | Textured regions are produced by drawing a Cairo mask and filling it with a numpy texture (§5.6).                                            | M   |
 | FR-24 | Text is rendered with Pillow after all graphics, so no texture or effect touches it.                                                         | M   |
 | FR-25 | Title and subtitle wrap by measured pixel width, honour explicit `\n`, and auto-shrink in 4 px steps to the theme minimum; still too long → validation error. | M |
-| FR-26 | Text, seal, tag pill, and the main subject stay in the safe zone (§8.2). Decorative layers may extend beyond it.                             | M   |
+| FR-26 | Text, seal, tag pill, and every character's head box stay in the safe zone (§8.2). Robes, props, and decorative layers may extend beyond it. | M   |
 | FR-27 | Progress bar and footer are optional chrome (`theme.progress_bar`, `theme.footer`); both are off in the approved references.                | M   |
 
 ### 5.4 Scenes and templates
@@ -194,7 +194,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-60 | **Lacquer ground:** vertical blend black → deep red → black with `sin` profile, modulated ±10 % by low-frequency Gaussian noise.     | M   |
 | FR-61 | **Gold leaf:** square tiles (`tile` px) with tone jitter −9 %…+7 %, diagonal sine sheen ±10 %, grain ±4 %, 1.2 px seams at 82 % brightness, worn spots only near seams, coverage ≤ `worn` (default 0.05), blended 65 % toward the underlayer colour. | M |
 | FR-62 | **Eggshell inlay:** jittered-grid seed points with cell size `cell` px; nearest/second-nearest distance via `scipy.spatial.cKDTree`; gap where `d2 − d1 < gap` (default 1.0 px) coloured warm dark brown; fragment tones jittered −16 %…+2 % around warm ivory. Computed only inside the mask's bounding box. | M |
-| FR-63 | **Sheen:** additive warm radial highlight `(1 − d/r)²` with strength ≤ 0.10, position per template.                                 | M   |
+| FR-63 | **Sheen:** additive warm radial highlight `(1 − d/r)²` with strength ≤ 0.10. The theme's `textures.sheen` `{x, y, r, strength}` is the default; a template may override it (`group`: 360, 700, 640, 0.10; `landscape`: 700, 520, 520, 0.08). | M |
 | FR-64 | **Grain:** multiplicative fine Gaussian noise ±2.5 %.                                                                                | M   |
 | FR-65 | Every texture takes a `numpy.random.Generator` seeded from theme seed + slide index + layer index; no global RNG. Exception: the eggshell RNG is `default_rng([seed, layer_index, mask_crc32])`, independent of slide index, so identical cloud and hill layers look the same on every slide. | M |
 | FR-66 | Eggshell regions are cached by (mask hash, parameters) during a render run. Because the eggshell RNG does not depend on the slide index (FR-65), identical masks hit the cache across slides. | S |
