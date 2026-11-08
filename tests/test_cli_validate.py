@@ -273,7 +273,10 @@ def test_unknown_palette_key_in_characters_layer_items(
             {"type": "ground", "y": 1100},
             {
                 "type": "characters",
-                "items": [{"role": "general"}, {"role": "leader", "robe": "teal"}],
+                "items": [
+                    {"role": "general", "x": 300},
+                    {"role": "leader", "robe": "teal", "x": 700},
+                ],
             },
         ]
     }

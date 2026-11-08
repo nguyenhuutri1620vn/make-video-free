@@ -2,34 +2,60 @@
 
 ``load_script`` and ``load_theme`` validate each file alone. Here the two are checked
 against each other: font glyph coverage, text fit and auto-shrink, and palette keys named by
-character overrides. Overlap checks join this module with the formations (milestone M3).
+character overrides. FR-48 overlap checks live here too: character boxes against the seal,
+tag and text, and pixel masks for "no character covers another character's head".
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import logging
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Final
 
-from history_shorts.chrome import tag_box, tag_too_wide
+import numpy as np
+
+from history_shorts.characters.figure import FigureBoxes, figure_boxes, figure_mask, head_mask
+from history_shorts.characters.formations import PlacedCharacter, count_error, place
+from history_shorts.characters.roles import CharacterStyle, resolve_style
+from history_shorts.chrome import FRAME_INNER_INSET, seal_box, tag_box, tag_too_wide
 from history_shorts.config import (
     BoatLayer,
     CharactersLayer,
     CharacterSpec,
     LayerScene,
+    Palette,
     Script,
     Slide,
     TemplateScene,
     Theme,
 )
 from history_shorts.errors import Issue, Issues
-from history_shorts.text import VIETNAMESE_CHARSET, TextFitError, missing_glyphs, plan_text
+from history_shorts.layout import CANVAS_H, CANVAS_W
+from history_shorts.primitives import Box, FloatMask
+from history_shorts.text import (
+    VIETNAMESE_CHARSET,
+    TextFitError,
+    TextPlan,
+    missing_glyphs,
+    plan_text,
+)
+
+log = logging.getLogger(__name__)
 
 THEME_FONT_KEYS: Final = ("title", "subtitle", "tag")
 # Slide text fields -> theme font that renders them.
 TEXT_FIELD_FONTS: Final = (("tag", "tag"), ("title", "title"), ("subtitle", "subtitle"))
 # CharacterSpec fields that name a palette key.
 PALETTE_OVERRIDE_FIELDS: Final = ("robe", "robe_dk", "trim", "wrap")
+# Character heads stay inside the chrome frame. This is deliberately not the safe zone: the
+# approved ``group`` composition puts the outer generals' heads past its right edge.
+FRAME_INNER: Final = Box(
+    FRAME_INNER_INSET, FRAME_INNER_INSET, CANVAS_W - FRAME_INNER_INSET, CANVAS_H - FRAME_INNER_INSET
+)
+# Pixels of a later character's mask allowed on an earlier character's head mask.
+HEAD_OVERLAP_TOLERANCE_PX: Final = 0
+MASK_ALPHA_THRESHOLD: Final = 0.5
 
 
 def check_all(script: Script, theme: Theme) -> list[Issue]:
@@ -40,6 +66,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     _check_text_fit(script, theme, issues)
     _check_tag_width(script, theme, issues)
     _check_palette_refs(script, theme, issues)
+    _check_characters(script, theme, issues)
     return issues.items
 
 
@@ -166,3 +193,146 @@ def _scene_characters(
 def _indexed(path: str, specs: tuple[CharacterSpec, ...]) -> Iterator[tuple[str, CharacterSpec]]:
     for index, spec in enumerate(specs):
         yield f"{path}[{index}]", spec
+
+
+# --------------------------------------------------------------------------------------
+# Characters: counts and placement (FR-47, FR-48)
+# --------------------------------------------------------------------------------------
+
+
+def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
+    """Formation counts, then overlap checks for layer scenes with positioned characters.
+
+    Template scenes are expanded later (Task 20), which calls ``check_overlaps`` itself.
+    """
+    name = script.path.name
+    for index, slide in enumerate(script.slides):
+        scene = slide.scene
+        if not isinstance(scene, LayerScene):
+            continue
+        placed: list[tuple[PlacedCharacter, CharacterStyle, str]] = []
+        for layer_index, layer in enumerate(scene.layers):
+            if isinstance(layer, CharactersLayer):
+                base = f"slides[{index}].scene.layers[{layer_index}]"
+                placed.extend(_layer_placed(name, base, layer, theme.palette, issues))
+        if placed:
+            try:
+                text = plan_text(slide, theme)
+            except TextFitError:
+                continue  # reported by the text-fit check
+            issues.items.extend(
+                check_overlaps(index, placed, text, theme, theme.palette, tag=slide.tag, file=name)
+            )
+
+
+def _layer_placed(
+    name: str, base: str, layer: CharactersLayer, palette: Palette, issues: Issues
+) -> list[tuple[PlacedCharacter, CharacterStyle, str]]:
+    """Place a characters layer; problems become issues and an empty list."""
+    specs = layer.items
+    if layer.formation is not None:
+        message = count_error(layer.formation, len(specs))
+        if message is not None:
+            issues.error(name, f"{base}.items", message)
+            return []
+    else:
+        missing = [k for k, spec in enumerate(specs) if spec.x is None]
+        for k in missing:
+            issues.error(name, f"{base}.items[{k}].x", "needs x without a formation")
+        if missing:
+            return []
+    try:
+        placed = place(layer.formation, specs, layer.baseline)
+        styles = [resolve_style(p.spec, palette) for p in placed]
+    except (KeyError, ValueError):
+        return []  # unknown palette keys are reported by the palette check
+    paths = {id(spec): f"{base}.items[{k}]" for k, spec in enumerate(specs)}
+    return [(p, style, paths[id(p.spec)]) for p, style in zip(placed, styles, strict=True)]
+
+
+def _fmt(box: Box) -> str:
+    return f"({round(box.x0)},{round(box.y0)},{round(box.x1)},{round(box.y1)})"
+
+
+def _figure_overlaps(
+    boxes: FigureBoxes, targets: Sequence[tuple[str, Box | None]]
+) -> Iterator[tuple[str, Box, Box]]:
+    """(target name, character box, target box) for the first character box hit per target."""
+    own = [box for box in (boxes.head, boxes.body, boxes.prop) if box is not None]
+    for label, target in targets:
+        if target is None:
+            continue
+        hit = next((box for box in own if box.intersects(target)), None)
+        if hit is not None:
+            yield label, hit, target
+
+
+def check_overlaps(
+    slide_index: int,
+    placed: list[tuple[PlacedCharacter, CharacterStyle, str]],
+    text: TextPlan,
+    theme: Theme,
+    palette: Palette,
+    *,
+    tag: str = "",
+    file: str = "script.json",
+) -> list[Issue]:
+    """FR-48 for one slide. ``placed`` is in draw order; each ``str`` is the JSON path.
+
+    Errors: a head box outside the frame; a head, body or prop box on the seal, tag pill,
+    title or subtitle box; a later-drawn character whose pixels cover an earlier
+    character's head (pixel masks, so boxes of the approved composition do not trip it).
+    """
+    targets = (
+        ("seal", seal_box(theme)),
+        ("tag", tag_box(tag, theme)),
+        ("title", text.title_box),
+        ("subtitle", text.subtitle_box),
+    )
+    issues: list[Issue] = []
+    for item, style, path in placed:
+        boxes = figure_boxes(style, item.placement)
+        if not boxes.head.inside(FRAME_INNER):
+            issues.append(
+                Issue(
+                    file,
+                    path,
+                    f"head box {_fmt(boxes.head)} is outside the frame {_fmt(FRAME_INNER)}",
+                    "error",
+                )
+            )
+        for label, mine, other in _figure_overlaps(boxes, targets):
+            msg = f"overlaps {label} (character box {_fmt(mine)}, {label} box {_fmt(other)})"
+            issues.append(Issue(file, path, msg, "error"))
+    issues.extend(_head_cover_issues(placed, palette, file))
+    log.debug("slide %d: %d overlap issue(s)", slide_index, len(issues))
+    return issues
+
+
+def _overlap_pixels(upper: tuple[FloatMask, Box], lower: tuple[FloatMask, Box]) -> int:
+    """Pixels where both masks exceed the threshold, in canvas coordinates."""
+    (a, abox), (b, bbox) = upper, lower
+    x0, y0 = int(max(abox.x0, bbox.x0)), int(max(abox.y0, bbox.y0))
+    x1, y1 = int(min(abox.x1, bbox.x1)), int(min(abox.y1, bbox.y1))
+    if x1 <= x0 or y1 <= y0:
+        return 0
+    sa = a[y0 - int(abox.y0) : y1 - int(abox.y0), x0 - int(abox.x0) : x1 - int(abox.x0)]
+    sb = b[y0 - int(bbox.y0) : y1 - int(bbox.y0), x0 - int(bbox.x0) : x1 - int(bbox.x0)]
+    return int(np.count_nonzero((sa > MASK_ALPHA_THRESHOLD) & (sb > MASK_ALPHA_THRESHOLD)))
+
+
+def _head_cover_issues(
+    placed: list[tuple[PlacedCharacter, CharacterStyle, str]], palette: Palette, file: str
+) -> list[Issue]:
+    if len(placed) < 2:
+        return []
+    bodies = [figure_mask(style, item.placement, palette) for item, style, _ in placed]
+    heads = [head_mask(style, item.placement, palette) for item, style, _ in placed]
+    issues: list[Issue] = []
+    for upper in range(1, len(placed)):  # drawn later = in front
+        for lower in range(upper):
+            count = _overlap_pixels(bodies[upper], heads[lower])
+            if count > HEAD_OVERLAP_TOLERANCE_PX:
+                msg = f"covers the head of {placed[lower][2]} ({count} px)"
+                issues.append(Issue(file, placed[upper][2], msg, "error"))
+    return issues

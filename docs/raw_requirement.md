@@ -154,7 +154,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-23 | Textured regions are produced by drawing a Cairo mask and filling it with a numpy texture (§5.6).                                            | M   |
 | FR-24 | Text is rendered with Pillow after all graphics, so no texture or effect touches it.                                                         | M   |
 | FR-25 | Title and subtitle wrap by measured pixel width, honour explicit `\n`, and auto-shrink in 4 px steps to the theme minimum; still too long → validation error. | M |
-| FR-26 | Text, seal, tag pill, and every character's head box stay in the safe zone (§8.2). Robes, props, and decorative layers may extend beyond it. | M   |
+| FR-26 | Text, seal, and tag pill stay in the safe zone (§8.2). Character head boxes stay inside the frame (inset 58); the approved `group` composition extends past the safe zone's right edge. Robes, props, and decorative layers may extend beyond the safe zone. | M   |
 | FR-27 | Progress bar and footer are optional chrome (`theme.progress_bar`, `theme.footer`); both are off in the approved references.                | M   |
 
 ### 5.4 Scenes and templates
@@ -427,7 +427,7 @@ Default theme: `themes/son_mai/theme.json`. Default output: `output/<slug(title)
 
 Text is centred on x = 505 (the safe zone's centre), not 540.
 
-**Safe-zone check (FR-26).** The check applies to text, the seal, the tag pill, and character head boxes. Robes and props may extend past the safe zone.
+**Safe-zone check (FR-26).** The check applies to text, the seal, and the tag pill. Character head boxes stay inside the frame (inset 58, i.e. x 58–1022, y 58–1862); the approved `group` composition extends past the safe zone's right edge. Robes and props may extend past the safe zone.
 
 **Title placement.** A one-line title has its top at y 1215. A two-line title has its line tops at 1190 and 1190 + step, where step = round(size × 102 / 92).
 

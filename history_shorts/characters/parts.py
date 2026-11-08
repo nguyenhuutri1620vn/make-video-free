@@ -27,6 +27,22 @@ FLAG_TOP: Final = -136
 OAR_SHAFT: Final[tuple[Point, Point]] = ((15.07, -78.0), (25.76, 6.0))
 OAR_BLADE_TOP: Final[Point] = (25.0, 0.0)
 
+# Extreme points of each region in the local frame, for bounding boxes (FR-48). Heads run from
+# the crest (or bun) top to the chin; props include the flag tip or spear tip.
+HEAD_HALF_WIDTH: Final = 6.6
+CHIN_Y: Final = -81.7
+BUN_TOP: Final = -102.3
+CREST_TOP: Final = -110.6
+BODY_HALF_WIDTH: Final = 25.0
+BODY_TOP: Final = -82.0
+BODY_BOTTOM: Final = 1.5
+# (x0, y0, x1, y1) per prop.
+PROP_EXTENT: Final[dict[str, tuple[float, float, float, float]]] = {
+    "flag": (15.5, -139.0, 50.0, 1.0),
+    "spear": (15.1, -144.0, 18.9, 1.0),
+    "oar": (14.5, -78.0, 29.0, 16.0),
+}
+
 # The front part of the oar shaft is redrawn over the near arm between these two heights.
 OAR_GRIP_Y: Final = (-66.0, -55.0)
 SHAFT_BOTTOM: Final = 1
