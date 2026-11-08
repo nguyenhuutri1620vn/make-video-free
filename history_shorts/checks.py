@@ -258,6 +258,8 @@ def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
     name = script.path.name
     for index, slide in enumerate(script.slides):
         scene = slide.scene
+        if isinstance(scene, TemplateScene):
+            _check_template_counts(name, f"slides[{index}].scene", scene, issues)
         if not isinstance(scene, LayerScene):
             continue
         placed: list[Styled] = []
@@ -275,6 +277,18 @@ def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
             issues.items.extend(
                 check_overlaps(index, placed, text, theme, theme.palette, tag=slide.tag, file=name)
             )
+
+
+def _check_template_counts(name: str, base: str, scene: TemplateScene, issues: Issues) -> None:
+    """Character counts of a template: group formation size, landscape boat crew size."""
+    if scene.template == "group" and scene.characters is not None:
+        message = count_error("centre_pair", len(scene.characters))
+        if message is not None:
+            issues.error(name, f"{base}.characters", message)
+    if scene.template == "landscape":
+        for b, boat in enumerate(scene.boats or ()):
+            if len(boat.crew) > MAX_CREW:
+                issues.error(name, f"{base}.boats[{b}].crew", CREW_COUNT_ERROR)
 
 
 def _styled(
