@@ -208,6 +208,9 @@ def _encode_video(
     if music is not None and not music.is_file():
         print(f"ERROR --music: {music} is not a file")
         return ValidationFailed.exit_code
+    if out.is_dir():
+        print(f"ERROR cannot write video to {out}: it is a directory")
+        return EXIT_ERROR
     info = ff.find_ffmpeg()  # before any slide work, so a missing FFmpeg fails fast (AC-14)
     _warn_unsupported_motion(script)
     opts = RenderOptions(
@@ -224,11 +227,19 @@ def _encode_video(
         return EXIT_ERROR
     timings = {"validate": validated - began, "render_slides": time.perf_counter() - phase}
     durations = [slide_duration(s, theme.video.fps) for s in script.slides]
-    assemble(info, paths, durations, theme, opts, timings)
+    try:
+        assemble(info, paths, durations, theme, opts, timings)
+    except OSError as exc:
+        print(f"ERROR cannot write video to {out}: {exc.strerror or exc}")
+        return EXIT_ERROR
     timings["total"] = time.perf_counter() - began
     warnings = [i for i in issues if i.severity == "warning"]
     data = rp.build_report(script, theme, opts, durations, paths, timings, warnings, info)
-    report = rp.write_report(out, data)
+    try:
+        report = rp.write_report(out, data)
+    except OSError as exc:
+        print(f"ERROR cannot write report to {rp.report_path(out)}: {exc.strerror or exc}")
+        return EXIT_ERROR
     _print_summary(script, out, report, sum(durations), timings["total"], len(paths))
     return EXIT_OK
 

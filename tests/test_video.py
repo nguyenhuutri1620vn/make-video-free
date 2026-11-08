@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -131,13 +132,23 @@ def test_mismatched_lengths_rejected(tmp_path: Path, theme: Theme, temp_root: Pa
 
 
 def test_keep_temp_keeps_the_directory_and_its_files(
-    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    theme: Theme,
+    temp_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     calls: RunLog = []
     monkeypatch.setattr(ffmpeg, "run", fake_run(calls, error=lambda c: AssertionError()))
-    assemble(INFO, pngs(tmp_path), [2.0, 2.0], theme, options(tmp_path / "o.mp4", keep_temp=True))
+    with caplog.at_level(logging.INFO, logger="history_shorts.video"):
+        assemble(
+            INFO, pngs(tmp_path), [2.0, 2.0], theme, options(tmp_path / "o.mp4", keep_temp=True)
+        )
     kept = leftovers(temp_root)
     assert len(kept) == 1
+    assert [r.getMessage() for r in caplog.records if r.levelno == logging.INFO] == [
+        f"kept temporary files in {kept[0]}"
+    ]
     assert sorted(p.name for p in kept[0].iterdir()) == [
         "clip_01.mp4", "clip_02.mp4", "list.txt", "video.mp4",
     ]  # fmt: skip

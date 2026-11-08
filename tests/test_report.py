@@ -68,7 +68,7 @@ def test_report_contents(tmp_path: Path, theme: Theme) -> None:
     assert isinstance(slides, list) and len(slides) == len(script.slides)
     assert slides[0] == {
         "index": 1,
-        "duration": slide_duration(script.slides[0], 30),
+        "duration": round(slide_duration(script.slides[0], 30), 3),
         "png": "slides/01.png",
     }
     assert data["total_duration"] == pytest.approx(27.9)

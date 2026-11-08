@@ -62,7 +62,7 @@ def _versions(info: FfmpegInfo) -> dict[str, str]:
 
 def _slide_rows(slides: Sequence[Path], durations: Sequence[float], base: Path) -> list[object]:
     return [
-        {"index": number, "duration": seconds, "png": _relative(png, base)}
+        {"index": number, "duration": round(seconds, 3), "png": _relative(png, base)}
         for number, (png, seconds) in enumerate(zip(slides, durations, strict=True), start=1)
     ]
 

@@ -6,6 +6,7 @@ import json
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +17,7 @@ from history_shorts.ffmpeg import FfmpegInfo
 
 ScriptFactory = Callable[..., Path]
 INFO = FfmpegInfo(Path("ffmpeg"), Path("ffprobe"), (8, 1))
+VERBOSE_FLAGS: list[bool] = []  # the ``verbose`` argument of each fake ffmpeg run
 TWO = [{"title": "Mê Linh", "duration": 2.0}, {"title": "Hai Bà Trưng", "duration": 3.5}]
 
 
@@ -36,9 +38,11 @@ def temp_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def fake_ffmpeg(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     """Pretend FFmpeg is installed; every command just writes its output file."""
     calls: list[list[str]] = []
+    VERBOSE_FLAGS.clear()
 
     def run(cmd: list[str], *, verbose: bool) -> None:
         calls.append(cmd)
+        VERBOSE_FLAGS.append(verbose)
         Path(cmd[-1]).write_bytes(b"x")
 
     monkeypatch.setattr(ffmpeg, "find_ffmpeg", lambda: INFO)
@@ -105,7 +109,7 @@ def test_music_options_reach_ffmpeg(
     assert len(data["music_sha256"]) == 64
 
 
-def test_keep_temp_prints_nothing_to_delete_and_keeps_files(
+def test_keep_temp_keeps_clips_and_list_file(
     tmp_path: Path,
     tmp_script: ScriptFactory,
     fake_ffmpeg: list[list[str]],
@@ -260,7 +264,7 @@ def test_jobs_still_warns_as_ignored(
     assert "--keep-temp" not in text
 
 
-def test_verbose_logs_commands(
+def test_verbose_flag_reaches_every_ffmpeg_run(
     tmp_path: Path,
     tmp_script: ScriptFactory,
     fake_ffmpeg: list[list[str]],
@@ -268,8 +272,60 @@ def test_verbose_logs_commands(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     script = tmp_script(slides=[{"title": "A", "duration": 2.0}])
-    code, _ = run_cli(argv_for(script, tmp_path / "v.mp4", "--verbose"), capsys)
-    assert code == 0  # fake run bypasses the logging; the flag must still be accepted
+    assert run_cli(argv_for(script, tmp_path / "a.mp4", "--verbose"), capsys)[0] == 0
+    assert VERBOSE_FLAGS == [True, True, True]
+    VERBOSE_FLAGS.clear()
+    assert run_cli(argv_for(script, tmp_path / "b.mp4"), capsys)[0] == 0
+    assert VERBOSE_FLAGS == [False, False, False]
+
+
+def test_out_is_a_directory_fails_before_any_work(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out = tmp_path / "dir.mp4"
+    out.mkdir()
+    code, text = run_cli(argv_for(tmp_script(slides=TWO), out), capsys)
+    assert code == 1
+    assert f"ERROR cannot write video to {out}: it is a directory" in text
+    assert fake_ffmpeg == [] and not (tmp_path / "slides").exists()
+
+
+def test_write_failure_is_a_clear_error_not_internal(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    temp_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def boom(*_a: object, **_k: object) -> None:
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr("history_shorts.video.os", SimpleNamespace(replace=boom))
+    out = tmp_path / "v.mp4"
+    code, text = run_cli(argv_for(tmp_script(slides=TWO), out), capsys)
+    assert code == 1
+    assert f"ERROR cannot write video to {out}: Permission denied" in text
+    assert "internal" not in text
+    assert list(temp_root.iterdir()) == []
+
+
+def test_report_write_failure_is_a_clear_error(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    temp_root: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out = tmp_path / "v.mp4"
+    (tmp_path / "v.report.json").mkdir()  # a directory where the report file belongs
+    code, text = run_cli(argv_for(tmp_script(slides=TWO), out), capsys)
+    assert code == 1
+    assert f"ERROR cannot write report to {tmp_path / 'v.report.json'}: " in text
+    assert "internal" not in text
 
 
 def test_zoom_in_motion_warns_and_renders_without_motion(
