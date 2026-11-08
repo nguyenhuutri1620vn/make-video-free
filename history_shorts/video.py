@@ -40,6 +40,7 @@ class RenderOptions:
     keep_temp: bool = False
     jobs: int = 1
     verbose: bool = False
+    motions: tuple[str, ...] = ()  # per slide; missing entries mean "none" (FR-84)
 
 
 def default_jobs() -> int:
@@ -82,9 +83,10 @@ def _encode_clips(
             theme.video.crf,
             fade.fade_in,
             fade.fade_out,
+            motion=opts.motions[index] if index < len(opts.motions) else "none",
             threads=threads,
         )
-        for (png, seconds), clip in zip(jobs, clips, strict=True)
+        for index, ((png, seconds), clip) in enumerate(zip(jobs, clips, strict=True))
     ]
     if opts.jobs <= 1:
         for cmd in cmds:

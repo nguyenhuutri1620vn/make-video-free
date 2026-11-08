@@ -85,9 +85,41 @@ def test_clip_cmd_zero_fades_are_omitted_safely() -> None:
     assert vf == "format=yuv420p"
 
 
-def test_clip_cmd_zoom_in_not_implemented_yet() -> None:
-    with pytest.raises(NotImplementedError):
-        clip_cmd(INFO, Path("a.png"), Path("a.mp4"), 2.0, 30, 20, 0.3, 0.3, motion="zoom_in")
+def test_zoom_in_filter_exact() -> None:
+    cmd = clip_cmd(
+        INFO, Path("/t/01.png"), Path("/t/clip_01.mp4"), 4.0, 30, 20, 0.3, 0.3, motion="zoom_in"
+    )
+    assert cmd == [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-framerate", "30",
+        "-t", "4.000", "-i", "/t/01.png", "-vf",
+        "scale=2160:3840,"
+        "zoompan=z='min(1+0.06*on/120,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+        ":d=1:s=1080x1920:fps=30,"
+        "fade=t=in:st=0:d=0.300,fade=t=out:st=3.700:d=0.300,format=yuv420p",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30",
+        "-an", "/t/clip_01.mp4",
+    ]  # fmt: skip
+
+
+def test_zoom_in_keeps_threads_and_other_args() -> None:
+    args = (INFO, Path("a.png"), Path("a.mp4"), 4.0, 30, 20, 0.3, 0.3)
+    zoom = clip_cmd(*args, motion="zoom_in", threads=2)
+    plain = clip_cmd(*args, threads=2)
+    at = zoom.index("-vf")
+    assert zoom[:at] == plain[:at]
+    assert zoom[at + 2 :] == plain[at + 2 :]
+    assert "-threads" in zoom
+
+
+def test_motion_none_is_unchanged() -> None:
+    args = (INFO, Path("a.png"), Path("a.mp4"), 2.0, 30, 20, 0.3, 0.3)
+    assert clip_cmd(*args, motion="none") == clip_cmd(*args)
+    assert "zoompan" not in " ".join(clip_cmd(*args))
+
+
+def test_unknown_motion_rejected() -> None:
+    with pytest.raises(ValueError, match="motion"):
+        clip_cmd(INFO, Path("a.png"), Path("a.mp4"), 2.0, 30, 20, 0.3, 0.3, motion="pan")
 
 
 def test_concat_list_escapes_quotes_and_uses_posix_paths() -> None:
@@ -330,3 +362,58 @@ def test_clip_smoke_and_probe(tmp_path: Path) -> None:
     assert result.fps == "30/1"
     assert result.audio_codec is None
     assert result.duration > 0
+
+
+def _grid_png(path: Path) -> None:
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (1080, 1920), (240, 240, 240))
+    draw = ImageDraw.Draw(img)
+    for offset in range(-400, 401, 100):  # vertical lines around the centre column
+        draw.line([(540 + offset, 0), (540 + offset, 1919)], fill=(0, 0, 0), width=6)
+    draw.rectangle([520, 940, 560, 980], fill=(200, 30, 30))  # centre marker
+    img.save(path)
+
+
+def _frame(info: FfmpegInfo, video: Path, seek: float, out: Path) -> Any:
+    from PIL import Image
+
+    cmd = [str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y"]
+    cmd += ["-ss", f"{seek:.3f}", "-i", str(video), "-frames:v", "1", str(out)]
+    run(cmd, verbose=False)
+    return Image.open(out).convert("RGB")
+
+
+def _line_distance(img: Any) -> int:
+    """Distance from the centre column to the outermost grid line on the right, on row 200."""
+    row = [img.getpixel((x, 200))[0] for x in range(1080)]
+    return max(x for x in range(540, 1080) if row[x] < 100) - 540
+
+
+@pytest.mark.ffmpeg
+@requires_ffmpeg
+def test_zoom_in_clip_probe_and_magnification(tmp_path: Path) -> None:
+    png = tmp_path / "grid.png"
+    _grid_png(png)
+    info = find_ffmpeg()
+    out = tmp_path / "zoom.mp4"
+    run(clip_cmd(info, png, out, 2.0, 30, 20, 0.0, 0.0, motion="zoom_in"), verbose=False)
+    result = probe(info, out)
+    assert (result.width, result.height) == (1080, 1920)
+    assert (result.codec, result.pix_fmt, result.fps) == ("h264", "yuv420p", "30/1")
+    assert result.duration == pytest.approx(2.0, abs=0.05)
+    count = subprocess.run(
+        [str(info.ffprobe), "-v", "error", "-count_frames", "-select_streams", "v:0",
+         "-show_entries", "stream=nb_read_frames", "-of", "default=nw=1:nk=1", str(out)],
+        capture_output=True, text=True, check=True,
+    )  # fmt: skip
+    assert abs(int(count.stdout.strip()) - 60) <= 1
+
+    first = _frame(info, out, 0.0, tmp_path / "first.png")
+    last = _frame(info, out, 1.9, tmp_path / "last.png")
+    # outermost line at +400 px in the source grows with the zoom
+    ratio = _line_distance(last) / _line_distance(first)
+    assert ratio == pytest.approx(1.06, abs=0.015)
+    for img in (first, last):  # the centre stays put
+        r, g, b = img.getpixel((540, 960))
+        assert (r, g, b) == pytest.approx((200, 30, 30), abs=25)

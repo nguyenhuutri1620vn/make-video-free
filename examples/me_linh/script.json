@@ -18,6 +18,7 @@
       "tag": "MÊ LINH",
       "title": "Con gái Lạc tướng",
       "subtitle": "Theo Đại Việt sử ký toàn thư, Trưng Trắc và Trưng Nhị là con gái Lạc tướng huyện Mê Linh.",
+      "motion": "zoom_in",
       "claim": true,
       "source": 0,
       "scene": { "template": "landscape", "boats": [] }

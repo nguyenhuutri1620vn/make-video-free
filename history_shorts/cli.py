@@ -159,12 +159,6 @@ def _print_sources(script: Script) -> None:
         print(block)
 
 
-def _warn_unsupported_motion(script: Script) -> None:
-    for index, slide in enumerate(script.slides):
-        if slide.motion != "none":
-            print(f"WARN slides[{index}].motion: {slide.motion} is not implemented yet; ignored")
-
-
 def _render_pngs(
     args: argparse.Namespace, script: Script, theme: Theme, out: Path
 ) -> list[Path] | None:
@@ -217,7 +211,6 @@ def _encode_video(
         print(f"ERROR cannot write video to {out}: it is a directory")
         return EXIT_ERROR
     info = ff.find_ffmpeg()  # before any slide work, so a missing FFmpeg fails fast (AC-14)
-    _warn_unsupported_motion(script)
     opts = RenderOptions(
         out=out,
         music=music,
@@ -225,6 +218,7 @@ def _encode_video(
         keep_temp=args.keep_temp,
         jobs=default_jobs() if args.jobs is None else args.jobs,
         verbose=args.verbose,
+        motions=tuple(slide.motion for slide in script.slides),
     )
     phase = time.perf_counter()
     paths = _render_pngs(args, script, theme, out)

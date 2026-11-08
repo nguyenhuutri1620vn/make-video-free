@@ -355,17 +355,26 @@ def test_report_write_failure_is_a_clear_error(
     assert "internal" not in text
 
 
-def test_zoom_in_motion_warns_and_renders_without_motion(
+def test_zoom_in_motion_reaches_clip_cmd_without_warning(
     tmp_path: Path,
     tmp_script: ScriptFactory,
     fake_ffmpeg: list[list[str]],
     temp_root: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    script = tmp_script(slides=[{"title": "A", "duration": 2.0, "motion": "zoom_in"}])
+    script = tmp_script(
+        slides=[
+            {"title": "A", "duration": 2.0, "motion": "zoom_in"},
+            {"title": "B", "duration": 2.0},
+        ]
+    )
     code, text = run_cli(argv_for(script, tmp_path / "v.mp4"), capsys)
     assert code == 0
-    assert "WARN slides[0].motion: zoom_in is not implemented yet" in text
+    assert ".motion" not in text
+    clips = [c for c in fake_ffmpeg if "-loop" in c]
+    vfs = [c[c.index("-vf") + 1] for c in clips]
+    assert sorted("zoompan" in v for v in vfs) == [False, True]
+    assert "zoompan" in vfs[0]  # slide order is kept
 
 
 def test_preview_ignores_video_flags_with_a_warning(

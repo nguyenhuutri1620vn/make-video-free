@@ -116,6 +116,11 @@ def find_ffmpeg(
     return FfmpegInfo(Path(paths["ffmpeg"]), Path(paths["ffprobe"]), version)
 
 
+ZOOM_MAX = 1.06  # final zoom factor of ``zoom_in`` (FR-84)
+ZOOM_PRESCALE = 2  # the image is scaled up by this much before zoompan, so it stays sharp
+VIDEO_SIZE = (1080, 1920)
+
+
 def _secs(value: float) -> str:
     return f"{value:.3f}"
 
@@ -139,8 +144,19 @@ def _fade_filter(duration: float, fade_in: float, fade_out: float) -> str:
     if fade_out > 0:
         start = max(duration - fade_out, 0.0)
         parts.append(f"fade=t=out:st={_secs(start)}:d={_secs(fade_out)}")
-    parts.append("format=yuv420p")
     return ",".join(parts)
+
+
+def _zoom_filter(duration: float, fps: int) -> str:
+    """Slow centred zoom from 100 % to ``ZOOM_MAX`` over ``duration`` (FR-84)."""
+    frames = max(round(duration * fps), 1)
+    width, height = VIDEO_SIZE
+    step = f"{ZOOM_MAX - 1:.2f}"
+    return (
+        f"scale={width * ZOOM_PRESCALE}:{height * ZOOM_PRESCALE},"
+        f"zoompan=z='min(1+{step}*on/{frames},{ZOOM_MAX})'"
+        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={width}x{height}:fps={fps}"
+    )
 
 
 def clip_cmd(
@@ -159,14 +175,17 @@ def clip_cmd(
 
     ``threads`` caps libx264's threads (``-threads N``) when clips encode in parallel.
     """
-    if motion != "none":
-        raise NotImplementedError(f"motion {motion!r} is not supported by clip_cmd yet")
+    if motion not in ("none", "zoom_in"):
+        raise ValueError(f"unknown motion {motion!r}")
+    fades = _fade_filter(duration, fade_in, fade_out)
+    chain = [_zoom_filter(duration, fps)] if motion == "zoom_in" else []
+    vf = ",".join([*chain, *([fades] if fades else []), "format=yuv420p"])
     cap = [] if threads is None else ["-threads", str(threads)]
     return [
         str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y",
         "-loop", "1", "-framerate", str(fps), "-t", _secs(duration),
         "-i", str(png),
-        "-vf", _fade_filter(duration, fade_in, fade_out),
+        "-vf", vf,
         "-c:v", "libx264", *cap, "-preset", X264_PRESET, "-crf", str(crf),
         "-pix_fmt", "yuv420p", "-r", str(fps), "-an", str(out),
     ]  # fmt: skip
