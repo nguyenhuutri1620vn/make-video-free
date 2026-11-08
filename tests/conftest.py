@@ -28,6 +28,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+requires_ffmpeg = pytest.mark.skipif(
+    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
+    reason="ffmpeg and ffprobe are not on PATH",
+)
+"""Reusable marker: skip when FFmpeg is unavailable (pair with ``@pytest.mark.ffmpeg``)."""
+
+
 @pytest.fixture(scope="session")
 def repo_root() -> Path:
     return REPO_ROOT
