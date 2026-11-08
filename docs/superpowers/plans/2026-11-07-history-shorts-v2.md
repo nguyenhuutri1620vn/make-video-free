@@ -905,6 +905,45 @@ def test_head_overlap_reported(): ...
   3. Report the differences, send the PNGs, and **wait for sign-off**.
 - [ ] **Step 6: Commit** `feat(m3): gallery command`. Add a CHANGELOG `M3` entry and open a PR.
 
+### Task 15b: Costume kits (multi-era character architecture)
+
+Added 2026-11-08. The owner wants the series to cover Vietnamese history end to end, including Văn Lang–Âu Lạc, Lý–Trần–Hồ, Lê–Tây Sơn–Nguyễn and modern bộ đội. Today's figure is one fixed silhouette, so this task makes it pluggable. It must cause **no visual change**.
+
+**Files:**
+- Create: `history_shorts/characters/kits/__init__.py` (the `Kit` type and the `KITS` registry), `history_shorts/characters/kits/ancient_female.py` (today's parts and constants, moved from `parts.py`)
+- Modify: `characters/parts.py` (becomes a thin re-export for compatibility, or is removed with imports updated), `characters/figure.py`, `characters/roles.py`, `checks.py`, `gallery.py`
+- Modify: `docs/raw_requirement.md` (FR-45, new Appendix B), `CLAUDE.md` ("Characters" section), `README.md` (Decisions)
+- Test: `tests/test_kits.py`; existing figure, formation and gallery tests stay green unchanged, except for import paths
+
+**Interfaces:**
+- **Produces:**
+  - `Kit` (frozen dataclass), with these fields:
+    - `name: str`
+    - `draw_order: tuple[str, ...]`
+    - `parts: Mapping[str, PartFn]`, where `PartFn = Callable[[Canvas, CharacterStyle, Palette], None]`
+    - `head_parts: frozenset[str]`
+    - `props: frozenset[str]` (the props this kit can draw)
+    - `hand_center: Point`
+    - `shaft_segment: Callable[[str], tuple[Point, Point] | None]`
+    - `extents: KitExtents` (the local boxes for head, body and per-prop extents used by `figure_boxes`)
+  - `KITS: Mapping[str, Kit]` (read-only).
+  - `RolePreset.kit: str = "ancient_female"` and `CharacterStyle.kit: str`.
+- **Behaviour:** `draw_figure`, `figure_boxes`, `figure_mask` and `head_mask` resolve everything through `KITS[style.kit]`. `figure.py` contains no part names and no geometry.
+
+- [ ] **Step 1: Capture a baseline.** Before changing code, render the reference `centre_pair` group, `boat_crew` with an oar and the gallery to PNG in the scratchpad.
+- [ ] **Step 2: Write failing tests.**
+  - `test_figure_py_has_no_kit_geometry`: an AST or grep check that figure.py has no numeric path literals and no part names.
+  - `test_dummy_kit_draws_without_touching_figure_py`: monkeypatch `KITS` with a 1-part test kit plus a role preset using it, then draw and get non-empty alpha.
+  - `test_role_prop_must_be_supported_by_kit`: validation reports `slides[0].scene.layers[0].items[0].prop: prop 'rifle' not supported by kit 'ancient_female'` (rifle is injected through a test kit and role).
+  - `test_every_role_kit_exists`.
+- [ ] **Step 3: Implement** by moving code, not rewriting geometry.
+- [ ] **Step 4: Prove no visual change.** Re-render the Step 1 baselines; they must be byte-identical. Then run the Gate.
+- [ ] **Step 5: Docs.**
+  - FR-45: "each role preset names a costume kit; kits are pluggable part sets".
+  - Appendix B — Era packs (planned after v2.0): Văn Lang–Âu Lạc; Lý–Trần–Hồ; Lê–Tây Sơn–Nguyễn; Hiện đại 1945–1975. Each pack needs owner-approved reference images (prototype → approval → code), new kits, props (sword, rifle at rest, …) and scene layers (nhà sàn, thành quách, làng tre, …). Costumes are stylised (§15), with no likeness of real people (C-06) and weapons at rest.
+  - CLAUDE.md "Characters": "a new era = a new kit module plus role data; never edit figure.py".
+- [ ] **Step 6: Commit** `refactor(m3): pluggable costume kits for multi-era characters`.
+
 ---
 
 ## M4 — Scenes & templates (exit: AC-03, AC-04, AC-05, AC-10; owner sign-off)
