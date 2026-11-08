@@ -17,7 +17,7 @@ from typing import Final
 import numpy as np
 
 from history_shorts.characters.figure import FigureBoxes, figure_boxes, figure_mask, head_mask
-from history_shorts.characters.formations import PlacedCharacter, count_error, place
+from history_shorts.characters.formations import PlacedCharacter, count_error
 from history_shorts.characters.kits import kit_named
 from history_shorts.characters.roles import (
     CharacterStyle,
@@ -40,6 +40,8 @@ from history_shorts.config import (
 from history_shorts.errors import Issue, Issues
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import Box, FloatMask
+from history_shorts.scene.boat import CREW_COUNT_ERROR, MAX_CREW, crew_placements
+from history_shorts.scene.people import placed_characters
 from history_shorts.text import (
     VIETNAMESE_CHARSET,
     TextFitError,
@@ -243,21 +245,28 @@ def _check_kits(script: Script, issues: Issues) -> None:
 # --------------------------------------------------------------------------------------
 
 
-def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
-    """Formation counts, then overlap checks for layer scenes with positioned characters.
+Styled = tuple[PlacedCharacter, CharacterStyle, str]  # placement, style, JSON path
 
-    Template scenes are expanded later (Task 20), which calls ``check_overlaps`` itself.
+
+def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
+    """Counts, then overlap checks for layer scenes with positioned characters and boat crew.
+
+    Placement comes from ``people.placed_characters`` and ``boat.crew_placements``, the same
+    functions the layer drawers use. Template scenes are expanded later (Task 20), which
+    calls ``check_overlaps`` itself.
     """
     name = script.path.name
     for index, slide in enumerate(script.slides):
         scene = slide.scene
         if not isinstance(scene, LayerScene):
             continue
-        placed: list[tuple[PlacedCharacter, CharacterStyle, str]] = []
+        placed: list[Styled] = []
         for layer_index, layer in enumerate(scene.layers):
+            base = f"slides[{index}].scene.layers[{layer_index}]"
             if isinstance(layer, CharactersLayer):
-                base = f"slides[{index}].scene.layers[{layer_index}]"
-                placed.extend(_layer_placed(name, base, layer, theme.palette, issues))
+                placed.extend(_characters_placed(name, base, layer, theme.palette, issues))
+            elif isinstance(layer, BoatLayer):
+                placed.extend(_boat_placed(name, base, layer, theme.palette, issues))
         if placed:
             try:
                 text = plan_text(slide, theme)
@@ -268,9 +277,20 @@ def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
             )
 
 
-def _layer_placed(
+def _styled(
+    placed: Sequence[PlacedCharacter], paths: Sequence[str], palette: Palette
+) -> list[Styled]:
+    """Pair each placement with its resolved style and JSON path; ``[]`` if a key is unknown."""
+    try:
+        styles = [resolve_style(p.spec, palette) for p in placed]
+    except KeyError:
+        return []  # unknown palette keys are reported by the palette check
+    return list(zip(placed, styles, paths, strict=True))
+
+
+def _characters_placed(
     name: str, base: str, layer: CharactersLayer, palette: Palette, issues: Issues
-) -> list[tuple[PlacedCharacter, CharacterStyle, str]]:
+) -> list[Styled]:
     """Place a characters layer; problems become issues and an empty list."""
     specs = layer.items
     if layer.formation is not None:
@@ -287,12 +307,25 @@ def _layer_placed(
     if any(kit_problem(spec) is not None for spec in specs):
         return []  # reported by the kit check
     try:
-        placed = place(layer.formation, specs, layer.baseline)
-        styles = [resolve_style(p.spec, palette) for p in placed]
-    except (KeyError, ValueError):
-        return []  # unknown palette keys are reported by the palette check
+        placed = placed_characters(layer)
+    except ValueError:
+        return []
+    # a formation reorders the specs into draw order, so paths follow the spec objects
     paths = {id(spec): f"{base}.items[{k}]" for k, spec in enumerate(specs)}
-    return [(p, style, paths[id(p.spec)]) for p, style in zip(placed, styles, strict=True)]
+    return _styled(placed, [paths[id(p.spec)] for p in placed], palette)
+
+
+def _boat_placed(
+    name: str, base: str, layer: BoatLayer, palette: Palette, issues: Issues
+) -> list[Styled]:
+    """Place a boat's crew; problems become issues and an empty list."""
+    if len(layer.crew) > MAX_CREW:
+        issues.error(name, f"{base}.crew", CREW_COUNT_ERROR)
+        return []
+    if any(kit_problem(spec) is not None for spec in layer.crew):
+        return []  # reported by the kit check
+    placed = crew_placements(layer)  # in spec order
+    return _styled(placed, [f"{base}.crew[{k}]" for k in range(len(placed))], palette)
 
 
 def _fmt(box: Box) -> str:
@@ -314,7 +347,7 @@ def _figure_overlaps(
 
 def check_overlaps(
     slide_index: int,
-    placed: list[tuple[PlacedCharacter, CharacterStyle, str]],
+    placed: list[Styled],
     text: TextPlan,
     theme: Theme,
     palette: Palette,
@@ -366,9 +399,7 @@ def _overlap_pixels(upper: tuple[FloatMask, Box], lower: tuple[FloatMask, Box]) 
     return int(np.count_nonzero((sa > MASK_ALPHA_THRESHOLD) & (sb > MASK_ALPHA_THRESHOLD)))
 
 
-def _head_cover_issues(
-    placed: list[tuple[PlacedCharacter, CharacterStyle, str]], palette: Palette, file: str
-) -> list[Issue]:
+def _head_cover_issues(placed: list[Styled], palette: Palette, file: str) -> list[Issue]:
     if len(placed) < 2:
         return []
     bodies = [figure_mask(style, item.placement, palette) for item, style, _ in placed]

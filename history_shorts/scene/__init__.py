@@ -9,14 +9,21 @@ from history_shorts.compose import GROUND_LAYER, DrawContext
 from history_shorts.config import Layer
 from history_shorts.primitives import FloatImage
 
-from . import clouds, sky, terrain
+from . import boat, clouds, lotus, people, sky, terrain
 from .registry import LayerDrawer, merge
 
 __all__ = ["LAYER_DRAWERS", "LayerDrawer", "draw_layers"]
 
 # Each layer module registers its own drawers; this read-only view is the single lookup table.
 LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
-    merge(sky.DRAWERS, clouds.DRAWERS, terrain.DRAWERS)
+    merge(
+        sky.DRAWERS,
+        clouds.DRAWERS,
+        terrain.DRAWERS,
+        boat.DRAWERS,
+        lotus.DRAWERS,
+        people.DRAWERS,
+    )
 )
 
 
