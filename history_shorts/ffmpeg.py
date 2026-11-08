@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import FfmpegFailed, FfmpegMissing, FfmpegTooOld
+from .layout import CANVAS_H, CANVAS_W
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +118,8 @@ def find_ffmpeg(
 
 
 ZOOM_MAX = 1.06  # final zoom factor of ``zoom_in`` (FR-84)
-ZOOM_PRESCALE = 2  # the image is scaled up by this much before zoompan, so it stays sharp
-VIDEO_SIZE = (1080, 1920)
+ZOOM_PRESCALE = 4  # zoompan floors its crop origin to whole source pixels; 4x keeps the zoom smooth
+VIDEO_SIZE = (CANVAS_W, CANVAS_H)
 
 
 def _secs(value: float) -> str:

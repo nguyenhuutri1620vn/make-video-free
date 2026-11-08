@@ -372,9 +372,8 @@ def test_zoom_in_motion_reaches_clip_cmd_without_warning(
     assert code == 0
     assert ".motion" not in text
     clips = [c for c in fake_ffmpeg if "-loop" in c]
-    vfs = [c[c.index("-vf") + 1] for c in clips]
-    assert sorted("zoompan" in v for v in vfs) == [False, True]
-    assert "zoompan" in vfs[0]  # slide order is kept
+    zoomed = {Path(c[c.index("-i") + 1]).name: "zoompan" in c[c.index("-vf") + 1] for c in clips}
+    assert zoomed == {"01.png": True, "02.png": False}
 
 
 def test_preview_ignores_video_flags_with_a_warning(

@@ -49,7 +49,7 @@ Covers AC-01 and AC-02 (1080x1920, 30 fps, h264, yuv420p, duration = sum of slid
 ## M6 — Polish
 
 - Task 23: `--jobs N` encodes clips in parallel (FR-87) with a thread pool; the default is CPU count - 1 (`video.default_jobs`), `--jobs 0` is a usage error (exit 2), `--jobs 1` is serial. The concat order is always slide order. The first failure cancels pending clips, waits for running ones, raises the first error in slide order, then cleans up as before.
-- Task 24: `"motion": "zoom_in"` (FR-84). `clip_cmd` pre-scales the slide 2x and runs `zoompan` from 100 % to 106 % about the centre, then the usual fades; `RenderOptions.motions` carries each slide's motion to the clip encoder and the "not implemented" `WARN` is gone. Slide 2 of both examples uses it.
+- Task 24: `"motion": "zoom_in"` (FR-84). `clip_cmd` pre-scales the slide 4x and runs `zoompan` from 100 % to 106 % about the centre, then the usual fades; `RenderOptions.motions` carries each slide's motion to the clip encoder and the "not implemented" `WARN` is gone. Slide 2 of both examples uses it.
 
 ## Unreleased
 

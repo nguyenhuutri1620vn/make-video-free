@@ -92,7 +92,7 @@ def test_zoom_in_filter_exact() -> None:
     assert cmd == [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-framerate", "30",
         "-t", "4.000", "-i", "/t/01.png", "-vf",
-        "scale=2160:3840,"
+        "scale=4320:7680,"
         "zoompan=z='min(1+0.06*on/120,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
         ":d=1:s=1080x1920:fps=30,"
         "fade=t=in:st=0:d=0.300,fade=t=out:st=3.700:d=0.300,format=yuv420p",
@@ -417,3 +417,55 @@ def test_zoom_in_clip_probe_and_magnification(tmp_path: Path) -> None:
     for img in (first, last):  # the centre stays put
         r, g, b = img.getpixel((540, 960))
         assert (r, g, b) == pytest.approx((200, 30, 30), abs=25)
+
+
+def _line_steps(info: FfmpegInfo, tmp_path: Path, prescale: int) -> list[float]:
+    """Frame-to-frame steps of the sub-pixel centroid of a vertical grid line (row 200)."""
+    import numpy as np
+    from PIL import Image
+
+    from history_shorts import ffmpeg as ff
+
+    png = tmp_path / f"grid{prescale}.png"
+    _grid_png(png)
+    out = tmp_path / f"zoom{prescale}.mp4"
+    old = ff.ZOOM_PRESCALE
+    ff.ZOOM_PRESCALE = prescale
+    try:
+        run(clip_cmd(info, png, out, 2.0, 30, 12, 0.0, 0.0, motion="zoom_in"), verbose=False)
+    finally:
+        ff.ZOOM_PRESCALE = old
+    frames = tmp_path / f"f{prescale}"
+    frames.mkdir()
+    cmd = [str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y", "-i", str(out)]
+    run(cmd + [str(frames / "%03d.png")], verbose=False)
+    xs = np.arange(1080, dtype=float)
+    centroids = []
+    for path in sorted(frames.glob("*.png")):
+        row = np.asarray(Image.open(path).convert("L"), dtype=float)[200]
+        weight = np.clip(240.0 - row[900:1080], 0.0, None)  # the +400 px line (x about 940..1000)
+        centroids.append(float((weight * xs[900:1080]).sum() / weight.sum()))
+    return list(np.diff(centroids))
+
+
+def _assert_smooth(steps: list[float]) -> None:
+    import numpy as np
+
+    assert len(steps) >= 58
+    assert min(steps) > -0.1  # no back-step
+    assert float(np.std(steps)) < 0.3
+    assert max(steps) < 1.0
+
+
+@pytest.mark.ffmpeg
+@requires_ffmpeg
+def test_zoom_in_motion_is_smooth(tmp_path: Path) -> None:
+    _assert_smooth(_line_steps(find_ffmpeg(), tmp_path, 4))
+
+
+@pytest.mark.ffmpeg
+@requires_ffmpeg
+def test_zoom_in_judders_at_2x_prescale(tmp_path: Path) -> None:
+    """Documents why ZOOM_PRESCALE is 4: at 2x the smoothness check fails."""
+    with pytest.raises(AssertionError):
+        _assert_smooth(_line_steps(find_ffmpeg(), tmp_path, 2))
