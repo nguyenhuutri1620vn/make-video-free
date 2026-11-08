@@ -11,9 +11,8 @@ from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 from history_shorts.textures import eggshell
 
-from .registry import LayerDrawer, as_drawer
+from .registry import WHITE, LayerDrawer, entry
 
-WHITE: Final = (255, 255, 255)
 OUTLINE_WIDTH: Final = 2.2  # divided by the item scale
 CURL_WIDTH: Final = 1.6
 
@@ -63,4 +62,4 @@ def draw_clouds(img: FloatImage, layer: CloudsLayer, ctx: DrawContext, index: in
     return over(img, lines)
 
 
-DRAWERS: dict[type, LayerDrawer] = {CloudsLayer: as_drawer(draw_clouds)}
+DRAWERS: dict[type, LayerDrawer] = dict([entry(CloudsLayer, draw_clouds)])

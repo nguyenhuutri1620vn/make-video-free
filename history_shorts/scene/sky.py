@@ -11,9 +11,8 @@ from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 from history_shorts.textures import gold_leaf
 
-from .registry import LayerDrawer, as_drawer
+from .registry import WHITE, LayerDrawer, entry
 
-WHITE: Final = (255, 255, 255)
 RING_INNER_COLOR: Final = "gold_lt"
 RING_OUTER_COLOR: Final = "gold_dk"
 SUN_RING_WIDTH: Final = 3.0
@@ -61,7 +60,4 @@ def draw_birds(img: FloatImage, layer: BirdsLayer, ctx: DrawContext, index: int)
     return over(img, cv)
 
 
-DRAWERS: dict[type, LayerDrawer] = {
-    SunLayer: as_drawer(draw_sun),
-    BirdsLayer: as_drawer(draw_birds),
-}
+DRAWERS: dict[type, LayerDrawer] = dict([entry(SunLayer, draw_sun), entry(BirdsLayer, draw_birds)])
