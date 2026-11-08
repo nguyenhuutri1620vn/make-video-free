@@ -1,7 +1,8 @@
 """Contact sheet of every role x facing x prop on lacquer ground (FR-04).
 
 Layer-type rows are added with the scene layers (Task 20). Each figure uses its role
-preset's crest, so crest variants are not part of the sheet.
+preset's crest, so crest variants are not part of the sheet. A cell whose prop the role's
+costume kit cannot draw stays empty; the columns keep their places.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 from history_shorts.canvas import Canvas
 from history_shorts.characters import ROLES, resolve_style
 from history_shorts.characters.figure import Placement, draw_figure
+from history_shorts.characters.kits import kit_named
 from history_shorts.compose import over, rng_for
 from history_shorts.config import CharacterSpec, Theme
 from history_shorts.layout import CANVAS_W
@@ -59,13 +61,19 @@ class GalleryCell:
 
 
 def grid_cells() -> list[GalleryCell]:
-    """Every cell, row by row: roles in preset order, +1 then -1, props left to right."""
+    """Every cell, row by row: roles in preset order, +1 then -1, props left to right.
+
+    Props the role's kit cannot draw get no cell.
+    """
     cells: list[GalleryCell] = []
     for role_index, role in enumerate(ROLES):
+        drawable = kit_named(ROLES[role].kit).props
         for facing_index, facing in enumerate(FACINGS):
             row = role_index * len(FACINGS) + facing_index
             y0 = HEADER_H + row * CELL_H
             for column, prop in enumerate(PROPS):
+                if prop not in drawable:
+                    continue
                 x0 = column * CELL_W
                 box = Box(x0, y0, x0 + CELL_W, y0 + CELL_H)
                 placement = Placement(x0 + CELL_W / 2, box.y1 - FEET_MARGIN, FIGURE_H, facing)

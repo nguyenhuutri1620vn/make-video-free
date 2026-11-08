@@ -61,7 +61,7 @@ compose.py     float32 RGB buffer; over() premultiplied compositing; fill_mask()
 chrome.py      frame + corner scrolls, waves; seal and tag pill (Pillow)
 text.py        wrap by pixel width, auto-shrink, glyph check, title/subtitle drawing (Pillow)
 scene/         layer registry + layers (sky, terrain, clouds, boat, lotus) + templates (group, landscape)
-characters/    CharacterSpec, ROLES presets, parts, figure (drawing order), formations
+characters/    CharacterSpec, ROLES presets, kits (parts per era), figure (draws via kit), formations
 ffmpeg.py      discovery, version check, command builders, run with stderr capture
 video.py       clips, concat, music, atomic output
 report.py      render report + sources block
@@ -87,10 +87,11 @@ Data flows one way: `config` → `scene.templates` (expand) → `compose` → PN
 
 - Local frame: feet at (0,0), height 100 units, y up negative. Place with `translate(x, baseline)` then `scale(facing * h/100, h/100)`. Mirroring is only ever done with `scale(-1, 1)`; never mirror coordinates by hand.
 - Drawing order (FR-41) matters for correctness: hair back → back prop shaft and head → robe → belt and sash → sleeves → **front prop shaft** → hand → neck → face → features → front hair → bun and hairpin → headwrap → crest. The front shaft makes the hand visibly grip the spear or flag.
-- Keep proportions from `docs/reference/prototype/figures.py` as named constants in `characters/parts.py` (e.g. `HEAD_CENTER_Y = -88.5`, `SHOULDER_Y = -79`, `WAIST_Y = -55`, `HEM_HALF_WIDTH = 25`, `PROP_X = 17`).
+- Keep proportions from `docs/reference/prototype/figures.py` as named constants in `characters/kits/ancient_female.py` (re-exported by `characters/parts.py`) (e.g. `HEAD_CENTER_Y = -88.5`, `SHOULDER_Y = -79`, `WAIST_Y = -55`, `HEM_HALF_WIDTH = 25`, `PROP_X = 17`).
 - Faces stay minimal: ivory oval, faint pink cheeks, thin brows, downcast closed-eye arcs, a tiny nose line, small vermilion lips. Do not add pupils, eyelashes, ears, or shading.
 - Do **not** draw loose side-lock strokes beside the face; they read as black streaks (removed after owner feedback).
 - Roles are data (`ROLES` dict of presets); adding a role must not require editing `figure.py`.
+- Costume kits (FR-45): `characters/kits/` holds one module per kit (parts, draw order, head parts, props, extents) registered in `KITS`; each role preset names its kit. A new era = a new kit module plus role data; never edit `figure.py`.
 - Formations compute positions only; they draw back rows first and set `facing` outward for characters left/right of centre.
 - After placing characters, compute each character's bounding box (including flag and spear tip) and fail validation on overlap with the seal, tag pill, text regions, or another head (FR-48).
 

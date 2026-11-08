@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
 import pytest
 
 from history_shorts.canvas import Canvas
-from history_shorts.characters import figure, parts, resolve_style
+from history_shorts.characters import kits, parts, resolve_style
 from history_shorts.characters.figure import DRAW_ORDER, Placement, draw_figure
+from history_shorts.characters.kits import KITS
 from history_shorts.characters.parts import (
     HAND_CENTER,
     HEAD_CENTER_Y,
@@ -180,7 +182,10 @@ def test_parts_called_in_draw_order(palette: Any, monkeypatch: pytest.MonkeyPatc
     def recorder(name: str) -> Any:
         return lambda cv, style, pal: calls.append(name)
 
-    monkeypatch.setattr(figure, "_PARTS", {name: recorder(name) for name in DRAW_ORDER})
+    kit = KITS["ancient_female"]
+    recorders = {name: recorder(name) for name in DRAW_ORDER}
+    patched = dataclasses.replace(kit, parts=recorders)
+    monkeypatch.setattr(kits, "KITS", MappingProxyType({**KITS, kit.name: patched}))
     style = resolve_style(CharacterSpec(role="leader"), palette)
     draw_figure(Canvas(50, 50), style, Placement(25, 40, 30, 1), palette)
     assert calls == list(DRAW_ORDER)

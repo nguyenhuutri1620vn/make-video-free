@@ -1,56 +1,31 @@
-"""Draw one character: placement transform plus the FR-41 part order."""
+"""Draw, box and mask one character through its costume kit (FR-41, FR-45, FR-48).
+
+This module knows the placement transform and nothing about how a character looks: part
+names, drawing order, head parts and local extents all come from ``kits.kit_for(style)``.
+A new era adds a kit module and role data; this file does not change.
+"""
 
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Final
 
 import numpy as np
 
 from history_shorts.canvas import Canvas
-from history_shorts.characters import parts
-from history_shorts.characters.roles import CharacterStyle
+from history_shorts.characters.kits import KITS, LocalBox, kit_for
+from history_shorts.characters.roles import DEFAULT_KIT, CharacterStyle
 from history_shorts.config import Palette
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import Box, FloatMask
 
-LOCAL_HEIGHT: Final = 100.0
+LOCAL_HEIGHT: Final = 100.0  # the shared local frame: feet at (0, 0), 100 units tall
 
-PartFunction = Callable[[Canvas, CharacterStyle, Palette], None]
-
-DRAW_ORDER: Final[tuple[str, ...]] = (
-    "hair_back",
-    "prop_back",
-    "robe",
-    "belt",
-    "sleeves",
-    "prop_front",
-    "hand",
-    "neck",
-    "face",
-    "features",
-    "hair_front",
-    "bun",
-    "headwrap",
-    "crest",
-)
-
-# Parts that make up the head for the "nobody covers a head" check (FR-48).
-HEAD_PARTS: Final[tuple[str, ...]] = (
-    "hair_back",
-    "neck",
-    "face",
-    "features",
-    "hair_front",
-    "bun",
-    "headwrap",
-    "crest",
-)
+# Compatibility alias: the default kit's FR-41 order. Drawing uses the style's own kit.
+DRAW_ORDER: Final[tuple[str, ...]] = KITS[DEFAULT_KIT].draw_order
 MASK_MARGIN: Final = 4  # px around a box so anti-aliased edges and strokes are inside
-
-_PARTS: Final[dict[str, PartFunction]] = {name: getattr(parts, name) for name in DRAW_ORDER}
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +53,7 @@ class FigureBoxes:
     prop: Box | None
 
 
-def _transform_box(local: tuple[float, float, float, float], placement: Placement) -> Box:
+def _transform_box(local: LocalBox, placement: Placement) -> Box:
     """Map a local-frame box through the placement; mirroring flips the x order."""
     unit = placement.height / LOCAL_HEIGHT
     lx0, ly0, lx1, ly1 = local
@@ -88,13 +63,11 @@ def _transform_box(local: tuple[float, float, float, float], placement: Placemen
 
 
 def figure_boxes(style: CharacterStyle, placement: Placement) -> FigureBoxes:
-    """Head, body and prop boxes from the parts' extreme points; nothing is rendered."""
-    top = parts.CREST_TOP if style.crest else parts.BUN_TOP
-    half = parts.HEAD_HALF_WIDTH
-    head = _transform_box((-half, top, half, parts.CHIN_Y), placement)
-    wide = parts.BODY_HALF_WIDTH
-    body = _transform_box((-wide, parts.BODY_TOP, wide, parts.BODY_BOTTOM), placement)
-    extent = parts.PROP_EXTENT.get(style.prop)
+    """Head, body and prop boxes from the kit's extents; nothing is rendered."""
+    extents = kit_for(style).extents
+    head = _transform_box(extents.head_box(style.crest), placement)
+    body = _transform_box(extents.body, placement)
+    extent = extents.props.get(style.prop)
     prop = None if extent is None else _transform_box(extent, placement)
     return FigureBoxes(head, body, prop)
 
@@ -104,15 +77,19 @@ def draw_figure(
     style: CharacterStyle,
     placement: Placement,
     palette: Palette,
-    names: Iterable[str] = DRAW_ORDER,
+    names: Iterable[str] | None = None,
 ) -> None:
-    """Draw ``names`` (default all parts) in FR-41 order; mirroring is only ``scale(-1, 1)``."""
+    """Draw ``names`` (default: the kit's whole draw order); mirroring is only ``scale(-1, 1)``.
+
+    ``names`` must be in the kit's draw order; ``KeyError`` for a name the kit lacks.
+    """
+    kit = kit_for(style)
     unit = placement.height / LOCAL_HEIGHT
     cv.save()
     cv.translate(placement.x, placement.baseline)
     cv.scale(placement.facing * unit, unit)
-    for name in names:
-        _PARTS[name](cv, style, palette)
+    for name in kit.draw_order if names is None else names:
+        kit.parts[name](cv, style, palette)
     cv.restore()
 
 
@@ -120,7 +97,7 @@ def _render_mask(
     style: CharacterStyle,
     placement: Placement,
     palette: Palette,
-    names: tuple[str, ...],
+    names: tuple[str, ...] | None,
     area: Box,
 ) -> tuple[FloatMask, Box]:
     """Alpha of ``names`` on a canvas cropped to ``area`` (+ margin, clamped to the frame).
@@ -150,19 +127,20 @@ def figure_mask(
     area = boxes.head.union(boxes.body)
     if boxes.prop is not None:
         area = area.union(boxes.prop)
-    return _render_mask(style, placement, palette, DRAW_ORDER, area)
+    return _render_mask(style, placement, palette, None, area)
 
 
 def head_mask(
     style: CharacterStyle, placement: Placement, palette: Palette
 ) -> tuple[FloatMask, Box]:
-    """Alpha of the visible head: head parts from the crest down to the chin line.
+    """Alpha of the visible head: the kit's head parts, from the top down to its chin line.
 
     The hair behind the robe hangs below the chin but is hidden by the robe, so the mask
     stops at the chin; covering it would hide nothing.
     """
-    head = figure_boxes(style, placement).head
-    mask, box = _render_mask(style, placement, palette, HEAD_PARTS, head)
+    kit = kit_for(style)
+    head = figure_boxes(style, placement).head  # bottom edge = the kit's chin_y, placed
+    mask, box = _render_mask(style, placement, palette, kit.head_order, head)
     chin = math.ceil(head.y1) - int(box.y0)
     mask[max(chin, 0) :, :] = 0
     return mask, box

@@ -29,6 +29,7 @@ Covers AC-06 (formations and figures never overlap seal, tag, text or another he
 - Task 13: figure parts in FR-41 drawing order, with the oar grip.
 - Task 14: figure boxes, formations (`centre_pair`, `line`, `v_shape`) and FR-48 overlap checks.
 - Task 15: `gallery [--theme PATH] [--out PATH]` writes a 1080x3000 contact sheet (default `output/gallery.png`): 4 props across, 8 role x facing rows down (roles in preset order, facing +1 then -1), on one lacquer ground, each cell labelled `role · facing · prop`. Figures use their role preset's crest. Layer-type rows arrive with the scene layers (Task 20).
+- Task 15b: costume kits (FR-45). The figure is drawn, boxed and masked through `KITS[style.kit]`; today's parts moved verbatim to the `ancient_female` kit (`characters/parts.py` re-exports it). Roles name their kit; `validate` rejects unknown kits and props a kit cannot draw. No visual change (byte-identical renders and gallery). Spec: FR-45 amended, Appendix B (era packs, planned after v2.0) added.
 
 ## Unreleased
 

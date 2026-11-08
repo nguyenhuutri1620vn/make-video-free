@@ -2,7 +2,8 @@
 
 ``load_script`` and ``load_theme`` validate each file alone. Here the two are checked
 against each other: font glyph coverage, text fit and auto-shrink, and palette keys named by
-character overrides. FR-48 overlap checks live here too: character boxes against the seal,
+character overrides, and costume kits (FR-45): each role's kit must exist and draw the
+character's prop. FR-48 overlap checks live here too: character boxes against the seal,
 tag and text, and pixel masks for "no character covers another character's head".
 """
 
@@ -17,7 +18,13 @@ import numpy as np
 
 from history_shorts.characters.figure import FigureBoxes, figure_boxes, figure_mask, head_mask
 from history_shorts.characters.formations import PlacedCharacter, count_error, place
-from history_shorts.characters.roles import CharacterStyle, resolve_style
+from history_shorts.characters.kits import kit_named
+from history_shorts.characters.roles import (
+    CharacterStyle,
+    preset_for,
+    resolve_style,
+    resolved_prop,
+)
 from history_shorts.chrome import FRAME_INNER_INSET, seal_box, tag_box, tag_too_wide
 from history_shorts.config import (
     BoatLayer,
@@ -66,6 +73,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     _check_text_fit(script, theme, issues)
     _check_tag_width(script, theme, issues)
     _check_palette_refs(script, theme, issues)
+    _check_kits(script, issues)
     _check_characters(script, theme, issues)
     return issues.items
 
@@ -196,6 +204,41 @@ def _indexed(path: str, specs: tuple[CharacterSpec, ...]) -> Iterator[tuple[str,
 
 
 # --------------------------------------------------------------------------------------
+# Costume kits (FR-45)
+# --------------------------------------------------------------------------------------
+
+
+def kit_problem(spec: CharacterSpec) -> tuple[str, str] | None:
+    """(field, message) when the spec's role kit is unknown or cannot draw its prop.
+
+    An unknown role is the script loader's error, so it is not reported here.
+    """
+    try:
+        preset = preset_for(spec)
+    except KeyError:
+        return None
+    try:
+        kit = kit_named(preset.kit)
+    except KeyError:
+        return "role", f"role '{spec.role}' uses unknown kit '{preset.kit}'"
+    prop = resolved_prop(spec, preset)
+    if prop not in kit.props:
+        return "prop", f"prop '{prop}' not supported by kit '{kit.name}'"
+    return None
+
+
+def _check_kits(script: Script, issues: Issues) -> None:
+    for index, slide in enumerate(script.slides):
+        if slide.scene is None:
+            continue
+        for path, spec in _scene_characters(slide.scene, f"slides[{index}].scene"):
+            problem = kit_problem(spec)
+            if problem is not None:
+                field, message = problem
+                issues.error(script.path.name, f"{path}.{field}", message)
+
+
+# --------------------------------------------------------------------------------------
 # Characters: counts and placement (FR-47, FR-48)
 # --------------------------------------------------------------------------------------
 
@@ -241,6 +284,8 @@ def _layer_placed(
             issues.error(name, f"{base}.items[{k}].x", "needs x without a formation")
         if missing:
             return []
+    if any(kit_problem(spec) is not None for spec in specs):
+        return []  # reported by the kit check
     try:
         placed = place(layer.formation, specs, layer.baseline)
         styles = [resolve_style(p.spec, palette) for p in placed]

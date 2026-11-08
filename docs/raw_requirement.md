@@ -179,7 +179,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-42 | Robe: crossed-collar (*giao lĩnh*) silhouette with flared hem, vertical gradient, back-fold shadow, ivory under-collar, lapel trim line, hem band with dots, thin gold outline. | M |
 | FR-43 | Face: ivory oval, faint pink cheeks, thin brows, downcast closed-eye arcs, tiny nose line, small vermilion lips. No other detail.     | M   |
 | FR-44 | Hands: fist shape with three finger lines and a thumb line, gripping the prop shaft, which passes in front of the sleeve. This holds for `flag`, `spear`, and `oar`. The oar shaft is the line through the hand centre (17.3, −60.5) and the blade top (25, 0), drawn from y −78 to y 6, with a front shaft segment drawn like the spear and flag. | M |
-| FR-45 | Roles (presets): `leader` (vermilion robe, gold trim, gold headwrap, fan crest, flag); `general` (dark vermilion, dark-gold trim, red headwrap, spear); `general_alt` (brown robe, red trim, spear); `boat_crew` (jade robe, oar). Any field can be overridden. | M |
+| FR-45 | Roles (presets): `leader` (vermilion robe, gold trim, gold headwrap, fan crest, flag); `general` (dark vermilion, dark-gold trim, red headwrap, spear); `general_alt` (brown robe, red trim, spear); `boat_crew` (jade robe, oar). Any field can be overridden. Each role preset names a costume kit; kits are pluggable part sets (drawing order, head parts, supported props, extents). All v2.0 roles use the `ancient_female` kit; a prop the role's kit cannot draw is a validation error. Era packs are planned (Appendix B). | M |
 | FR-46 | Props: `flag` (swallow-tail banner with gold border, inner lines, roundel, finial), `spear` (leaf blade and red tassel), `oar`, `none`. | M |
 | FR-47 | Formations: `centre_pair` (two front leaders 565 px, middle pair 475 px, outer pair 420 px at x ≈ 432/648, 285/795, 150/930), `line`, `v_shape`. Back rows drawn first. Outer characters face outward so props never cross the centre. | M |
 | FR-48 | No character or prop overlaps the seal, the tag pill, a text box, or another character's head.                                     | M   |
@@ -527,8 +527,12 @@ history-shorts/
 │   │   └── lotus.py
 │   ├── characters/
 │   │   ├── __init__.py         # CharacterSpec, ROLES
-│   │   ├── figure.py           # drawing order FR-41
-│   │   ├── parts.py            # hair, robe, sleeves, belt, head, props
+│   │   ├── figure.py           # placement, boxes, masks; draws through the kit
+│   │   ├── kits/               # costume kits (FR-45)
+│   │   │   ├── __init__.py     # KITS registry, kit_for
+│   │   │   ├── base.py         # Kit, KitExtents
+│   │   │   └── ancient_female.py   # hair, robe, sleeves, belt, head, props; FR-41 order
+│   │   ├── parts.py            # compatibility re-export of ancient_female
 │   │   └── formations.py
 │   ├── ffmpeg.py
 │   ├── video.py
@@ -662,3 +666,25 @@ Recorded so later work does not contradict it. Nothing here is implemented in v2
 **A.2 Motions.** Pan, pop-up name cards, colour-tone shift, split screen.
 
 **A.3 Poses.** Kneeling and riding an elephant (see FR-50).
+
+---
+
+## Appendix B — Era packs (planned after v2.0)
+
+Recorded so v2.0 code leaves room for them. Nothing here is implemented in v2.0, and the hard constraints (§2) stay unchanged.
+
+The series is meant to cover Vietnamese history end to end. Each era pack adds:
+
+- owner-approved reference images first (prototype → approval → code), as for v2.0;
+- new costume kits (FR-45), each a new kit module plus role presets, with no change to `figure.py`;
+- new props (sword, rifle at rest, …), drawn by the kits that support them;
+- new scene layers (nhà sàn, thành quách, làng tre, …).
+
+| Pack | Era |
+|------|-----|
+| B.1 | Văn Lang–Âu Lạc |
+| B.2 | Lý–Trần–Hồ |
+| B.3 | Lê–Tây Sơn–Nguyễn |
+| B.4 | Hiện đại 1945–1975 (bộ đội) |
+
+Costumes stay stylised, not reconstructions (§15); no likeness of real people (C-06); weapons are held at rest.
