@@ -21,6 +21,15 @@ Slides now render end to end with chrome and text only (scenes arrive in M4). Co
 - Task 10: frame, corner scrolls, waves, seal, tag pill, optional progress bar and footer.
 - Task 11: `render --preview` writes `<out dir>/slides/NN.png` (1-based, atomic per file, never deletes stale files, which are reported as `WARN`). `render` validates first (exit 3 on errors) and accepts every spec §7 flag; `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted and ignored with a `WARN`. Without `--preview` it renders the PNGs, then exits 1 with "video assembly is not implemented yet (milestone M5)". New modules: `output.py` (slug, default output path), `render.py`.
 
+## M3 — Characters
+
+Covers AC-06 (formations and figures never overlap seal, tag, text or another head) and AC-07 (every role x facing x prop x crest draws, with the hand on the shaft); FR-04 for characters.
+
+- Task 12: role presets (`ROLES`) and style resolution; roles are data only.
+- Task 13: figure parts in FR-41 drawing order, with the oar grip.
+- Task 14: figure boxes, formations (`centre_pair`, `line`, `v_shape`) and FR-48 overlap checks.
+- Task 15: `gallery [--theme PATH] [--out PATH]` writes a 1080x3000 contact sheet (default `output/gallery.png`): 4 props across, 8 role x facing rows down (roles in preset order, facing +1 then -1), on one lacquer ground, each cell labelled `role · facing · prop`. Figures use their role preset's crest. Layer-type rows arrive with the scene layers (Task 20).
+
 ## Unreleased
 
 ### Docs

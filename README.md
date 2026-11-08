@@ -26,11 +26,14 @@ brew reinstall --build-from-source freetype
 python -m history_shorts validate --script examples/nu_tuong/script.json
 python -m history_shorts render --script examples/nu_tuong/script.json --preview
 python -m history_shorts render --script examples/me_linh/script.json --preview --out output/me_linh.mp4 --debug-safe-zone
+python -m history_shorts gallery --out output/gallery.png
 ```
 
 `render --preview` validates the script first (exit 3 and nothing written on any error), then writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; the video itself is not produced yet (milestone M5), so without `--preview` the command renders the PNGs and then exits 1 with a clear message. Slides are chrome and text only until the scenes arrive in M4.
 
 PNGs are written atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted but ignored for now (a `WARN` says so). `--verbose` logs the time per slide; `--debug-safe-zone` outlines the safe zone and regions.
+
+`gallery` renders a 1080x3000 contact sheet of every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest; layer types join the sheet with the scene layers.
 
 ## Fonts
 

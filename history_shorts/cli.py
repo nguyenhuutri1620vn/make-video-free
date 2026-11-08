@@ -28,6 +28,8 @@ EXIT_INTERRUPTED = 130
 # The theme shipped with the package, found from the package location, not the CWD.
 DEFAULT_THEME = Path(__file__).resolve().parent.parent / "themes" / "son_mai" / "theme.json"
 
+DEFAULT_GALLERY = Path("output") / "gallery.png"  # relative to the CWD
+
 # Import name -> (what to install, install hint per platform; None means "same on all").
 _PIP_HINT = 'pip install -e ".[dev]"'
 _CAIRO_HINTS: dict[str, str] = {
@@ -179,9 +181,27 @@ def _cmd_render(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _cmd_stub(args: argparse.Namespace) -> int:
-    print(f"history-shorts {args.command}: not implemented yet")
-    return EXIT_ERROR
+def _cmd_gallery(args: argparse.Namespace) -> int:
+    from history_shorts.gallery import render_gallery
+    from history_shorts.render import write_png
+
+    try:
+        theme, warnings = load_theme(args.theme)
+    except ValidationFailed as exc:
+        return _print_report(exc.issues.items)
+    for issue in warnings:
+        print(f"WARN {issue.format()}")
+    out: Path = args.out
+    started = time.perf_counter()
+    image = render_gallery(theme)
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        write_png(image, out)
+    except OSError as exc:
+        print(f"ERROR cannot write gallery to {out}: {exc.strerror or exc}")
+        return EXIT_ERROR
+    print(f"Wrote gallery to {out} in {time.perf_counter() - started:.1f} s")
+    return EXIT_OK
 
 
 def _add_theme_option(parser: argparse.ArgumentParser) -> None:
@@ -219,7 +239,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"history-shorts {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="{render,validate,gallery}")
     _add_render_parser(sub)
-    sub.add_parser("gallery", help="gallery (not implemented yet)").set_defaults(run=_cmd_stub)
+    gallery = sub.add_parser("gallery", help="contact sheet of every role, facing and prop")
+    _add_theme_option(gallery)
+    gallery.add_argument(
+        "--out", type=Path, default=DEFAULT_GALLERY, help="output PNG (default: output/gallery.png)"
+    )
+    gallery.set_defaults(run=_cmd_gallery)
     validate = sub.add_parser("validate", help="check a script and theme without rendering")
     validate.add_argument("--script", type=Path, required=True, help="path to script.json")
     _add_theme_option(validate)

@@ -21,7 +21,3 @@ def test_no_subcommand_is_usage_error() -> None:
     with pytest.raises(SystemExit) as exc:
         main([])
     assert exc.value.code == 2
-
-
-def test_gallery_stub_returns_one() -> None:
-    assert main(["gallery"]) == 1
