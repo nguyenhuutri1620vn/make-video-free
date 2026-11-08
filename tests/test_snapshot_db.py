@@ -6,12 +6,17 @@ import importlib.metadata
 import json
 from pathlib import Path
 
+import cairo
 import pytest
 from helpers.snapshots import SNAPSHOT_PACKAGES, SnapshotDb
+from PIL import features
 
 
 def _key() -> str:
-    return ";".join(f"{n}={importlib.metadata.version(n)}" for n in SNAPSHOT_PACKAGES)
+    versions = [f"{n}={importlib.metadata.version(n)}" for n in SNAPSHOT_PACKAGES]
+    versions.append(f"cairo_c={cairo.cairo_version_string()}")
+    versions.append(f"freetype={features.version('freetype2')}")
+    return ";".join(versions)
 
 
 def test_key_names_the_four_drawing_libraries_with_their_versions() -> None:
@@ -19,6 +24,7 @@ def test_key_names_the_four_drawing_libraries_with_their_versions() -> None:
     assert db.key == _key()
     assert db.key.startswith("pycairo=") and ";numpy=" in db.key
     assert ";scipy=" in db.key and ";Pillow=" in db.key
+    assert ";cairo_c=" in db.key and ";freetype=" in db.key  # the bundled C libraries too
 
 
 def test_missing_file_or_key_skips_with_the_update_hint(tmp_path: Path) -> None:

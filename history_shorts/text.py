@@ -58,7 +58,7 @@ VIETNAMESE_CHARSET: Final = _build_charset()
 
 @lru_cache(maxsize=64)
 def _font(path: Path, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(path), size)
+    return ImageFont.truetype(str(path), size, layout_engine=ImageFont.Layout.BASIC)
 
 
 def font(path: Path, size: int) -> ImageFont.FreeTypeFont:
@@ -73,7 +73,7 @@ def _glyph_signature(font: ImageFont.FreeTypeFont, ch: str) -> tuple[tuple[int, 
 
 def missing_glyphs(font_path: Path, chars: str = VIETNAMESE_CHARSET) -> list[str]:
     """Characters whose rendering is identical to the font's ``.notdef`` glyph."""
-    font = ImageFont.truetype(str(font_path), 64)
+    font = ImageFont.truetype(str(font_path), 64, layout_engine=ImageFont.Layout.BASIC)
     notdef = _glyph_signature(font, _NOTDEF)
     return [ch for ch in chars if not ch.isspace() and _glyph_signature(font, ch) == notdef]
 

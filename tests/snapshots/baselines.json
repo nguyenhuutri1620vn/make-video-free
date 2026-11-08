@@ -2,5 +2,9 @@
   "pycairo=1.29.2;numpy=2.4.6;scipy=1.17.1;Pillow=13.0.0": {
     "me_linh": "deebf9b9f7d72efc71a7b22121e6c2b53d10e26e0cc7e96f97efb37f68b5ed70",
     "nu_tuong": "09f05f0879388770cf8ad642a5f7714b8d914de130bdb015d694f342fc00072e"
+  },
+  "pycairo=1.29.2;numpy=2.4.6;scipy=1.17.1;Pillow=13.0.0;cairo_c=1.18.6;freetype=2.14.3": {
+    "me_linh": "deebf9b9f7d72efc71a7b22121e6c2b53d10e26e0cc7e96f97efb37f68b5ed70",
+    "nu_tuong": "09f05f0879388770cf8ad642a5f7714b8d914de130bdb015d694f342fc00072e"
   }
 }

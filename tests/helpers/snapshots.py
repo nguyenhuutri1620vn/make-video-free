@@ -8,7 +8,9 @@ import os
 from pathlib import Path
 from typing import Final
 
+import cairo
 import pytest
+from PIL import features
 
 SNAPSHOT_PACKAGES: Final = ("pycairo", "numpy", "scipy", "Pillow")
 
@@ -19,9 +21,11 @@ class SnapshotDb:
     def __init__(self, path: Path, update: bool) -> None:
         self.path = path
         self.update = update
-        self.key = ";".join(
-            f"{name}={importlib.metadata.version(name)}" for name in SNAPSHOT_PACKAGES
-        )
+        versions = [f"{name}={importlib.metadata.version(name)}" for name in SNAPSHOT_PACKAGES]
+        # The bundled C libraries draw the pixels too (Cairo via pycairo, FreeType via Pillow).
+        versions.append(f"cairo_c={cairo.cairo_version_string()}")
+        versions.append(f"freetype={features.version('freetype2')}")
+        self.key = ";".join(versions)
 
     def _read(self) -> dict[str, dict[str, str]]:
         data: dict[str, dict[str, str]] = json.loads(self.path.read_text(encoding="utf-8"))
