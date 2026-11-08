@@ -284,19 +284,17 @@ def _template_issues(
 def test_group_template_character_count_is_checked(
     tmp_script: Callable[..., Path], theme: Theme
 ) -> None:
-    for count in (0, 7):
+    message = (
+        "formation centre_pair supports 1, 2, 4 or 6 characters (use line or v_shape for 3 or 5)"
+    )
+    for count in (0, 3, 5, 7):
         issues = _template_issues(
             tmp_script, theme, {"template": "group", "characters": [{"role": "general"}] * count}
         )
-        assert [(i.path, i.message) for i in issues] == [
-            ("slides[0].scene.characters", "formation centre_pair supports 1–6 characters")
-        ]
-    assert (
-        _template_issues(
-            tmp_script, theme, {"template": "group", "characters": [{"role": "general"}] * 6}
-        )
-        == []
-    )
+        assert [(i.path, i.message) for i in issues] == [("slides[0].scene.characters", message)]
+    for count in (1, 2, 4, 6):
+        scene = {"template": "group", "characters": [{"role": "general"}] * count}
+        assert _template_issues(tmp_script, theme, scene) == []
 
 
 def test_landscape_template_crew_count_is_checked(

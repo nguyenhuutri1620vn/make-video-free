@@ -46,3 +46,22 @@ def test_check_passes_on_equal_digest_and_fails_on_a_changed_one(tmp_path: Path)
     db.check("nu_tuong", "abc")
     with pytest.raises(AssertionError, match="nu_tuong first slide changed"):
         db.check("nu_tuong", "abd")
+
+
+def test_update_is_atomic_and_leaves_no_tmp_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "baselines.json"
+    path.write_text(json.dumps({"other=1": {"me_linh": "old"}}))
+    before = path.read_text()
+
+    def broken_replace(src: object, dst: object) -> None:
+        raise OSError("rename failed")
+
+    monkeypatch.setattr("helpers.snapshots.os.replace", broken_replace)
+    with pytest.raises(OSError, match="rename failed"):
+        SnapshotDb(path, update=True).check("nu_tuong", "abc")
+    assert path.read_text() == before  # the old file is intact
+    monkeypatch.undo()
+    SnapshotDb(path, update=True).check("nu_tuong", "abc")
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["baselines.json"]

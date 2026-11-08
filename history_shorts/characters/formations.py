@@ -17,13 +17,15 @@ from history_shorts.layout import CANVAS_W
 CENTRE_X: Final = CANVAS_W / 2
 
 # centre_pair: (x offset from the centre, baseline offset, height) per tier, front to back.
-# The pair sits at CENTRE_X -/+ offset; a lone last character stands at CENTRE_X.
+# The pair sits at CENTRE_X -/+ offset. Only whole pairs (2, 4, 6) or a single character
+# (alone at CENTRE_X in the front tier) are allowed: an odd extra character would stand in
+# front of a head (FR-47, FR-48).
 CENTRE_PAIR_TIERS: Final[tuple[tuple[float, float, float], ...]] = (
     (108, 6, 565),  # front: x 432 / 648
     (255, 0, 475),  # middle: x 285 / 795
     (390, -4, 420),  # outer: x 150 / 930
 )
-CENTRE_PAIR_MAX: Final = 2 * len(CENTRE_PAIR_TIERS)
+CENTRE_PAIR_COUNTS: Final = (1, 2, 4, 6)
 
 LINE_X: Final = (150.0, 930.0)
 LINE_HEIGHT: Final = 475.0
@@ -60,8 +62,7 @@ def _centre_pair_slots(count: int, baseline: float) -> list[_Slot]:
     for index in range(count):
         tier = index // 2
         dx, db, height = CENTRE_PAIR_TIERS[tier]
-        alone = index == count - 1 and count % 2 == 1
-        x = CENTRE_X if alone else CENTRE_X + (-dx if index % 2 == 0 else dx)
+        x = CENTRE_X if count == 1 else CENTRE_X + (-dx if index % 2 == 0 else dx)
         slots.append(_Slot(x, baseline + db, height, row=tier))
     return slots
 
@@ -90,9 +91,13 @@ def _v_shape_slots(count: int, baseline: float) -> list[_Slot]:
     return slots
 
 
+CENTRE_PAIR_COUNT_ERROR: Final = (
+    "formation centre_pair supports 1, 2, 4 or 6 characters (use line or v_shape for 3 or 5)"
+)
+
 # name -> (slot builder, maximum count)
 _FORMATIONS: Final = {
-    "centre_pair": (_centre_pair_slots, CENTRE_PAIR_MAX),
+    "centre_pair": (_centre_pair_slots, max(CENTRE_PAIR_COUNTS)),
     "line": (_line_slots, LINE_MAX),
     "v_shape": (_v_shape_slots, V_MAX),
 }
@@ -100,6 +105,8 @@ _FORMATIONS: Final = {
 
 def count_error(formation: str, count: int) -> str | None:
     """The message for a wrong character count, or None when ``count`` fits."""
+    if formation == "centre_pair":
+        return None if count in CENTRE_PAIR_COUNTS else CENTRE_PAIR_COUNT_ERROR
     limit = _FORMATIONS[formation][1]
     if 1 <= count <= limit:
         return None

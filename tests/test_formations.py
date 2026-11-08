@@ -23,6 +23,9 @@ from history_shorts.errors import Issue
 from history_shorts.primitives import Box
 from history_shorts.text import TextPlan, plan_text
 
+CENTRE_PAIR_MESSAGE = (
+    "formation centre_pair supports 1, 2, 4 or 6 characters (use line or v_shape for 3 or 5)"
+)
 REF_ROLES = ["leader", "leader", "general_alt", "general_alt", "general", "general"]
 REF_SPECS = [CharacterSpec(role=r) for r in REF_ROLES]
 REF_TITLE = "Những nữ tướng\nbên Hai Bà Trưng"
@@ -82,13 +85,24 @@ def test_two_characters_take_front_slots() -> None:
     assert summary(placed) == [(432, 1106, 565, -1), (648, 1106, 565, 1)]
 
 
-def test_centre_pair_odd_last_character_is_centred_in_its_tier() -> None:
+def test_centre_pair_single_character_stands_in_the_centre_front() -> None:
     one = place("centre_pair", REF_SPECS[:1], baseline=1100)
     assert summary(one) == [(540, 1106, 565, 1)]
-    three = place("centre_pair", REF_SPECS[:3], baseline=1100)
-    assert summary(three) == [(540, 1100, 475, 1), (432, 1106, 565, -1), (648, 1106, 565, 1)]
-    five = place("centre_pair", REF_SPECS[:1] * 5, baseline=1000)
-    assert summary(five)[0] == (540, 996, 420, 1)
+
+
+@pytest.mark.parametrize("count", [3, 5])
+def test_centre_pair_rejects_odd_counts_above_one(count: int) -> None:
+    with pytest.raises(ValueError, match=r"supports 1, 2, 4 or 6 characters"):
+        place("centre_pair", REF_SPECS[:1] * count, baseline=1100)
+
+
+@pytest.mark.parametrize("count", [1, 2, 4, 6])
+def test_centre_pair_valid_counts_never_cover_a_head(
+    count: int, theme: Theme, palette: Palette, make_slide: SlideFactory
+) -> None:
+    placed = place("centre_pair", REF_SPECS[:count], 1100)
+    issues = overlaps(0, styled(placed, palette), plan_text(make_slide("A"), theme), theme, palette)
+    assert not [i for i in issues if "covers the head" in i.message]
 
 
 def test_explicit_values_override_slots_and_facing() -> None:
@@ -140,6 +154,8 @@ def test_v_shape_steps_outward() -> None:
     ("formation", "count"),
     [
         ("centre_pair", 0),
+        ("centre_pair", 3),
+        ("centre_pair", 5),
         ("centre_pair", 7),
         ("line", 0),
         ("line", 8),
@@ -426,9 +442,17 @@ def test_check_all_formation_count(tmp_script: ScriptFactory, theme: Theme) -> N
     items = [{"role": "general"}] * 7
     slide = layer_slide([{"type": "characters", "formation": "centre_pair", "items": items}])
     issues = check_all(load(tmp_script, [slide]), theme)
-    assert issue_pairs(issues) == [
-        ("slides[0].scene.layers[0].items", "formation centre_pair supports 1–6 characters")
-    ]
+    assert issue_pairs(issues) == [("slides[0].scene.layers[0].items", CENTRE_PAIR_MESSAGE)]
+
+
+@pytest.mark.parametrize("count", [0, 3, 5, 7])
+def test_check_all_centre_pair_counts_other_than_1_2_4_6(
+    count: int, tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    items = [{"role": "general"}] * count
+    slide = layer_slide([{"type": "characters", "formation": "centre_pair", "items": items}])
+    issues = check_all(load(tmp_script, [slide]), theme)
+    assert issue_pairs(issues) == [("slides[0].scene.layers[0].items", CENTRE_PAIR_MESSAGE)]
 
 
 def test_check_all_items_without_formation_need_x(tmp_script: ScriptFactory, theme: Theme) -> None:
@@ -455,15 +479,28 @@ def test_check_all_expands_template_scenes(tmp_script: ScriptFactory, theme: The
     assert check_all(load(tmp_script, [slide]), theme) == []
 
 
-def test_check_all_reports_template_overlaps_with_script_paths(
+@pytest.mark.parametrize("count", [3, 5])
+def test_check_all_rejects_odd_template_group_counts_with_the_script_path(
+    count: int, tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    scene = {"template": "group", "characters": [{"role": "leader"}] * count}
+    issues = check_all(load(tmp_script, [{"title": "A", "scene": scene}]), theme)
+    assert issue_pairs(issues) == [("slides[0].scene.characters", CENTRE_PAIR_MESSAGE)]
+
+
+def test_check_all_reports_template_head_overlaps_with_script_paths(
     tmp_script: ScriptFactory, theme: Theme
 ) -> None:
-    """A third character in a centre pair stands in the middle, in front of a head (FR-48)."""
-    slide = {"title": "A", "scene": {"template": "group", "characters": [{"role": "leader"}] * 3}}
-    issues = check_all(load(tmp_script, [slide]), theme)
-    assert issues
-    assert all(i.severity == "error" and "head" in i.message for i in issues)
-    assert {i.path for i in issues} <= {f"slides[0].scene.characters[{k}]" for k in range(3)}
+    """Explicit positions in a template group still go through the head-cover check (FR-48)."""
+    back = {"role": "general", "x": 540, "baseline": 1100, "height": 475}
+    front = {"role": "leader", "x": 540, "baseline": 1106, "height": 700}
+    slide = {"title": "A", "scene": {"template": "group", "characters": [back, front]}}
+    paths = [
+        i.path
+        for i in check_all(load(tmp_script, [slide]), theme)
+        if "covers the head" in i.message
+    ]
+    assert paths == ["slides[0].scene.characters[1]"]
 
 
 def test_check_all_passes_the_slide_tag_to_the_overlap_check(

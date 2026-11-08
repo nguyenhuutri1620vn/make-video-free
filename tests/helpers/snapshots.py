@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 from typing import Final
 
@@ -32,7 +33,9 @@ class SnapshotDb:
             data = self._read() if self.path.is_file() else {}
             data.setdefault(self.key, {})[example] = digest
             text = json.dumps(data, indent=2, sort_keys=True) + "\n"
-            self.path.write_text(text, encoding="utf-8")
+            tmp = self.path.with_name(self.path.name + ".tmp")
+            tmp.write_text(text, encoding="utf-8")
+            os.replace(tmp, self.path)
             return
         baseline = self._read().get(self.key, {}) if self.path.is_file() else {}
         if example not in baseline:
