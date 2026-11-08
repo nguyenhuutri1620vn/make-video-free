@@ -126,3 +126,18 @@ def test_jobs_4_probes_like_jobs_1(tmp_path: Path, repo_root: Path) -> None:  # 
         ).stdout.strip()  # fmt: skip
         results.append((p.codec, p.width, p.height, p.fps, round(p.duration, 2), frames))
     assert results[0] == results[1]
+
+
+def test_music_without_audio_stream_exit_3(
+    tmp_path: Path, repo_root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from PIL import Image
+
+    cover = tmp_path / "cover.png"
+    Image.new("RGB", (8, 8)).save(cover)
+    script = repo_root / "examples" / "me_linh" / "script.json"
+    out = tmp_path / "res" / "v.mp4"
+    argv = ["render", "--script", str(script), "--out", str(out), "--music", str(cover)]
+    assert main(argv) == 3
+    assert f"ERROR --music: no audio stream in {cover}" in capsys.readouterr().out
+    assert not (out.parent / "slides").exists()

@@ -516,3 +516,13 @@ def test_check_all_passes_the_slide_tag_to_the_overlap_check(
     assert not any(
         "overlaps tag" in i.message for i in check_all(load(tmp_script, [without]), theme)
     )
+
+
+def test_formation_names_have_one_definition() -> None:
+    from history_shorts.characters import formations
+    from history_shorts.scene_config import FORMATION_NAMES
+
+    assert not hasattr(formations, "FORMATION_NAMES")  # defined once, in scene_config
+    for name in FORMATION_NAMES:
+        count = 2 if name == "centre_pair" else 3
+        assert len(place(name, [CharacterSpec(role="leader")] * count, 1000.0)) == count

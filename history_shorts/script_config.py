@@ -126,6 +126,9 @@ def _text(
     child = ctx.at(key)
     raw = ctx.str_(obj, key) if required else ctx.str_(obj, key, default="", non_empty=False)
     value = unicodedata.normalize("NFC", raw)
+    if value and not value.strip():
+        child.error("must not be blank")
+        return value
     emoji = _first_emoji(value)
     if emoji is not None:
         child.error(f"emoji are not supported ({emoji})")

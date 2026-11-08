@@ -73,6 +73,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     issues = Issues()
     _check_theme_fonts(theme, issues)
     _check_used_glyphs(script, theme, issues)
+    _check_theme_text_glyphs(theme, issues)
     _check_text_fit(script, theme, issues)
     _check_tag_width(script, theme, issues)
     _check_palette_refs(script, theme, issues)
@@ -119,6 +120,22 @@ def _check_used_glyphs(script: Script, theme: Theme, issues: Issues) -> None:
             here = [ch for ch in _used_characters(value) if ch in absent]
             if here:
                 issues.error(name, f"slides[{index}].{field}", f"missing glyphs: {', '.join(here)}")
+
+
+def _check_theme_text_glyphs(theme: Theme, issues: Issues) -> None:
+    """Seal lines (title font) and an enabled footer (tag font) must be renderable."""
+    name = theme.path.name
+    chrome = theme.chrome
+    targets: list[tuple[str, str, Path]] = [
+        (f"chrome.seal.lines[{i}]", line, theme.fonts.title)
+        for i, line in enumerate(chrome.seal.lines)
+    ]
+    if chrome.footer.enabled and chrome.footer.text:
+        targets.append(("chrome.footer.text", chrome.footer.text, theme.fonts.tag))
+    for where, text, font_path in targets:
+        absent = missing_glyphs(font_path, _used_characters(text))
+        if absent:
+            issues.error(name, where, f"missing glyphs: {', '.join(absent)}")
 
 
 # --------------------------------------------------------------------------------------

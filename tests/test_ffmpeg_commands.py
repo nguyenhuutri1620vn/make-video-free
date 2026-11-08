@@ -469,3 +469,17 @@ def test_zoom_in_judders_at_2x_prescale(tmp_path: Path) -> None:
     """Documents why ZOOM_PRESCALE is 4: at 2x the smoothness check fails."""
     with pytest.raises(AssertionError):
         _assert_smooth(_line_steps(find_ffmpeg(), tmp_path, 2))
+
+
+def test_has_audio_reads_ffprobe_output() -> None:
+    from history_shorts.ffmpeg import has_audio
+
+    info = FfmpegInfo(Path("ffmpeg"), Path("ffprobe"), (8, 1))
+    assert has_audio(info, Path("a.m4a"), _runner("audio\n"))
+    assert not has_audio(info, Path("a.png"), _runner(""))
+    assert not has_audio(info, Path("a.bin"), _runner("audio\n", code=1))
+
+    def broken(cmd: list[str], **kwargs: Any) -> Any:
+        raise OSError("boom")
+
+    assert not has_audio(info, Path("a.m4a"), broken)

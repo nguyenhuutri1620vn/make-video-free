@@ -211,6 +211,11 @@ def _encode_video(
         print(f"ERROR cannot write video to {out}: it is a directory")
         return EXIT_ERROR
     info = ff.find_ffmpeg()  # before any slide work, so a missing FFmpeg fails fast (AC-14)
+    if info.version is None:
+        print("WARN could not determine the FFmpeg version (dev build?); continuing")
+    if music is not None and not ff.has_audio(info, music):
+        print(f"ERROR --music: no audio stream in {music}")
+        return ValidationFailed.exit_code
     opts = RenderOptions(
         out=out,
         music=music,
@@ -375,7 +380,29 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _make_streams_safe() -> None:
+    """Never let a non-UTF-8 stdout/stderr crash a finished render on Vietnamese text.
+
+    A redirected (non-TTY) stream that is not UTF-8 is switched to UTF-8, so reports and the
+    Sources block stay readable; a console (TTY) keeps its encoding and unencodable characters
+    are replaced with ``?``.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        try:
+            if encoding != "utf8" and not stream.isatty():
+                reconfigure(encoding="utf-8", errors="replace")
+            else:
+                reconfigure(errors="replace")
+        except (OSError, ValueError, LookupError):
+            continue
+
+
 def main(argv: list[str] | None = None) -> int:
+    _make_streams_safe()
     args = build_parser().parse_args(argv)
     try:
         if not _require_runtime():
@@ -388,5 +415,6 @@ def main(argv: list[str] | None = None) -> int:
         print("interrupted")
         return EXIT_INTERRUPTED
     except Exception as exc:  # noqa: BLE001 - last-resort handler: report, never a traceback
+        logging.getLogger(__name__).debug("unexpected error", exc_info=True)
         print(f"ERROR internal: {type(exc).__name__}: {exc}")
         return EXIT_ERROR

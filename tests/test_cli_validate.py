@@ -223,7 +223,11 @@ def test_missing_theme_font_glyphs_are_listed(
     tmp_script: ScriptFactory, theme: Theme, monkeypatch: pytest.MonkeyPatch
 ) -> None:  # AC-08
     def fake(font_path: Path, chars: str = checks.VIETNAMESE_CHARSET) -> list[str]:
-        return ["ơ", "ư"] if font_path == theme.fonts.title and chars else []
+        return (
+            ["ơ", "ư"]
+            if font_path == theme.fonts.title and chars == checks.VIETNAMESE_CHARSET
+            else []
+        )
 
     monkeypatch.setattr(checks, "missing_glyphs", fake)
     script, _ = load(tmp_script, theme)
@@ -432,3 +436,70 @@ def test_keyboard_interrupt_exit_130(
 
 def test_three_errors_file_is_valid_json(repo_root: Path) -> None:
     json.loads((repo_root / "tests" / "data" / "three_errors.json").read_text(encoding="utf-8"))
+
+
+def test_seal_and_footer_glyphs_are_checked(
+    tmp_script: ScriptFactory, theme: Theme, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    chrome = replace(
+        theme.chrome,
+        seal=replace(theme.chrome.seal, lines=("SỬ", "漢")),
+        footer=replace(theme.chrome.footer, enabled=True, text="Việt 漢"),
+    )
+    themed = replace(theme, chrome=chrome)
+    seen: dict[Path, str] = {}
+
+    def fake(font_path: Path, chars: str = checks.VIETNAMESE_CHARSET) -> list[str]:
+        seen[font_path] = chars
+        return [c for c in chars if c == "漢"] if chars != checks.VIETNAMESE_CHARSET else []
+
+    monkeypatch.setattr(checks, "missing_glyphs", fake)
+    script, _ = load(tmp_script, themed)
+    result = messages(script, themed)
+    assert ("theme.json", "chrome.seal.lines[1]", "missing glyphs: 漢", "error") in result
+    assert ("theme.json", "chrome.footer.text", "missing glyphs: 漢", "error") in result
+    assert not any(r[1] == "chrome.seal.lines[0]" for r in result)
+
+
+def test_unexpected_error_logs_traceback_at_debug(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import logging
+
+    from history_shorts import cli
+
+    def boom() -> bool:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(cli, "_require_runtime", boom)
+    with caplog.at_level(logging.DEBUG, logger="history_shorts.cli"):
+        code = main(["validate", "--script", example(repo_root, "nu_tuong")])
+    assert code == 1
+    assert "ERROR internal: RuntimeError: boom" in capsys.readouterr().out
+    records = [r for r in caplog.records if r.exc_info]
+    assert records and records[0].exc_info is not None
+    assert records[0].exc_info[0] is RuntimeError
+
+
+def test_cp1252_redirected_stdout_does_not_crash(
+    repo_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+    import sys
+
+    raw = io.BytesIO()
+    wrapper = io.TextIOWrapper(raw, encoding="cp1252", write_through=True)
+    monkeypatch.setattr(sys, "stdout", wrapper)
+    script = example(repo_root, "nu_tuong")
+    assert main(["validate", "--script", script]) == 0
+    out = tmp_path / "v.mp4"
+    assert main(["render", "--script", script, "--out", str(out), "--preview"]) == 0
+    wrapper.flush()
+    text = raw.getvalue().decode("utf-8")
+    assert "Sources:" in text and "Rendered 5 slides" in text
+    assert (tmp_path / "slides" / "01.png").is_file()

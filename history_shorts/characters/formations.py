@@ -38,8 +38,6 @@ V_STEP_HEIGHT: Final = 0.88
 V_STEP_BASELINE: Final = -4.0
 V_MAX: Final = 7
 
-FORMATION_NAMES: Final = ("centre_pair", "line", "v_shape")
-
 
 @dataclass(frozen=True, slots=True)
 class PlacedCharacter:

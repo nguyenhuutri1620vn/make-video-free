@@ -47,6 +47,7 @@ def fake_ffmpeg(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
         Path(cmd[-1]).write_bytes(b"x")
 
     monkeypatch.setattr(ffmpeg, "find_ffmpeg", lambda: INFO)
+    monkeypatch.setattr(ffmpeg, "has_audio", lambda info, path, runner=None: True)
     monkeypatch.setattr(ffmpeg, "run", run)
     return calls
 
@@ -399,3 +400,35 @@ def test_report_goes_next_to_output_for_unicode_paths(
     code, _ = run_cli(argv_for(script, out), capsys)
     assert code == 0
     assert (out.parent / "nu tuong.report.json").is_file()
+
+
+def test_music_without_audio_stream_is_exit_3_before_rendering(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(ffmpeg, "has_audio", lambda info, path, runner=None: False)
+    music = tmp_path / "cover.png"
+    music.write_bytes(b"not audio")
+    out = tmp_path / "res" / "v.mp4"
+    code, text = run_cli(argv_for(tmp_script(slides=TWO), out, "--music", str(music)), capsys)
+    assert code == 3
+    assert f"ERROR --music: no audio stream in {music}" in text
+    assert fake_ffmpeg == [] and not (out.parent / "slides").exists()
+
+
+def test_unknown_ffmpeg_version_prints_warn_line(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    temp_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    dev = FfmpegInfo(Path("ffmpeg"), Path("ffprobe"), None)
+    monkeypatch.setattr(ffmpeg, "find_ffmpeg", lambda: dev)
+    code, text = run_cli(argv_for(tmp_script(slides=TWO), tmp_path / "v.mp4"), capsys)
+    assert code == 0, text
+    assert "WARN could not determine the FFmpeg version (dev build?); continuing" in text

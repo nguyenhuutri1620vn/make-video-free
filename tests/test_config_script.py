@@ -163,6 +163,9 @@ def test_sourced_claim_is_silent(tmp_script: ScriptFactory) -> None:
         ("motion", "pan", "must be one of none, zoom_in"),
         ("claim", "yes", "must be true or false"),
         ("title", "", "must be a non-empty string"),
+        ("title", "   ", "must not be blank"),
+        ("tag", " \t", "must not be blank"),
+        ("subtitle", "  ", "must not be blank"),
         ("scene", [], "must be an object"),
     ],
 )
@@ -766,3 +769,10 @@ def test_invalid_sources_do_not_cascade_into_source_index_errors(
     errors = _errors(tmp_script(sources=sources, slides=[{"title": "A", "source": 0}]))
     assert errors and all(e.startswith("script.json › sources") for e in errors)
     assert not any("index out of range" in e for e in errors)
+
+
+def test_empty_tag_and_subtitle_stay_allowed(tmp_script: ScriptFactory) -> None:
+    slide = {"title": "A", "tag": "", "subtitle": ""}
+    script, warnings = load_script(tmp_script(slides=[slide]))
+    assert (script.slides[0].tag, script.slides[0].subtitle) == ("", "")
+    assert [w.path for w in warnings] == ["slides"]  # only the total-duration warning

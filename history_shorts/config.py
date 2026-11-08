@@ -8,10 +8,13 @@ public name so callers import from ``history_shorts.config`` only.
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
+
+from PIL import ImageFont
 
 from history_shorts.errors import Issue, Issues, ValidationFailed
 from history_shorts.primitives import RGB
@@ -258,6 +261,9 @@ def _parse_palette(ctx: Ctx, obj: Mapping[str, Any]) -> Palette:
     return Palette(colors)
 
 
+FONT_PROBE_SIZE: Final = 12
+
+
 def _parse_fonts(ctx: Ctx, obj: Mapping[str, Any], base: Path) -> Fonts:
     raw = ctx.section(obj, "fonts", ("title", "subtitle", "tag"), required=True)
     fonts_ctx = ctx.at("fonts")
@@ -267,6 +273,13 @@ def _parse_fonts(ctx: Ctx, obj: Mapping[str, Any], base: Path) -> Fonts:
         target = (base / name).resolve()
         if name and not target.is_file():
             fonts_ctx.at(key).error(f"file not found: {target}")
+        elif name:
+            try:
+                ImageFont.truetype(
+                    str(target), FONT_PROBE_SIZE, layout_engine=ImageFont.Layout.BASIC
+                )
+            except OSError as exc:
+                fonts_ctx.at(key).error(f"cannot load font {target}: {exc}")
         resolved[key] = target
     return Fonts(resolved["title"], resolved["subtitle"], resolved["tag"])
 
@@ -327,7 +340,7 @@ def _read_seal_lines(ctx: Ctx, value: object) -> tuple[str, ...]:
     lines: list[str] = []
     for item_ctx, element in ctx.items(value):
         if isinstance(element, str) and element:
-            lines.append(element)
+            lines.append(unicodedata.normalize("NFC", element))
         else:
             item_ctx.error("must be a non-empty string")
     return tuple(lines)
@@ -366,7 +379,9 @@ def _parse_chrome(ctx: Ctx, obj: Mapping[str, Any]) -> Chrome:
         progress_bar=ch.toggle(raw, "progress_bar", default=False),
         footer=FooterSpec(
             enabled=footer_ctx.bool_(footer, "enabled", default=False),
-            text=footer_ctx.str_(footer, "text", default="", non_empty=False),
+            text=unicodedata.normalize(
+                "NFC", footer_ctx.str_(footer, "text", default="", non_empty=False)
+            ),
         ),
     )
 

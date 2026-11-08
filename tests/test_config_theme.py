@@ -224,3 +224,27 @@ def test_validation_rules(
 ) -> None:
     msgs = _messages(_edit(tmp_theme, mutate))
     assert any(m.startswith(expected) for m in msgs), msgs
+
+
+def test_corrupt_font_is_validation_error(tmp_theme: TmpTheme) -> None:
+    path = tmp_theme()
+    bad = path.parent / "fonts" / "Corrupt.ttf"
+    bad.write_bytes(b"this is not a font")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["fonts"]["title"] = "fonts/Corrupt.ttf"
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    msgs = _messages(path)
+    assert len(msgs) == 1
+    assert msgs[0].startswith(f"theme.json › fonts.title: cannot load font {bad.resolve()}: ")
+
+
+def test_theme_text_is_nfc_normalised(tmp_theme: TmpTheme) -> None:
+    import unicodedata
+
+    def mutate(d: dict[str, Any]) -> None:
+        d["chrome"]["seal"]["lines"] = [unicodedata.normalize("NFD", "SỬ"), "VIỆT"]
+        d["chrome"]["footer"] = {"enabled": True, "text": unicodedata.normalize("NFD", "Việt")}
+
+    theme, _ = load_theme(_edit(tmp_theme, mutate))
+    assert theme.chrome.seal.lines == ("SỬ", "VIỆT")
+    assert theme.chrome.footer.text == "Việt"

@@ -295,3 +295,16 @@ def probe(info: FfmpegInfo, path: Path) -> ProbeResult:
         )
     except (ValueError, KeyError, StopIteration, AttributeError, TypeError) as exc:
         raise FfmpegFailed(cmd, f"unexpected ffprobe output: {exc}") from exc
+
+
+def has_audio(info: FfmpegInfo, path: Path, runner: Runner | None = None) -> bool:
+    """True when ffprobe finds at least one audio stream in ``path``; False on any failure."""
+    cmd = [
+        str(info.ffprobe), "-v", "error", "-select_streams", "a",
+        "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path),
+    ]  # fmt: skip
+    try:
+        result = (runner or _run_text)(cmd)
+    except OSError:
+        return False
+    return result.returncode == 0 and "audio" in result.stdout
