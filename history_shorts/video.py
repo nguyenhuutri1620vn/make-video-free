@@ -71,9 +71,18 @@ def _encode_clips(
     fade = theme.transition
     jobs = list(zip(slides, durations, strict=True))
     clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(jobs) + 1)]
+    threads = max(1, (os.cpu_count() or 2) // opts.jobs) if opts.jobs > 1 else None
     cmds = [
         ffmpeg.clip_cmd(
-            info, png, clip, seconds, theme.video.fps, theme.video.crf, fade.fade_in, fade.fade_out
+            info,
+            png,
+            clip,
+            seconds,
+            theme.video.fps,
+            theme.video.crf,
+            fade.fade_in,
+            fade.fade_out,
+            threads=threads,
         )
         for (png, seconds), clip in zip(jobs, clips, strict=True)
     ]
@@ -81,12 +90,13 @@ def _encode_clips(
         for cmd in cmds:
             ffmpeg.run(cmd, verbose=opts.verbose)
         return clips
-    pool = ThreadPoolExecutor(max_workers=opts.jobs)
-    futures = [pool.submit(ffmpeg.run, cmd, verbose=opts.verbose) for cmd in cmds]
-    try:
-        wait(futures, return_when=FIRST_EXCEPTION)
-    finally:  # also on KeyboardInterrupt in the main thread
-        pool.shutdown(wait=True, cancel_futures=True)
+    futures: list[Future[None]] = []
+    with ThreadPoolExecutor(max_workers=opts.jobs) as pool:
+        try:
+            futures = [pool.submit(ffmpeg.run, cmd, verbose=opts.verbose) for cmd in cmds]
+            wait(futures, return_when=FIRST_EXCEPTION)
+        finally:  # also on KeyboardInterrupt, even during submission
+            pool.shutdown(wait=True, cancel_futures=True)
     _raise_first_failure(futures)
     return clips
 

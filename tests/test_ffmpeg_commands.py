@@ -58,6 +58,15 @@ def test_clip_cmd_exact() -> None:
     ]  # fmt: skip
 
 
+def test_clip_cmd_threads_exact() -> None:
+    args = (INFO, Path("/t/01.png"), Path("/t/clip_01.mp4"), 4.0, 30, 20, 0.3, 0.3)
+    cmd = clip_cmd(*args, threads=2)
+    base = clip_cmd(*args)
+    at = base.index("libx264") + 1
+    assert cmd == [*base[:at], "-threads", "2", *base[at:]]
+    assert clip_cmd(*args, threads=None) == base
+
+
 def test_clip_cmd_fades_scaled_down_when_longer_than_clip() -> None:
     cmd = clip_cmd(INFO, Path("a.png"), Path("a.mp4"), 0.4, 30, 20, 0.3, 0.3)
     vf = cmd[cmd.index("-vf") + 1]

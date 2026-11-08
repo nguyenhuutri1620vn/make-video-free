@@ -332,3 +332,22 @@ def test_first_failure_in_slide_order_is_raised(
     with pytest.raises(FfmpegFailed) as caught:
         assemble(INFO, pngs(tmp_path, 3), [2.0] * 3, theme, options(tmp_path / "o.mp4", jobs=3))
     assert caught.value.stderr_tail == "clip 1"
+
+
+def test_parallel_caps_threads_per_clip(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(os, "cpu_count", lambda: 8)
+    seen: list[list[str]] = []
+
+    def run(cmd: list[str], *, verbose: bool) -> None:
+        if clip_number(cmd) is not None:
+            seen.append(cmd)
+        Path(cmd[-1]).write_bytes(b"x")
+
+    monkeypatch.setattr(ffmpeg, "run", run)
+    assemble(INFO, pngs(tmp_path, 2), [2.0] * 2, theme, options(tmp_path / "o.mp4", jobs=4))
+    assert all(c[c.index("-threads") + 1] == "2" for c in seen) and len(seen) == 2
+    seen.clear()
+    assemble(INFO, pngs(tmp_path, 2), [2.0] * 2, theme, options(tmp_path / "o.mp4", jobs=1))
+    assert all("-threads" not in c for c in seen) and len(seen) == 2

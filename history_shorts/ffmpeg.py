@@ -153,16 +153,21 @@ def clip_cmd(
     fade_in: float,
     fade_out: float,
     motion: str = "none",
+    threads: int | None = None,
 ) -> list[str]:
-    """One slide PNG to a silent H.264 clip with fades (FR-80)."""
+    """One slide PNG to a silent H.264 clip with fades (FR-80).
+
+    ``threads`` caps libx264's threads (``-threads N``) when clips encode in parallel.
+    """
     if motion != "none":
         raise NotImplementedError(f"motion {motion!r} is not supported by clip_cmd yet")
+    cap = [] if threads is None else ["-threads", str(threads)]
     return [
         str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y",
         "-loop", "1", "-framerate", str(fps), "-t", _secs(duration),
         "-i", str(png),
         "-vf", _fade_filter(duration, fade_in, fade_out),
-        "-c:v", "libx264", "-preset", X264_PRESET, "-crf", str(crf),
+        "-c:v", "libx264", *cap, "-preset", X264_PRESET, "-crf", str(crf),
         "-pix_fmt", "yuv420p", "-r", str(fps), "-an", str(out),
     ]  # fmt: skip
 
