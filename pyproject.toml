@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy"]
+dev = ["pytest", "ruff", "mypy", "pytest-cov"]
 
 [project.scripts]
 history-shorts = "history_shorts.cli:main"

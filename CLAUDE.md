@@ -19,7 +19,7 @@ Open both images before any visual work and compare your preview PNGs against th
 
 1. **No AI**: no LLM, image generation, TTS, ASR, or ML model, local or remote. (C-01)
 2. **No network at runtime**: never import `requests`, `httpx`, `urllib.request`, `http.client`, `socket` in `history_shorts/`. (C-02)
-3. **Dependencies are fixed**: Python ≥ 3.10, `pycairo`, `numpy`, `scipy`, `Pillow`, system `ffmpeg`/`ffprobe`; dev: `pytest`, `ruff`, `mypy`. Ask before adding anything. Never add MoviePy, OpenCV, scikit-image, cairosvg, or a browser renderer. (C-03, C-04)
+3. **Dependencies are fixed**: Python ≥ 3.10, `pycairo`, `numpy`, `scipy`, `Pillow`, system `ffmpeg`/`ffprobe`; dev: `pytest`, `ruff`, `mypy`, `pytest-cov` (owner-approved 2026-11-08). Ask before adding anything. Never add MoviePy, OpenCV, scikit-image, cairosvg, or a browser renderer. (C-03, C-04)
 4. **No crackle, scratches, or random dark strokes.** Surface finish is sheen + fine grain only. The owner rejected crackle as "unnecessary black streaks". (C-08)
 5. **No hardcoded style values** in drawing code: colours from `theme.palette`, fonts and sizes from the theme, geometry from named constants or the scene file. (C-07)
 6. **Original artwork only**: no tracing of existing paintings, no realistic faces, no likenesses of real people, no bundled third-party images, textures, or music. (C-06)

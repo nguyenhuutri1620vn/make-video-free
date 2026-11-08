@@ -52,6 +52,21 @@ Covers AC-01 and AC-02 (1080x1920, 30 fps, h264, yuv420p, duration = sum of slid
 - Task 24: `"motion": "zoom_in"` (FR-84). `clip_cmd` pre-scales the slide 4x and runs `zoompan` from 100 % to 106 % about the centre, then the usual fades; `RenderOptions.motions` carries each slide's motion to the clip encoder and the "not implemented" `WARN` is gone. Slide 2 of both examples uses it.
 - Task 25: eggshell cache (FR-66): `compose.EggshellCache` is created once per `render_slides` run and shared by every slide through `DrawContext.cache`; identical masks (same crc32, cell, gap, seed, layer, shape) are computed once and the arrays are read-only. Per-character `seed` (FR-49): `Variation(bun, sash, dot_spacing)` from `variation_for(seed)`, carried by `CharacterStyle.variation` and applied by the `ancient_female` kit; no seed leaves the figure exactly as before.
 
+- Task 26: final QA. Performance measured against NFR-01 and NFR-03 (all targets met), line coverage measured against NFR-08 (every required group at least 98 %, no tests needed), the AC-01..AC-15 walkthrough, and the README completed (setup per OS, data contracts, sources workflow, performance, coverage, acceptance). `pytest-cov` added as an owner-approved dev dependency (pinned 7.1.0; spec C-03, CLAUDE.md and README updated); it is not part of the default `pytest -q` run.
+
+## v2.0.0
+
+First complete release. `history-shorts` turns a `script.json` and a `theme.json` into a 1080x1920, 30 fps H.264 video in the style of Vietnamese lacquer painting, entirely offline and without any AI.
+
+- M1 foundation: strict config validation with path-tracked errors, layout, text and the Vietnamese glyph check.
+- M2 textures and chrome: lacquer ground, gold leaf, eggshell and surface finish; frame, scrolls, waves, seal and tag.
+- M3 characters: role presets, costume kits, formations and FR-48 overlap checks, the `gallery` command.
+- M4 scenes: layer registry, `group` and `landscape` templates matching the approved references, `render --preview`.
+- M5 video: FFmpeg discovery and commands, clip encode, concat, music mix, atomic output, render report.
+- M6 polish: parallel encoding, `zoom_in` motion, eggshell cache, per-character variety, final QA.
+
+Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04 given 2026-11-08.
+
 ## Unreleased
 
 ### Docs

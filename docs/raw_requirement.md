@@ -76,7 +76,7 @@ The prototype code that produced them lives in `docs/reference/prototype/`. It i
 |------|------------------------------------------------------------------------------------------------------------------------------------|
 | C-01 | **No AI.** No LLM, image generation, TTS, ASR, or ML model, local or remote.                                                       |
 | C-02 | **No network access at runtime.**                                                                                                  |
-| C-03 | **Runtime dependencies are exactly:** Python ≥ 3.10, `pycairo`, `numpy`, `scipy`, `Pillow`, and the system `ffmpeg`/`ffprobe` binaries. Dev: `pytest`, `ruff`, `mypy`. Anything else needs owner approval. |
+| C-03 | **Runtime dependencies are exactly:** Python ≥ 3.10, `pycairo`, `numpy`, `scipy`, `Pillow`, and the system `ffmpeg`/`ffprobe` binaries. Dev: `pytest`, `ruff`, `mypy`, `pytest-cov` (owner-approved 2026-11-08). Anything else needs owner approval. |
 | C-04 | **No MoviePy, OpenCV, scikit-image, or browser-based renderers.** FFmpeg is called via `subprocess` with argument lists.          |
 | C-05 | **Cross-platform:** Windows 10+, macOS 12+, Ubuntu 22.04+.                                                                         |
 | C-06 | **Copyright-safe:** all built-in visuals are original procedural drawings. Bundled fonts are OFL-licensed. No bundled third-party art, photos, maps, textures, or music. |
