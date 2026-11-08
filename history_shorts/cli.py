@@ -18,6 +18,7 @@ from types import ModuleType
 from history_shorts import __version__
 from history_shorts.config import Script, Theme, load_script, load_theme
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
+from history_shorts.video import DEFAULT_MUSIC_VOLUME, MAX_MUSIC_VOLUME, RenderOptions, assemble
 
 COMMANDS = ("render", "validate", "gallery")
 
@@ -119,18 +120,21 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _warn_ignored_flags(args: argparse.Namespace) -> None:
-    given = [
-        flag
-        for flag, value in (
-            ("--music", args.music),
-            ("--music-volume", args.music_volume),
-            ("--keep-temp", args.keep_temp),
-            ("--jobs", args.jobs),
-        )
-        if value is not None and value is not False
-    ]
-    for flag in given:
-        print(f"WARN {flag} is not implemented yet (milestone M5); ignored")
+    """``--jobs`` waits for Task 23; the video flags mean nothing to ``--preview``."""
+    if args.jobs is not None:
+        print("WARN --jobs is not implemented yet (milestone M5); ignored")
+    if args.preview:
+        given = [
+            flag
+            for flag, value in (
+                ("--music", args.music),
+                ("--music-volume", args.music_volume),
+                ("--keep-temp", args.keep_temp),
+            )
+            if value is not None and value is not False
+        ]
+        for flag in given:
+            print(f"WARN {flag} has no effect with --preview")
 
 
 def _warn_stale_slides(directory: Path, slide_count: int) -> None:
@@ -143,27 +147,26 @@ def _warn_stale_slides(directory: Path, slide_count: int) -> None:
 
 
 def _print_sources(script: Script) -> None:
-    if script.sources:
-        print("Sources:")
-        for number, source in enumerate(script.sources, start=1):
-            print(f"[{number}] {source}")
+    from history_shorts.report import sources_block
+
+    block = sources_block(script)
+    if block:
+        print(block)
 
 
-def _cmd_render(args: argparse.Namespace) -> int:
-    from history_shorts.output import default_out_path, slides_dir
+def _warn_unsupported_motion(script: Script) -> None:
+    for index, slide in enumerate(script.slides):
+        if slide.motion != "none":
+            print(f"WARN slides[{index}].motion: {slide.motion} is not implemented yet; ignored")
+
+
+def _render_pngs(
+    args: argparse.Namespace, script: Script, theme: Theme, out: Path
+) -> list[Path] | None:
+    """Render the slide PNGs; ``None`` (after printing an ERROR) when they cannot be written."""
+    from history_shorts.output import slides_dir
     from history_shorts.render import render_slides, scene_expander
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.ERROR,
-        format="%(levelname)s %(name)s: %(message)s",
-    )
-    script, theme, issues = _load_and_check(args)
-    code = _print_report(issues)
-    if code != EXIT_OK or script is None or theme is None:
-        return code
-    _warn_ignored_flags(args)
-    out: Path = args.out if args.out is not None else default_out_path(script)
-    started = time.perf_counter()
     directory = slides_dir(out)
     try:
         paths = render_slides(
@@ -171,15 +174,89 @@ def _cmd_render(args: argparse.Namespace) -> int:
         )
     except OSError as exc:
         print(f"ERROR cannot write slides to {directory}: {exc.strerror or exc}")
-        return EXIT_ERROR
-    elapsed = time.perf_counter() - started
+        return None
     _warn_stale_slides(directory, len(paths))
-    noun = "slide" if len(paths) == 1 else "slides"
-    print(f"Rendered {len(paths)} {noun} to {directory} in {elapsed:.1f} s")
+    return paths
+
+
+def _print_summary(
+    script: Script, out: Path, report: Path, total: float, elapsed: float, count: int
+) -> None:
+    print(f"Slides: {count}")
+    print(f"Duration: {total:.1f} s")
+    print(f"Video: {out}")
+    print(f"Report: {report}")
+    print(f"Elapsed: {elapsed:.1f} s")
     _print_sources(script)
-    if not args.preview:
-        print("ERROR video assembly is not implemented yet (milestone M5)")
+
+
+def _encode_video(
+    args: argparse.Namespace,
+    script: Script,
+    theme: Theme,
+    issues: list[Issue],
+    out: Path,
+    began: float,
+    validated: float,
+) -> int:
+    """Everything after validation for a full render; see the order in the module docs."""
+    from history_shorts import ffmpeg as ff
+    from history_shorts import report as rp
+    from history_shorts.script_config import slide_duration
+
+    music: Path | None = args.music
+    if music is not None and not music.is_file():
+        print(f"ERROR --music: {music} is not a file")
+        return ValidationFailed.exit_code
+    info = ff.find_ffmpeg()  # before any slide work, so a missing FFmpeg fails fast (AC-14)
+    _warn_unsupported_motion(script)
+    opts = RenderOptions(
+        out=out,
+        music=music,
+        music_volume=DEFAULT_MUSIC_VOLUME if args.music_volume is None else args.music_volume,
+        keep_temp=args.keep_temp,
+        jobs=1 if args.jobs is None else args.jobs,
+        verbose=args.verbose,
+    )
+    phase = time.perf_counter()
+    paths = _render_pngs(args, script, theme, out)
+    if paths is None:
         return EXIT_ERROR
+    timings = {"validate": validated - began, "render_slides": time.perf_counter() - phase}
+    durations = [slide_duration(s, theme.video.fps) for s in script.slides]
+    assemble(info, paths, durations, theme, opts, timings)
+    timings["total"] = time.perf_counter() - began
+    warnings = [i for i in issues if i.severity == "warning"]
+    data = rp.build_report(script, theme, opts, durations, paths, timings, warnings, info)
+    report = rp.write_report(out, data)
+    _print_summary(script, out, report, sum(durations), timings["total"], len(paths))
+    return EXIT_OK
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
+    from history_shorts.output import default_out_path, slides_dir
+
+    began = time.perf_counter()
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO if args.keep_temp else logging.ERROR,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
+    script, theme, issues = _load_and_check(args)
+    validated = time.perf_counter()
+    code = _print_report(issues)
+    if code != EXIT_OK or script is None or theme is None:
+        return code
+    _warn_ignored_flags(args)
+    out: Path = args.out if args.out is not None else default_out_path(script)
+    if not args.preview:
+        return _encode_video(args, script, theme, issues, out, began, validated)
+    paths = _render_pngs(args, script, theme, out)
+    if paths is None:
+        return EXIT_ERROR
+    noun = "slide" if len(paths) == 1 else "slides"
+    elapsed = time.perf_counter() - validated
+    print(f"Rendered {len(paths)} {noun} to {slides_dir(out)} in {elapsed:.1f} s")
+    _print_sources(script)
     return EXIT_OK
 
 
@@ -212,24 +289,43 @@ def _add_theme_option(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _music_volume(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid number: {text!r}") from None
+    if not 0.0 <= value <= MAX_MUSIC_VOLUME:  # also rejects nan
+        raise argparse.ArgumentTypeError(f"{text} is outside 0 to {MAX_MUSIC_VOLUME:g}")
+    return value
+
+
 def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    render = sub.add_parser("render", help="render slide PNGs (video assembly comes in M5)")
+    render = sub.add_parser("render", help="render the slides and assemble the MP4 video")
     render.add_argument("--script", type=Path, required=True, help="path to script.json")
     _add_theme_option(render)
     render.add_argument(
         "--out", type=Path, default=None, help="output video path (default: output/<slug>.mp4)"
     )
-    render.add_argument("--music", type=Path, default=None, help="background music (not yet used)")
     render.add_argument(
-        "--music-volume", type=float, default=None, help="music volume (not yet used)"
+        "--music", type=Path, default=None, help="background music file (looped or trimmed)"
+    )
+    render.add_argument(
+        "--music-volume",
+        type=_music_volume,
+        default=None,
+        help="music volume, 0 to 2 (default: 0.6)",
     )
     render.add_argument("--preview", action="store_true", help="write slide PNGs only, no video")
-    render.add_argument("--keep-temp", action="store_true", help="keep temp files (not yet used)")
+    render.add_argument(
+        "--keep-temp", action="store_true", help="keep the temp directory with the clips"
+    )
     render.add_argument("--jobs", type=int, default=None, help="parallel encodes (not yet used)")
     render.add_argument(
         "--debug-safe-zone", action="store_true", help="outline the safe zone and regions"
     )
-    render.add_argument("--verbose", action="store_true", help="log per-slide timing")
+    render.add_argument(
+        "--verbose", action="store_true", help="log per-slide timing and every FFmpeg command"
+    )
     render.set_defaults(run=_cmd_render)
 
 

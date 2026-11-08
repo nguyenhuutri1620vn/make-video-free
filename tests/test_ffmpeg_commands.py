@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -111,9 +112,18 @@ def test_mux_with_music_exact() -> None:
     ]  # fmt: skip
 
 
-def test_mux_music_fade_out_start_never_negative() -> None:
+def test_mux_music_fades_scaled_down_for_short_videos() -> None:
     cmd = mux_cmd(INFO, Path("v.mp4"), Path("o.mp4"), 1.0, Path("a.mp3"), 0.6)
-    assert "afade=t=out:st=0.000:d=1.5" in cmd[cmd.index("-filter_complex") + 1]
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    assert "afade=t=in:st=0:d=0.25" in graph
+    assert "afade=t=out:st=0.250:d=0.75" in graph  # fades never overlap or go negative
+
+
+def test_mux_music_fades_unchanged_from_two_seconds() -> None:
+    cmd = mux_cmd(INFO, Path("v.mp4"), Path("o.mp4"), 2.0, Path("a.mp3"), 0.6)
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    assert "afade=t=in:st=0:d=0.5" in graph
+    assert "afade=t=out:st=0.500:d=1.5" in graph
 
 
 def test_mux_silent_uses_anullsrc() -> None:
@@ -232,11 +242,54 @@ def test_run_success_returns_none() -> None:
 
 
 def test_run_verbose_logs_full_command(caplog: pytest.LogCaptureFixture) -> None:
+    cmd = [sys.executable, "-c", "print('a b')"]
     with caplog.at_level(logging.DEBUG, logger="history_shorts.ffmpeg"):
-        run([sys.executable, "-c", "print('a b')"], verbose=True)
-    assert any(
-        "'print('\"'\"'a b'\"'\"')'" in r.message or "a b" in r.message for r in caplog.records
-    )
+        run(cmd, verbose=True)
+    messages = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
+    assert messages == [f"running: {shlex.join(cmd)}"]
+
+
+def test_run_not_verbose_logs_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.DEBUG, logger="history_shorts.ffmpeg"):
+        run([sys.executable, "-c", "pass"], verbose=False)
+    assert [r for r in caplog.records if r.levelno == logging.DEBUG] == []
+
+
+def test_run_oserror_becomes_ffmpeg_failed(tmp_path: Path) -> None:
+    not_executable = tmp_path / "ffmpeg"
+    not_executable.write_text("#!/bin/sh\n", encoding="utf-8")  # no exec bit
+    with pytest.raises(FfmpegFailed) as exc:
+        run([str(not_executable), "-version"], verbose=False)
+    assert exc.value.exit_code == 5
+    assert exc.value.command == [str(not_executable), "-version"]
+    assert exc.value.stderr_tail
+
+
+def test_probe_oserror_becomes_ffmpeg_failed(tmp_path: Path) -> None:
+    info = FfmpegInfo(tmp_path / "nope", tmp_path / "nope-probe", (8, 1))
+    with pytest.raises(FfmpegFailed):
+        probe(info, tmp_path / "v.mp4")
+
+
+def test_find_ffmpeg_oserror_is_missing() -> None:
+    def broken(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        raise PermissionError(13, "Permission denied")
+
+    with pytest.raises(FfmpegMissing, match="brew install ffmpeg") as exc:
+        find_ffmpeg(which=_which(BOTH), platform="darwin", runner=broken)
+    assert exc.value.exit_code == 4
+
+
+@pytest.mark.parametrize("payload", ["[]", "null", '{"streams": null}', '{"streams": [1]}'])
+def test_probe_unexpected_json_is_ffmpeg_failed(
+    monkeypatch: pytest.MonkeyPatch, payload: str
+) -> None:
+    def fake(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(cmd, 0, stdout=payload, stderr="")
+
+    monkeypatch.setattr("history_shorts.ffmpeg._run_text", fake)
+    with pytest.raises(FfmpegFailed, match="unexpected ffprobe output"):
+        probe(INFO, Path("v.mp4"))
 
 
 def test_run_propagates_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:

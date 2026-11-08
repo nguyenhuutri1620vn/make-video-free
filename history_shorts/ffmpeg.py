@@ -96,7 +96,12 @@ def find_ffmpeg(
         if found is None:
             raise FfmpegMissing(f"{name} was not found on PATH. Install it: {hint}")
         paths[name] = found
-    result = (runner or _run_text)([paths["ffmpeg"], "-version"])
+    try:
+        result = (runner or _run_text)([paths["ffmpeg"], "-version"])
+    except OSError as exc:  # exists on PATH but cannot be executed
+        raise FfmpegMissing(
+            f"cannot run {paths['ffmpeg']}: {exc}. Reinstall FFmpeg: {hint}"
+        ) from exc
     if result.returncode != 0:
         raise FfmpegMissing(f"`{paths['ffmpeg']} -version` failed. Reinstall FFmpeg: {hint}")
     version = parse_version(result.stdout)
@@ -113,6 +118,13 @@ def find_ffmpeg(
 
 def _secs(value: float) -> str:
     return f"{value:.3f}"
+
+
+def _music_fades(total: float) -> tuple[float, float]:
+    """Music fade-in and fade-out lengths, scaled down together when ``total`` < their sum."""
+    span = MUSIC_FADE_IN + MUSIC_FADE_OUT
+    scale = min(max(total, 0.0) / span, 1.0)
+    return MUSIC_FADE_IN * scale, MUSIC_FADE_OUT * scale
 
 
 def _fade_filter(duration: float, fade_in: float, fade_out: float) -> str:
@@ -191,11 +203,11 @@ def mux_cmd(
             *head, "-f", "lavfi", "-i", f"anullsrc=r={AUDIO_RATE}:cl=stereo",
             "-map", "0:v", "-map", "1:a", *tail,
         ]  # fmt: skip
-    fade_start = max(total - MUSIC_FADE_OUT, 0.0)
+    fade_in, fade_out = _music_fades(total)
     graph = (
         f"[1:a]atrim=0:{_secs(total)},asetpts=N/SR/TB,volume={volume:.2f},"
-        f"afade=t=in:st=0:d={MUSIC_FADE_IN},"
-        f"afade=t=out:st={_secs(fade_start)}:d={MUSIC_FADE_OUT},"
+        f"afade=t=in:st=0:d={fade_in:g},"
+        f"afade=t=out:st={_secs(max(total - fade_out, 0.0))}:d={fade_out:g},"
         f"aresample={AUDIO_RATE},aformat=channel_layouts=stereo[a]"
     )
     return [
@@ -208,7 +220,10 @@ def run(cmd: list[str], *, verbose: bool) -> None:
     """Run a command without a shell; raise ``FfmpegFailed`` with the last stderr lines."""
     if verbose:
         logger.debug("running: %s", shlex.join(cmd))
-    result = _run_text(cmd)
+    try:
+        result = _run_text(cmd)
+    except OSError as exc:
+        raise FfmpegFailed(cmd, f"cannot run {cmd[0]}: {exc}") from exc
     if result.returncode != 0:
         tail = "\n".join(result.stderr.splitlines()[-STDERR_TAIL_LINES:])
         raise FfmpegFailed(cmd, tail)
@@ -229,7 +244,10 @@ def probe(info: FfmpegInfo, path: Path) -> ProbeResult:
         "stream=codec_type,codec_name,width,height,pix_fmt,r_frame_rate,duration:format=duration",
         "-of", "json", str(path),
     ]  # fmt: skip
-    result = _run_text(cmd)
+    try:
+        result = _run_text(cmd)
+    except OSError as exc:
+        raise FfmpegFailed(cmd, f"cannot run {cmd[0]}: {exc}") from exc
     if result.returncode != 0:
         raise FfmpegFailed(cmd, "\n".join(result.stderr.splitlines()[-STDERR_TAIL_LINES:]))
     try:
@@ -250,5 +268,5 @@ def probe(info: FfmpegInfo, path: Path) -> ProbeResult:
             audio_codec=str(audio["codec_name"]) if audio else None,
             audio_duration=_opt_float(audio.get("duration")) if audio else None,
         )
-    except (ValueError, KeyError, StopIteration) as exc:
+    except (ValueError, KeyError, StopIteration, AttributeError, TypeError) as exc:
         raise FfmpegFailed(cmd, f"unexpected ffprobe output: {exc}") from exc

@@ -24,14 +24,38 @@ brew reinstall --build-from-source freetype
 
 ```bash
 python -m history_shorts validate --script examples/nu_tuong/script.json
+python -m history_shorts render --script examples/nu_tuong/script.json --out output/nu_tuong.mp4
+python -m history_shorts render --script examples/me_linh/script.json --music song.mp3 --music-volume 0.5
 python -m history_shorts render --script examples/nu_tuong/script.json --preview
 python -m history_shorts render --script examples/me_linh/script.json --preview --out output/me_linh.mp4 --debug-safe-zone
 python -m history_shorts gallery --out output/gallery.png
 ```
 
-`render --preview` validates the script first (exit 3 and nothing written on any error), then writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; the video itself is not produced yet (milestone M5), so without `--preview` the command renders the PNGs and then exits 1 with a clear message. A slide's `scene` (a `group` or `landscape` template, or explicit layers) is drawn between the ground and the chrome; a slide without a scene is chrome and text on the lacquer ground.
+`render` validates the script first (exit 3 and nothing written on any error). Without `--preview` it then looks for FFmpeg (exit 4 with an install hint when it is missing or older than 4.4, before any slide is drawn), renders the slide PNGs, encodes one H.264 clip per slide with the theme's fades, joins the clips, adds the audio track and writes the MP4 (1080x1920, 30 fps, `yuv420p`, CRF from the theme, `+faststart`), a render report and a console summary. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; its folder is created when missing, and paths with spaces, apostrophes and Vietnamese characters work.
 
-PNGs are written atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted but ignored for now (a `WARN` says so). `--verbose` logs the time per slide; `--debug-safe-zone` outlines the safe zone and regions.
+- Audio: without `--music` the video carries a silent AAC track. `--music FILE` (must exist, otherwise exit 3) is looped or trimmed to the video length, faded in over 0.5 s and out over 1.5 s (both scaled down together for videos shorter than 2 s) and mixed at `--music-volume` (0 to 2, default 0.6; outside that range is a usage error, exit 2). Output is AAC 192 kbps, 48 kHz, stereo.
+- Output is atomic: the audio mux writes `<out>.partial.mp4` next to the output, which is renamed onto `--out` only when complete. On any error or Ctrl-C (exit 130) the partial file and the temp directory are removed and an existing `--out` is left untouched. An existing `--out` is replaced after a successful render.
+- Temp files (clips, concat list, silent video) live in a `history-shorts-*` directory under the system temp dir and are removed afterwards; `--keep-temp` keeps it and logs its path. `--verbose` also logs every FFmpeg command and the time per slide. FFmpeg failures exit 5 and print the last 20 lines of its stderr.
+- `--jobs` is accepted but ignored for now (a `WARN` says so); clips are encoded one after the other. A slide's `"motion": "zoom_in"` is not implemented yet and is ignored with a `WARN`.
+- Console summary: slide count, total duration, video path, report path, elapsed time and the `Sources:` block ready to paste into a caption.
+
+`render --preview` writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg; `--music`, `--music-volume` and `--keep-temp` are ignored with a `WARN`. A slide's `scene` (a `group` or `landscape` template, or explicit layers) is drawn between the ground and the chrome; a slide without a scene is chrome and text on the lacquer ground.
+
+PNGs are always written to `<out dir>/slides/` (also without `--preview`), atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--debug-safe-zone` outlines the safe zone and regions.
+
+### Render report
+
+Next to the video, `render` writes `<video name>.report.json` (UTF-8, indented, sorted keys, written atomically):
+
+| Key | Content |
+|---|---|
+| `script_sha256`, `theme_sha256`, `music_sha256` | SHA-256 of the input files (`music_sha256` is `null` without music) |
+| `slides` | `[{index, duration, png}]`; `png` is relative to the report's folder (`slides/01.png`) |
+| `total_duration` | seconds, the sum of the slide durations (each a whole number of frames) |
+| `warnings` | validation warnings, formatted like the console lines |
+| `versions` | `python`, `pycairo`, `cairo`, `numpy`, `scipy`, `Pillow`, `ffmpeg` (`"dev"` for a development build) |
+| `timings` | seconds per phase: `validate`, `render_slides`, `encode`, `concat`, `mux`, `total` |
+| `sources` | the script's `sources`, in order |
 
 `gallery` renders a 1080x4080 contact sheet. The top block is every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. Below it, three rows of 270x360 cells show each scene layer type with the reference template's parameters (sun, moon, clouds, mountains, peaks gradient, peaks eggshell, hills left, river, ground, boat, birds, lotus); each is the layer drawn at full canvas scale, with a fixed 3:4 crop scaled into its cell (`gallery.LAYER_SPECS`). `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest.
 
@@ -74,4 +98,5 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Dependencies: `pyproject.toml` declares Python 3.10-compatible ranges, `constraints.txt` pins dev versions, and snapshot baselines exist only for pinned sets (§16 R-02).
 - Costume kits (FR-45): each role preset names a kit (`characters/kits/`); all v2.0 roles use `ancient_female`, whose props are flag, spear, oar and none. A prop the role's kit cannot draw is a `validate` error at `<character>.prop`, a role naming an unknown kit one at `<character>.role`. `figure.py` holds no part names or geometry. The refactor is pixel-identical (Task 15b). Era packs are planned (spec Appendix B).
 - Formations (FR-47): `centre_pair` takes exactly 1, 2, 4 or 6 characters. An odd extra character (3 or 5) would stand in the centre in front of another character's head and always fail the FR-48 check, so it is a count error that points to `line` or `v_shape`.
+- Video (FR-80..92): the video length is the sum of the slide durations, each already a whole number of frames, so the mux uses `-t` of that sum rounded to 3 decimals. FFmpeg is located before any slide is rendered (AC-14). The report's `ffmpeg` version is `major.minor`, or `dev` for builds without a release number.
 - Planned for v2.1, not implemented: narration export for the owner's VoiceStudio, extra motions, and extra poses (Appendix A).

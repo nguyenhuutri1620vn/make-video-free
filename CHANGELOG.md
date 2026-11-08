@@ -39,6 +39,13 @@ Covers AC-03 and AC-04 (first slides match the approved references; automated pa
 - Task 20 fix: `centre_pair` accepts exactly 1, 2, 4 or 6 characters (an odd extra character always stood in front of a head); other counts are a `validate` error pointing to `line` or `v_shape`. Snapshot baselines are written atomically.
 - Task 20: `render --preview` draws every slide's scene (`render.scene_expander`). `validate` expands template scenes and runs the FR-48 overlap checks on their characters and boat crew with script paths (`slides[i].scene.characters[k]`, `slides[i].scene.boats[b].crew[k]`); `check_overlaps` now requires `tag` and `file`, so the tag-pill check cannot be skipped by accident. `gallery` grows to 1080x4080 with three rows of layer-type cells. New tests: ΔE76 region comparison against the approved references (`tests/helpers/visual.py`), first-slide SHA-256 snapshots keyed by library versions (`--update-snapshots`), full-run determinism. The `me_linh` example's first slide now uses the plain `landscape` template, so its second boat matches the approved image. The snapshot baseline for the pinned versions was written intentionally with `pytest --update-snapshots`.
 
+## M5 — Video
+
+Covers AC-01 and AC-02 (1080x1920, 30 fps, h264, yuv420p, duration = sum of slides within 0.1 s), AC-13 (`--music` audio equals the video length and fades out) and AC-14 (no FFmpeg: exit 4 with an install hint, before any slide is rendered); FR-80..83, FR-85, FR-86, FR-90..92, NFR-04, NFR-05.
+
+- Task 21: `ffmpeg.py` with discovery (>= 4.4, per-OS install hint), exact command builders for clips, concat and mux, a shell-free runner that keeps the last 20 stderr lines, and `probe`.
+- Task 22: `video.assemble` (temp dir, serial clip encodes, concat, mux to `<out>.partial.mp4`, atomic rename; partial file and temp dir removed on any error or Ctrl-C), `report.py` (`<video>.report.json`, `sources_block`), and `render` end to end: validate, find FFmpeg, render slides, assemble, report, summary. `--music`, `--music-volume` (0 to 2), `--keep-temp` and `--verbose` now work; `--jobs` still waits for Task 23 and `--music`, `--music-volume`, `--keep-temp` warn that they have no effect with `--preview`. Hardening from the Task 21 review: an `OSError` from a binary that cannot run becomes `FfmpegMissing` (discovery) or `FfmpegFailed` (run, probe), `probe` also rejects `AttributeError` and `TypeError` parse failures, and music fades are scaled down together for videos shorter than 2 s.
+
 ## Unreleased
 
 ### Docs

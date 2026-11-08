@@ -406,44 +406,14 @@ def test_stale_pngs_reported_as_warn(
     assert (directory / "02.png").read_bytes() == b"old"
 
 
-def test_without_preview_renders_pngs_then_fails_loudly(
+def test_jobs_warns_as_ignored_until_parallel_encoding_exists(
     tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
 ) -> None:
     script = tmp_script(slides=[{"title": "A"}])
-    out = tmp_path / "v.mp4"
-    code, text = run(["render", "--script", str(script), "--out", str(out)], capsys)
-    assert code == 1
-    assert "ERROR video assembly is not implemented yet (milestone M5)" in text
-    assert (tmp_path / "slides" / "01.png").is_file()
-    assert not out.exists()
-
-
-def test_unimplemented_flags_warn_and_are_ignored(
-    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
-) -> None:
-    script = tmp_script(slides=[{"title": "A"}])
-    argv = [
-        "render",
-        "--script",
-        str(script),
-        "--preview",
-        "--out",
-        str(tmp_path / "v.mp4"),
-        "--music",
-        str(tmp_path / "song.mp3"),
-        "--music-volume",
-        "0.4",
-        "--keep-temp",
-        "--jobs",
-        "2",
-        "--verbose",
-    ]
-    code, text = run(argv, capsys)
+    argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
+    code, text = run([*argv, "--jobs", "2", "--verbose"], capsys)
     assert code == 0
-    warns = [ln for ln in text.splitlines() if ln.startswith("WARN ") and "not implemented" in ln]
-    joined = " ".join(warns)
-    for flag in ("--music", "--music-volume", "--keep-temp", "--jobs"):
-        assert flag in joined
+    assert "WARN --jobs is not implemented yet" in text
 
 
 def test_debug_safe_zone_flag(
@@ -494,17 +464,17 @@ def test_cli_render_matches_api_bytes(
         assert other.read_bytes() == path.read_bytes()
 
 
-def test_zero_valued_ignored_flags_still_warn(
+def test_zero_valued_flags_still_warn(
     tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
 ) -> None:
     script = tmp_script(slides=[{"title": "A"}])
     argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
     code, text = run([*argv, "--jobs", "0", "--music-volume", "0"], capsys)
     assert code == 0
-    assert "WARN --music-volume is not implemented yet" in text
+    assert "WARN --music-volume has no effect with --preview" in text
     assert "WARN --jobs is not implemented yet" in text
     code, text = run(argv, capsys)  # nothing given, nothing to warn about
-    assert "not implemented" not in text
+    assert "not implemented" not in text and "no effect" not in text
 
 
 def test_out_parent_is_a_file_reports_write_error(
