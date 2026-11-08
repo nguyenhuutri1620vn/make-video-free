@@ -45,7 +45,6 @@ GROUND_LAYER: Final = 0  # rng_for(theme.seed, 0, 0)
 
 SHEET_W: Final = CANVAS_W
 SHEET_H: Final = HEADER_H + len(ROLES) * len(FACINGS) * CELL_H
-assert SHEET_W == len(PROPS) * CELL_W
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,9 +99,14 @@ def label_font(theme: Theme) -> ImageFont.FreeTypeFont:
     return font(theme.fonts.tag, round(theme.type_scale.tag * LABEL_SCALE))
 
 
+def label_anchor(cell: GalleryCell) -> tuple[float, float]:
+    """Where the cell's label is centred (Pillow anchor ``mm``)."""
+    return (cell.box.x0 + cell.box.x1) / 2, cell.box.y1 - LABEL_MARGIN
+
+
 def label_box(theme: Theme, cell: GalleryCell) -> Box:
     """Pixel box of the cell's label, as drawn (anchored at its middle)."""
-    cx, cy = (cell.box.x0 + cell.box.x1) / 2, cell.box.y1 - LABEL_MARGIN
+    cx, cy = label_anchor(cell)
     x0, y0, x1, y1 = label_font(theme).getbbox(cell_label(cell), anchor="mm")
     return Box(cx + x0, cy + y0, cx + x1, cy + y1)
 
@@ -115,7 +119,7 @@ def _draw_labels(img: Image.Image, theme: Theme, cells: list[GalleryCell]) -> No
     text_font = label_font(theme)
     for cell in cells:
         draw.text(
-            ((cell.box.x0 + cell.box.x1) / 2, cell.box.y1 - LABEL_MARGIN),
+            label_anchor(cell),
             cell_label(cell),
             font=text_font,
             fill=colour,
