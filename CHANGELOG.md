@@ -46,6 +46,10 @@ Covers AC-01 and AC-02 (1080x1920, 30 fps, h264, yuv420p, duration = sum of slid
 - Task 21: `ffmpeg.py` with discovery (>= 4.4, per-OS install hint), exact command builders for clips, concat and mux, a shell-free runner that keeps the last 20 stderr lines, and `probe`.
 - Task 22: `video.assemble` (temp dir, serial clip encodes, concat, mux to `<out>.partial.mp4`, atomic rename; partial file and temp dir removed on any error or Ctrl-C), `report.py` (`<video>.report.json`, `sources_block`), and `render` end to end: validate, find FFmpeg, render slides, assemble, report, summary. `--music`, `--music-volume` (0 to 2), `--keep-temp` and `--verbose` now work; `--jobs` still waits for Task 23 and `--music`, `--music-volume`, `--keep-temp` warn that they have no effect with `--preview`. Hardening from the Task 21 review: an `OSError` from a binary that cannot run becomes `FfmpegMissing` (discovery) or `FfmpegFailed` (run, probe), `probe` also rejects `AttributeError` and `TypeError` parse failures, and music fades are scaled down together for videos shorter than 2 s.
 
+## M6 — Polish
+
+- Task 23: `--jobs N` encodes clips in parallel (FR-87) with a thread pool; the default is CPU count - 1 (`video.default_jobs`), `--jobs 0` is a usage error (exit 2), `--jobs 1` is serial. The concat order is always slide order. The first failure cancels pending clips, waits for running ones, raises the first error in slide order, then cleans up as before.
+
 ## Unreleased
 
 ### Docs

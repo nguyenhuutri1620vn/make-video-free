@@ -18,7 +18,13 @@ from types import ModuleType
 from history_shorts import __version__
 from history_shorts.config import Script, Theme, load_script, load_theme
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
-from history_shorts.video import DEFAULT_MUSIC_VOLUME, MAX_MUSIC_VOLUME, RenderOptions, assemble
+from history_shorts.video import (
+    DEFAULT_MUSIC_VOLUME,
+    MAX_MUSIC_VOLUME,
+    RenderOptions,
+    assemble,
+    default_jobs,
+)
 
 COMMANDS = ("render", "validate", "gallery")
 
@@ -120,9 +126,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _warn_ignored_flags(args: argparse.Namespace) -> None:
-    """``--jobs`` waits for Task 23; the video flags mean nothing to ``--preview``."""
-    if args.jobs is not None:
-        print("WARN --jobs is not implemented yet (milestone M5); ignored")
+    """The video flags mean nothing to ``--preview``."""
     if args.preview:
         given = [
             flag
@@ -130,6 +134,7 @@ def _warn_ignored_flags(args: argparse.Namespace) -> None:
                 ("--music", args.music),
                 ("--music-volume", args.music_volume),
                 ("--keep-temp", args.keep_temp),
+                ("--jobs", args.jobs),
             )
             if value is not None and value is not False
         ]
@@ -218,7 +223,7 @@ def _encode_video(
         music=music,
         music_volume=DEFAULT_MUSIC_VOLUME if args.music_volume is None else args.music_volume,
         keep_temp=args.keep_temp,
-        jobs=1 if args.jobs is None else args.jobs,
+        jobs=default_jobs() if args.jobs is None else args.jobs,
         verbose=args.verbose,
     )
     phase = time.perf_counter()
@@ -310,6 +315,16 @@ def _music_volume(text: str) -> float:
     return value
 
 
+def _jobs(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid integer: {text!r}") from None
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"{text} is not at least 1")
+    return value
+
+
 def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     render = sub.add_parser("render", help="render the slides and assemble the MP4 video")
     render.add_argument("--script", type=Path, required=True, help="path to script.json")
@@ -330,7 +345,12 @@ def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser])
     render.add_argument(
         "--keep-temp", action="store_true", help="keep the temp directory with the clips"
     )
-    render.add_argument("--jobs", type=int, default=None, help="parallel encodes (not yet used)")
+    render.add_argument(
+        "--jobs",
+        type=_jobs,
+        default=None,
+        help="parallel clip encodes, at least 1 (default: CPU count - 1)",
+    )
     render.add_argument(
         "--debug-safe-zone", action="store_true", help="outline the safe zone and regions"
     )

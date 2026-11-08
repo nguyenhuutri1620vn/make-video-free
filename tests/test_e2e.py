@@ -107,3 +107,22 @@ def test_without_ffmpeg_on_path_exit_4(
     assert code == 4
     assert "install" in capsys.readouterr().out.lower()
     assert not (tmp_path / "slides").exists()
+
+
+def test_jobs_4_probes_like_jobs_1(tmp_path: Path, repo_root: Path) -> None:  # FR-87
+    script = repo_root / "examples" / "nu_tuong" / "script.json"
+    info = find_ffmpeg()
+    results = []
+    for jobs in (1, 4):
+        out = tmp_path / f"j{jobs}" / "v.mp4"
+        assert (
+            main(["render", "--script", str(script), "--out", str(out), "--jobs", str(jobs)]) == 0
+        )
+        p = ffprobe(out)
+        frames = subprocess.run(
+            [str(info.ffprobe), "-v", "error", "-count_frames", "-select_streams", "v:0",
+             "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(out)],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()  # fmt: skip
+        results.append((p.codec, p.width, p.height, p.fps, round(p.duration, 2), frames))
+    assert results[0] == results[1]

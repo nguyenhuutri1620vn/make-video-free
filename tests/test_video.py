@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
+import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -14,7 +17,7 @@ from history_shorts import ffmpeg
 from history_shorts.config import Theme
 from history_shorts.errors import FfmpegFailed
 from history_shorts.ffmpeg import FfmpegInfo
-from history_shorts.video import RenderOptions, assemble
+from history_shorts.video import RenderOptions, assemble, default_jobs
 
 INFO = FfmpegInfo(Path("ffmpeg"), Path("ffprobe"), (8, 1))
 RunLog = list[list[str]]
@@ -233,3 +236,99 @@ def test_only_expected_files_are_touched(
     assemble(INFO, pngs(tmp_path, 1), [2.0], theme, options(out_dir / "o.mp4"))
     assert sorted(p.name for p in out_dir.iterdir()) == ["notes.txt", "o.mp4"]
     assert bystander.read_text(encoding="utf-8") == "keep"
+
+
+def test_default_jobs(monkeypatch: pytest.MonkeyPatch) -> None:
+    for cpus, expected in ((8, 7), (None, 1), (1, 1), (2, 1)):
+        monkeypatch.setattr(os, "cpu_count", lambda cpus=cpus: cpus)  # type: ignore[misc]
+        assert default_jobs() == expected
+
+
+def clip_number(cmd: list[str]) -> int | None:
+    name = Path(cmd[-1]).name
+    return int(name[5:7]) if name.startswith("clip_") else None
+
+
+def test_parallel_preserves_order(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, str] = {}
+    finished: list[int] = []
+
+    def run(cmd: list[str], *, verbose: bool) -> None:
+        number = clip_number(cmd)
+        if number is not None:
+            time.sleep(0.05 * (5 - number))  # earlier slides finish last
+        Path(cmd[-1]).write_bytes(b"x")
+        if number is not None:
+            finished.append(number)
+        if "concat" in cmd:
+            seen["list"] = Path(cmd[cmd.index("-i") + 1]).read_text(encoding="utf-8")
+
+    monkeypatch.setattr(ffmpeg, "run", run)
+    assemble(INFO, pngs(tmp_path, 4), [2.0] * 4, theme, options(tmp_path / "o.mp4", jobs=4))
+    assert finished != sorted(finished)  # the clips really did finish out of order
+    names = [Path(line.split("'")[1]).name for line in seen["list"].splitlines()]
+    assert names == [f"clip_{i:02d}.mp4" for i in range(1, 5)]
+
+
+def test_jobs_1_is_serial(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    threads: list[int] = []
+
+    def run(cmd: list[str], *, verbose: bool) -> None:
+        threads.append(threading.get_ident())
+        Path(cmd[-1]).write_bytes(b"x")
+
+    monkeypatch.setattr(ffmpeg, "run", run)
+    assemble(INFO, pngs(tmp_path, 3), [2.0] * 3, theme, options(tmp_path / "o.mp4", jobs=1))
+    assert len(threads) == 5  # three clips, concat, mux
+    assert set(threads) == {threading.get_ident()}
+
+
+def test_failure_cancels_pending_and_cleans_up(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    started: list[int] = []
+    active: list[int] = []
+    lock = threading.Lock()
+
+    def run(cmd: list[str], *, verbose: bool) -> None:
+        number = clip_number(cmd)
+        assert number is not None, "concat must not start after a failure"
+        with lock:
+            started.append(number)
+            active.append(number)
+        try:
+            time.sleep(0.3 if number != 1 else 0.05)
+            if number == 1:
+                raise FfmpegFailed(cmd, "boom")
+            Path(cmd[-1]).write_bytes(b"x")
+        finally:
+            with lock:
+                active.remove(number)
+
+    monkeypatch.setattr(ffmpeg, "run", run)
+    out = tmp_path / "o.mp4"
+    with pytest.raises(FfmpegFailed):
+        assemble(INFO, pngs(tmp_path, 5), [2.0] * 5, theme, options(out, jobs=2))
+    assert active == []  # nothing still running when assemble returned
+    assert len(started) < 5  # pending clips were cancelled
+    assert not out.exists()
+    assert not out.with_name("o.mp4.partial.mp4").exists()
+    assert leftovers(temp_root) == []
+
+
+def test_first_failure_in_slide_order_is_raised(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def run(cmd: list[str], *, verbose: bool) -> None:
+        number = clip_number(cmd)
+        time.sleep(0.05 * (3 - (number or 0)))  # slide 3 fails first in time
+        raise FfmpegFailed(cmd, f"clip {number}")
+
+    monkeypatch.setattr(ffmpeg, "run", run)
+    with pytest.raises(FfmpegFailed) as caught:
+        assemble(INFO, pngs(tmp_path, 3), [2.0] * 3, theme, options(tmp_path / "o.mp4", jobs=3))
+    assert caught.value.stderr_tail == "clip 1"

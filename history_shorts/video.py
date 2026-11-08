@@ -12,6 +12,7 @@ import os
 import shutil
 import tempfile
 import time
+from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -41,6 +42,11 @@ class RenderOptions:
     verbose: bool = False
 
 
+def default_jobs() -> int:
+    """Parallel clip encodes when ``--jobs`` is not given: one fewer than the CPU count (FR-87)."""
+    return max(1, (os.cpu_count() or 2) - 1)
+
+
 def partial_path(out: Path) -> Path:
     """The scratch file the mux writes before it is renamed onto ``out``."""
     return out.with_name(out.name + PARTIAL_SUFFIX)
@@ -54,16 +60,41 @@ def _encode_clips(
     opts: RenderOptions,
     work: Path,
 ) -> list[Path]:
-    clips: list[Path] = []
+    """Encode one clip per slide and return the clips in slide order.
+
+    ``opts.jobs == 1`` encodes in the calling thread. Otherwise a thread pool runs one
+    FFmpeg process per clip. On the first failure (or Ctrl-C) pending clips are cancelled and
+    the clips already running are waited for, so no FFmpeg writes into a temp directory that
+    is being deleted. Child FFmpeg processes are not killed: each finishes its single clip,
+    which takes a few seconds. The first failure in slide order is raised.
+    """
     fade = theme.transition
-    for number, (png, seconds) in enumerate(zip(slides, durations, strict=True), start=1):
-        clip = work / f"clip_{number:02d}.mp4"
-        cmd = ffmpeg.clip_cmd(
+    jobs = list(zip(slides, durations, strict=True))
+    clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(jobs) + 1)]
+    cmds = [
+        ffmpeg.clip_cmd(
             info, png, clip, seconds, theme.video.fps, theme.video.crf, fade.fade_in, fade.fade_out
         )
-        ffmpeg.run(cmd, verbose=opts.verbose)
-        clips.append(clip)
+        for (png, seconds), clip in zip(jobs, clips, strict=True)
+    ]
+    if opts.jobs <= 1:
+        for cmd in cmds:
+            ffmpeg.run(cmd, verbose=opts.verbose)
+        return clips
+    pool = ThreadPoolExecutor(max_workers=opts.jobs)
+    futures = [pool.submit(ffmpeg.run, cmd, verbose=opts.verbose) for cmd in cmds]
+    try:
+        wait(futures, return_when=FIRST_EXCEPTION)
+    finally:  # also on KeyboardInterrupt in the main thread
+        pool.shutdown(wait=True, cancel_futures=True)
+    _raise_first_failure(futures)
     return clips
+
+
+def _raise_first_failure(futures: list[Future[None]]) -> None:
+    for future in futures:
+        if not future.cancelled() and (error := future.exception()) is not None:
+            raise error
 
 
 def _run_steps(

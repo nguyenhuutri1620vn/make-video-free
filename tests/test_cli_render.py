@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -250,18 +251,42 @@ def test_interrupt_exits_130_and_cleans_up(
     assert list(temp_root.iterdir()) == []
 
 
-def test_jobs_still_warns_as_ignored(
+def test_jobs_zero_is_a_usage_error(
+    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = tmp_script(slides=[{"title": "A", "duration": 2.0}])
+    with pytest.raises(SystemExit) as caught:
+        main(argv_for(script, tmp_path / "v.mp4", "--jobs", "0"))
+    assert caught.value.code == 2
+    assert "--jobs" in capsys.readouterr().err
+
+
+def test_jobs_reaches_render_options(
     tmp_path: Path,
     tmp_script: ScriptFactory,
     fake_ffmpeg: list[list[str]],
     temp_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    from history_shorts import cli, video
+
+    seen: list[int] = []
+    real = video.assemble
+
+    def spy(*args: object, **kwargs: object) -> Path:
+        opts = args[4]
+        assert isinstance(opts, video.RenderOptions)
+        seen.append(opts.jobs)
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(cli, "assemble", spy)
     script = tmp_script(slides=[{"title": "A", "duration": 2.0}])
-    code, text = run_cli(argv_for(script, tmp_path / "v.mp4", "--jobs", "4"), capsys)
+    code, text = run_cli(argv_for(script, tmp_path / "v.mp4", "--jobs", "3"), capsys)
     assert code == 0
-    assert "WARN --jobs is not implemented yet" in text
-    assert "--keep-temp" not in text
+    assert "not implemented" not in text
+    code, _ = run_cli(argv_for(script, tmp_path / "w.mp4"), capsys)
+    assert seen == [3, video.default_jobs()]
 
 
 def test_verbose_flag_reaches_every_ffmpeg_run(
@@ -304,7 +329,9 @@ def test_write_failure_is_a_clear_error_not_internal(
     def boom(*_a: object, **_k: object) -> None:
         raise PermissionError(13, "Permission denied")
 
-    monkeypatch.setattr("history_shorts.video.os", SimpleNamespace(replace=boom))
+    monkeypatch.setattr(
+        "history_shorts.video.os", SimpleNamespace(replace=boom, cpu_count=os.cpu_count)
+    )
     out = tmp_path / "v.mp4"
     code, text = run_cli(argv_for(tmp_script(slides=TWO), out), capsys)
     assert code == 1

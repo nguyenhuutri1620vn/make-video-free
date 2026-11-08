@@ -406,14 +406,14 @@ def test_stale_pngs_reported_as_warn(
     assert (directory / "02.png").read_bytes() == b"old"
 
 
-def test_jobs_warns_as_ignored_until_parallel_encoding_exists(
+def test_jobs_warns_as_no_effect_with_preview(
     tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
 ) -> None:
     script = tmp_script(slides=[{"title": "A"}])
     argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
     code, text = run([*argv, "--jobs", "2", "--verbose"], capsys)
     assert code == 0
-    assert "WARN --jobs is not implemented yet" in text
+    assert "WARN --jobs has no effect with --preview" in text
 
 
 def test_debug_safe_zone_flag(
@@ -469,12 +469,12 @@ def test_zero_valued_flags_still_warn(
 ) -> None:
     script = tmp_script(slides=[{"title": "A"}])
     argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
-    code, text = run([*argv, "--jobs", "0", "--music-volume", "0"], capsys)
+    code, text = run([*argv, "--jobs", "1", "--music-volume", "0"], capsys)
     assert code == 0
     assert "WARN --music-volume has no effect with --preview" in text
-    assert "WARN --jobs is not implemented yet" in text
+    assert "WARN --jobs has no effect with --preview" in text
     code, text = run(argv, capsys)  # nothing given, nothing to warn about
-    assert "not implemented" not in text and "no effect" not in text
+    assert "no effect" not in text
 
 
 def test_out_parent_is_a_file_reports_write_error(
