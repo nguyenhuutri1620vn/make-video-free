@@ -68,7 +68,9 @@ def test_examples_load(repo_root: Path) -> None:
     assert isinstance(first, TemplateScene) and first.template == "group"
     assert first.characters is not None and len(first.characters) == 6
     assert first.sun is True and first.moon is True and first.seed is None
-    landscape = m.slides[0].scene
+    # the first slide is the plain landscape: reference boats and crew (AC-04)
+    assert m.slides[0].scene == TemplateScene(template="landscape", characters=None, boats=None)
+    landscape = m.slides[3].scene
     assert isinstance(landscape, TemplateScene) and landscape.boats is not None
     assert landscape.boats[0].crew[1] == CharacterSpec(role="boat_crew", facing=-1)
     assert m.slides[1].scene == TemplateScene(template="landscape", characters=None, boats=())

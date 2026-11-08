@@ -12,6 +12,7 @@ from typing import Final
 from PIL import Image
 
 from history_shorts.compose import (
+    DrawContext,
     SceneDrawer,
     SceneStyle,
     SlideContext,
@@ -20,12 +21,28 @@ from history_shorts.compose import (
 )
 from history_shorts.config import Script, Slide, Theme
 from history_shorts.output import slide_path, slides_dir
+from history_shorts.primitives import FloatImage
+from history_shorts.scene import draw_layers
+from history_shorts.scene.templates import expand as expand_scene
 
 log = logging.getLogger(__name__)
 
 PNG_COMPRESS_LEVEL: Final = 6  # fixed, so equal pixels give equal bytes (NFR-02)
 
 Expand = Callable[[Slide, Theme], tuple[SceneStyle, SceneDrawer | None]]
+
+
+def scene_expander(slide: Slide, theme: Theme) -> tuple[SceneStyle, SceneDrawer | None]:
+    """The ``Expand`` used by ``render``: a slide's scene (template or layers) becomes its style
+    and a drawing callback; a slide without a scene stays chrome and text on the plain ground."""
+    if slide.scene is None:
+        return default_style(theme), None
+    expanded = expand_scene(slide.scene, theme)
+
+    def draw_scene(img: FloatImage, ctx: DrawContext) -> FloatImage:
+        return draw_layers(img, expanded.layers, ctx)
+
+    return expanded.style, draw_scene
 
 
 def write_png(image: Image.Image, path: Path) -> None:
@@ -49,9 +66,10 @@ def render_slides(
 ) -> list[Path]:
     """Write ``<out dir>/slides/NN.png`` (1-based) for every slide and return the paths.
 
-    ``expand`` maps a slide to its scene style and drawing callback; without it every slide
-    is chrome and text on the plain lacquer ground. Stale ``NN.png`` files beyond the slide
-    count are left alone (the CLI reports them).
+    ``expand`` maps a slide to its scene style and drawing callback (``scene_expander`` is the
+    one ``render`` uses); without it every slide is chrome and text on the plain lacquer
+    ground. Stale ``NN.png`` files beyond the slide count are left alone (the CLI reports
+    them).
     """
     directory = slides_dir(out)
     directory.mkdir(parents=True, exist_ok=True)

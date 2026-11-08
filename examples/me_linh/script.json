@@ -12,15 +12,7 @@
       "subtitle": "Nơi cuộc khởi nghĩa bắt đầu",
       "claim": true,
       "source": 0,
-      "scene": {
-        "template": "landscape",
-        "boats": [
-          { "x": 290, "y": 1056, "scale": 1.5,
-            "crew": [ { "role": "leader", "facing": 1 }, { "role": "boat_crew", "facing": -1 } ] },
-          { "x": 780, "y": 1104, "scale": 1.25,
-            "crew": [ { "role": "general" }, { "role": "boat_crew" } ] }
-        ]
-      }
+      "scene": { "template": "landscape" }
     },
     {
       "tag": "MÊ LINH",

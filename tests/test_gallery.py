@@ -1,4 +1,4 @@
-"""``gallery`` contact sheet of every role x facing x prop (FR-04, AC-07)."""
+"""``gallery`` contact sheet of every role x facing x prop and every layer type (FR-04, AC-07)."""
 
 from __future__ import annotations
 
@@ -14,17 +14,25 @@ from history_shorts.canvas import Canvas
 from history_shorts.characters import ROLES, resolve_style
 from history_shorts.characters.figure import Placement, draw_figure, figure_boxes
 from history_shorts.cli import main
-from history_shorts.compose import over, rng_for
+from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import CharacterSpec, Theme
 from history_shorts.primitives import Box
+from history_shorts.scene import draw_layers
+from history_shorts.scene_config import LAYER_TYPES
 from history_shorts.textures import lacquer_ground
 
-SHEET_SIZE = (1080, 3000)
+SHEET_SIZE = (1080, 4080)  # header + 8 character rows + 3 layer rows of 360
 PATCH = 6  # half-size of the pixel patch sampled at a cell's body centre
 PATCH_MIN_DIFF = 30  # figure pixels differ from the ground by at least this (0..255)
 
 
-def test_cli_writes_a_1080x3000_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+@pytest.fixture(scope="module")
+def sheet_image(theme: Theme) -> Image.Image:
+    """The rendered sheet, built once for the module."""
+    return gallery.render_gallery(theme)
+
+
+def test_cli_writes_a_1080x4080_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     out = tmp_path / "deep" / "g.png"
     assert main(["gallery", "--out", str(out)]) == 0
     assert out.is_file()
@@ -105,7 +113,7 @@ def test_cells_tile_the_sheet_without_gaps() -> None:
     assert min(c.box.x0 for c in cells) == 0
     assert max(c.box.x1 for c in cells) == SHEET_SIZE[0]
     assert min(c.box.y0 for c in cells) == gallery.HEADER_H
-    assert max(c.box.y1 for c in cells) == SHEET_SIZE[1]
+    assert max(c.box.y1 for c in cells) == gallery.HEADER_H + 8 * gallery.CELL_H
     for a in cells:
         assert sum(a.box.intersects(b.box) for b in cells) == 1  # itself only
 
@@ -138,7 +146,7 @@ def test_feet_stand_above_the_label_and_centred() -> None:
         assert cell.placement.height == gallery.FIGURE_H
 
 
-def test_every_cell_holds_figure_pixels(theme: Theme) -> None:
+def test_every_cell_holds_figure_pixels(theme: Theme, sheet_image: Image.Image) -> None:
     ground = np.asarray(
         lacquer_ground(
             rng_for(theme.seed, 0, gallery.GROUND_LAYER),
@@ -147,7 +155,7 @@ def test_every_cell_holds_figure_pixels(theme: Theme) -> None:
             height=SHEET_SIZE[1],
         )
     )
-    sheet = np.asarray(gallery.render_gallery(theme)).astype(np.float32) / 255
+    sheet = np.asarray(sheet_image).astype(np.float32) / 255
     for cell in gallery.grid_cells():
         style = resolve_style(CharacterSpec(role=cell.role, prop=cell.prop), theme.palette)
         body = figure_boxes(style, cell.placement).body
@@ -157,8 +165,8 @@ def test_every_cell_holds_figure_pixels(theme: Theme) -> None:
         assert diff >= PATCH_MIN_DIFF, cell
 
 
-def test_header_and_labels_use_gold_light(theme: Theme) -> None:
-    sheet = np.asarray(gallery.render_gallery(theme))
+def test_header_and_labels_use_gold_light(theme: Theme, sheet_image: Image.Image) -> None:
+    sheet = np.asarray(sheet_image)
     gold = np.array(theme.palette["gold_lt"])
     header = sheet[: gallery.HEADER_H]
     assert (np.abs(header.astype(int) - gold).sum(axis=2) < 30).any()
@@ -246,8 +254,8 @@ def _mismatch(
     return int((diff & keep).sum())
 
 
-def test_each_cell_renders_its_labelled_figure(theme: Theme) -> None:
-    sheet = np.asarray(gallery.render_gallery(theme))
+def test_each_cell_renders_its_labelled_figure(theme: Theme, sheet_image: Image.Image) -> None:
+    sheet = np.asarray(sheet_image)
     ground = np.asarray(_ground(theme))
     limit = MISMATCH_MAX * gallery.CELL_W * gallery.CELL_H
     for cell in gallery.grid_cells():
@@ -255,9 +263,11 @@ def test_each_cell_renders_its_labelled_figure(theme: Theme) -> None:
         assert _mismatch(theme, sheet, ground, cell) <= limit, cell
 
 
-def test_cells_do_not_hold_a_neighbouring_combination(theme: Theme) -> None:
+def test_cells_do_not_hold_a_neighbouring_combination(
+    theme: Theme, sheet_image: Image.Image
+) -> None:
     """The check above has teeth: the wrong prop or facing differs on many pixels."""
-    sheet = np.asarray(gallery.render_gallery(theme))
+    sheet = np.asarray(sheet_image)
     ground = np.asarray(_ground(theme))
     for cell in gallery.grid_cells():
         other_prop = "none" if cell.prop != "none" else "spear"
@@ -266,9 +276,11 @@ def test_cells_do_not_hold_a_neighbouring_combination(theme: Theme) -> None:
             assert bad >= MISMATCH_MIN_PIXELS, (cell, changes, bad)
 
 
-def test_none_cell_is_empty_where_spear_has_its_shaft(theme: Theme) -> None:
+def test_none_cell_is_empty_where_spear_has_its_shaft(
+    theme: Theme, sheet_image: Image.Image
+) -> None:
     ground = np.asarray(_ground(theme))
-    sheet = np.asarray(gallery.render_gallery(theme))
+    sheet = np.asarray(sheet_image)
     for cell in (c for c in gallery.grid_cells() if c.prop == "none"):
         shaft = (_figure_alpha(theme, cell, prop="spear") > OPAQUE) & (
             _figure_alpha(theme, cell) == 0
@@ -277,3 +289,117 @@ def test_none_cell_is_empty_where_spear_has_its_shaft(theme: Theme) -> None:
         window = _window(cell)
         diff = np.abs(sheet[window].astype(np.float32) - ground[window] * 255).max(axis=2)
         assert (diff[shaft] <= MATCH_TOLERANCE).all(), cell
+
+
+# --------------------------------------------------------------------------------------
+# Layer-type cells (FR-04)
+# --------------------------------------------------------------------------------------
+
+LAYER_LABELS = [
+    "sun",
+    "moon",
+    "clouds",
+    "mountains",
+    "peaks gradient",
+    "peaks eggshell",
+    "hills left",
+    "river",
+    "ground",
+    "boat",
+    "birds",
+    "lotus",
+]
+ART_MIN_DIFF = 40  # 0..255: a cell with art differs from bare ground by at least this somewhere
+ART_MIN_PIXELS = 200
+LABEL_PAD = 4  # px around the label box that must stay bare ground
+
+
+def test_sheet_height_adds_three_layer_rows() -> None:
+    assert gallery.LAYER_ROWS == 3
+    assert gallery.SHEET_H == gallery.HEADER_H + (8 + 3) * gallery.CELL_H == 4080
+
+
+def test_layer_cells_label_every_type_once_in_reading_order() -> None:
+    cells = gallery.layer_cells()
+    assert [c.label for c in cells] == LAYER_LABELS
+    assert len({c.label for c in cells}) == len(cells)
+    # every layer type is drawn: ``characters`` by the grid above, the rest by a cell
+    assert {c.type_name for c in cells} | {"characters"} == set(LAYER_TYPES)
+    for c in cells:
+        assert type(c.layer) is LAYER_TYPES[c.type_name], c.label
+    assert [c.type_name for c in cells].count("peaks") == 2  # gradient and eggshell fills
+
+
+def test_layer_cells_sit_below_the_characters_four_to_a_row() -> None:
+    cells = gallery.layer_cells()
+    first_row_y = gallery.HEADER_H + 8 * gallery.CELL_H
+    assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(12)]
+    assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(12)]
+    assert all(c.box.width == gallery.CELL_W and c.box.height == gallery.CELL_H for c in cells)
+    assert max(c.box.y1 for c in cells) == gallery.SHEET_H
+    assert not any(c.box.intersects(g.box) for c in cells for g in gallery.grid_cells())
+
+
+def test_crops_are_three_by_four_and_inside_the_canvas() -> None:
+    canvas = Box(0, 0, 1080, 1920)
+    for c in gallery.layer_cells():
+        assert c.crop.inside(canvas), c.label
+        assert c.crop.width * 4 == pytest.approx(c.crop.height * 3), c.label  # no distortion
+
+
+def _bare_cell(theme: Theme, cell: gallery.LayerCell) -> Any:
+    """What the cell shows with nothing drawn: the canvas ground, cropped and scaled."""
+    return gallery.scale_crop(gallery.canvas_ground(theme), cell.crop)
+
+
+def test_every_layer_cell_holds_art_and_labels_stay_on_bare_ground(theme: Theme) -> None:
+    ground = gallery.canvas_ground(theme)
+    for cell in gallery.layer_cells():
+        art = gallery.layer_art(theme, ground, cell)
+        diff = np.abs(art - _bare_cell(theme, cell)).max(axis=2) * 255
+        assert (diff >= ART_MIN_DIFF).sum() >= ART_MIN_PIXELS, cell.label
+        label = gallery.label_box(theme, cell)
+        y0, y1 = int(label.y0 - cell.box.y0) - LABEL_PAD, int(label.y1 - cell.box.y0) + LABEL_PAD
+        x0, x1 = int(label.x0 - cell.box.x0) - LABEL_PAD, int(label.x1 - cell.box.x0) + LABEL_PAD
+        assert diff[y0:y1, x0:x1].max() <= 3, cell.label  # the art never runs under its label
+
+
+def test_layer_cell_art_is_drawn_by_its_layer_at_canvas_scale(
+    theme: Theme, palette: Any, sheet_image: Image.Image
+) -> None:
+    """The sheet cell equals the layer drawn on the canvas ground, cropped (not re-styled)."""
+    sheet = np.asarray(sheet_image).astype(np.float32)
+    ground = gallery.canvas_ground(theme)
+    ctx = DrawContext(theme, palette, theme.seed, 0)
+    for cell in gallery.layer_cells():
+        expected = gallery.scale_crop(draw_layers(ground.copy(), [cell.layer], ctx), cell.crop)
+        window = sheet[int(cell.box.y0) : int(cell.box.y1), int(cell.box.x0) : int(cell.box.x1)]
+        diff = np.abs(window - expected * 255).max(axis=2) > MATCH_TOLERANCE
+        keep = np.zeros(diff.shape, dtype=bool)
+        keep[BORDER : gallery.CELL_H - BORDER, BORDER : gallery.CELL_W - BORDER] = True
+        label = gallery.label_box(theme, cell)
+        y0, x0 = int(label.y0 - cell.box.y0), int(label.x0 - cell.box.x0)
+        keep[y0 - 1 : int(label.y1 - cell.box.y0) + 2, x0 - 1 : int(label.x1 - cell.box.x0) + 2] = (
+            False
+        )
+        assert (diff & keep).sum() <= MISMATCH_MAX * gallery.CELL_W * gallery.CELL_H, cell.label
+
+
+def test_layer_cells_differ_from_each_other(theme: Theme, sheet_image: Image.Image) -> None:
+    sheet = np.asarray(sheet_image).astype(np.int16)
+    cells = gallery.layer_cells()
+    windows = [
+        sheet[int(c.box.y0) : int(c.box.y1) - 60, int(c.box.x0) : int(c.box.x1)] for c in cells
+    ]
+    for i, a in enumerate(windows):
+        for b in windows[i + 1 :]:
+            assert np.abs(a - b).max(axis=2).mean() > 3
+
+
+def test_layer_labels_are_drawn_in_gold_light(theme: Theme, sheet_image: Image.Image) -> None:
+    sheet = np.asarray(sheet_image)
+    gold = np.array(theme.palette["gold_lt"])
+    for cell in gallery.layer_cells():
+        label = gallery.label_box(theme, cell)
+        window = sheet[int(label.y0) : int(label.y1) + 1, int(label.x0) : int(label.x1) + 1]
+        assert (np.abs(window.astype(int) - gold).sum(axis=2) < 30).any(), cell.label

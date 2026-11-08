@@ -17,7 +17,7 @@ from history_shorts.compose import DrawContext, SceneStyle, default_style
 from history_shorts.config import Script, Slide, Theme, load_script
 from history_shorts.output import default_out_path, slides_dir, slugify, stale_slides
 from history_shorts.primitives import FloatImage
-from history_shorts.render import render_slides
+from history_shorts.render import render_slides, scene_expander
 
 ScriptFactory = Callable[..., Path]
 
@@ -223,6 +223,68 @@ def test_expand_hook_supplies_style_and_scene(
         assert np.asarray(second)[350, 150, 0] > 150  # sheen/grain barely move a solid fill
 
 
+def test_scene_expander_without_scene_is_plain_ground(theme: Theme, make_slide: Any) -> None:
+    style, draw_scene = scene_expander(make_slide("A"), theme)
+    assert style == default_style(theme)
+    assert draw_scene is None
+
+
+def test_scene_expander_with_template_gives_its_style_and_a_drawer(
+    theme: Theme, make_slide: Any
+) -> None:
+    from history_shorts.config import TemplateScene
+    from history_shorts.scene.templates import GROUP_GROUND_COLORS
+
+    scene = TemplateScene(template="group", characters=None, boats=None)
+    style, draw_scene = scene_expander(make_slide("A", scene=scene), theme)
+    assert style.ground == GROUP_GROUND_COLORS
+    assert draw_scene is not None
+
+
+def test_scene_expander_drawer_draws_the_layers(
+    theme: Theme, palette: Any, flat_base: Callable[[], FloatImage], make_slide: Any
+) -> None:
+    from history_shorts.config import GroundLayer, LayerScene
+
+    scene = LayerScene(layers=(GroundLayer(y=1000, height=52),))
+    _style, draw_scene = scene_expander(make_slide("A", scene=scene), theme)
+    assert draw_scene is not None
+    base = flat_base()
+    out = draw_scene(base, DrawContext(theme, palette, theme.seed, 0))
+    assert out.shape == base.shape
+    assert not np.array_equal(out, base)
+
+
+def test_scene_slide_differs_from_the_same_slide_without_scene(
+    tmp_path: Path, tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    plain = load(tmp_script(slides=[{"title": "A"}]))
+    scened = load(tmp_script(slides=[{"title": "A", "scene": {"template": "group"}}]))
+    a = render_slides(plain, theme, tmp_path / "a" / "v.mp4", debug_safe_zone=False)
+    b = render_slides(
+        scened, theme, tmp_path / "b" / "v.mp4", debug_safe_zone=False, expand=scene_expander
+    )
+    assert a[0].read_bytes() != b[0].read_bytes()
+
+
+def test_debug_safe_zone_works_with_a_scene_slide(
+    tmp_path: Path, tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    script = load(tmp_script(slides=[{"title": "A", "scene": {"template": "landscape"}}]))
+    plain = render_slides(
+        script, theme, tmp_path / "a" / "v.mp4", debug_safe_zone=False, expand=scene_expander
+    )
+    debug = render_slides(
+        script, theme, tmp_path / "b" / "v.mp4", debug_safe_zone=True, expand=scene_expander
+    )
+    with Image.open(plain[0]) as p, Image.open(debug[0]) as d:
+        assert p.size == d.size == (1080, 1920)
+        diff = np.abs(np.asarray(p).astype(int) - np.asarray(d).astype(int)).sum(axis=2)
+    changed = diff > 0
+    assert 0 < changed.mean() < 0.02  # thin outlines, not a repaint
+    assert not changed[600:1000, 300:700].any()  # the scene inside the regions is intact
+
+
 # --------------------------------------------------------------------------------------
 # CLI: render --preview
 # --------------------------------------------------------------------------------------
@@ -253,6 +315,19 @@ def test_preview_writes_pngs_and_never_spawns_ffmpeg(
     assert code == 0, text
     assert pngs(tmp_path / "slides") == [f"{i:02d}.png" for i in range(1, 7)]
     assert not out.exists()
+
+
+def test_preview_renders_the_scene(
+    tmp_path: Path, tmp_script: ScriptFactory, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``render --preview`` expands scenes: the moon of a landscape is lit on the PNG."""
+    script = tmp_script(slides=[{"title": "A", "scene": {"template": "landscape"}}])
+    out = tmp_path / "v.mp4"
+    code, text = run(["render", "--script", str(script), "--preview", "--out", str(out)], capsys)
+    assert code == 0, text
+    with Image.open(tmp_path / "slides" / "01.png") as image:
+        moon = np.asarray(image)[450, 770].astype(int)  # the landscape moon's centre
+    assert moon.sum() > 3 * 120  # lacquer ground there is nearly black
 
 
 def test_preview_summary(

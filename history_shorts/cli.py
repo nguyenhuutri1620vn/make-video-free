@@ -151,7 +151,7 @@ def _print_sources(script: Script) -> None:
 
 def _cmd_render(args: argparse.Namespace) -> int:
     from history_shorts.output import default_out_path, slides_dir
-    from history_shorts.render import render_slides
+    from history_shorts.render import render_slides, scene_expander
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.ERROR,
@@ -166,7 +166,9 @@ def _cmd_render(args: argparse.Namespace) -> int:
     started = time.perf_counter()
     directory = slides_dir(out)
     try:
-        paths = render_slides(script, theme, out, debug_safe_zone=args.debug_safe_zone)
+        paths = render_slides(
+            script, theme, out, debug_safe_zone=args.debug_safe_zone, expand=scene_expander
+        )
     except OSError as exc:
         print(f"ERROR cannot write slides to {directory}: {exc.strerror or exc}")
         return EXIT_ERROR

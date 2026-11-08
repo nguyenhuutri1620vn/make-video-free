@@ -1,12 +1,18 @@
-"""Contact sheet of every role x facing x prop on lacquer ground (FR-04).
+"""Contact sheet of every role x facing x prop and every scene layer type (FR-04).
 
-Layer-type rows are added with the scene layers (Task 20). Each figure uses its role
-preset's crest, so crest variants are not part of the sheet. A cell whose prop the role's
-costume kit cannot draw stays empty; the columns keep their places.
+The character block comes first: one lacquer-ground sheet with a cell per role x facing x
+prop. Each figure uses its role preset's crest, so crest variants are not part of the sheet. A
+cell whose prop the role's costume kit cannot draw stays empty; the columns keep their places.
+
+Below it, one cell per scene layer type (``LAYER_SPECS``). Each layer is drawn at full canvas
+scale with the reference template's parameters onto its own 1080x1920 lacquer ground, and a
+fixed crop of that render (``crop``, a 3:4 box in canvas pixels) is scaled into the cell. The
+``characters`` layer type is the character block above.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, get_args
 
@@ -17,10 +23,13 @@ from history_shorts.canvas import Canvas
 from history_shorts.characters import ROLES, resolve_style
 from history_shorts.characters.figure import Placement, draw_figure
 from history_shorts.characters.kits import kit_named
-from history_shorts.compose import over, rng_for
-from history_shorts.config import CharacterSpec, Theme
-from history_shorts.layout import CANVAS_W
-from history_shorts.primitives import Box
+from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
+from history_shorts.compose import DrawContext, over, rng_for
+from history_shorts.config import CharacterSpec, Layer, LotusLayer, Theme
+from history_shorts.layout import CANVAS_H, CANVAS_W
+from history_shorts.primitives import Box, FloatImage
+from history_shorts.scene import draw_layers
+from history_shorts.scene import templates as tpl
 from history_shorts.scene_config import Prop
 from history_shorts.text import font
 from history_shorts.textures import lacquer_ground
@@ -46,7 +55,32 @@ TEXT_COLOR: Final = "gold_lt"
 GROUND_LAYER: Final = 0  # rng_for(theme.seed, 0, 0)
 
 SHEET_W: Final = CANVAS_W
-SHEET_H: Final = HEADER_H + len(ROLES) * len(FACINGS) * CELL_H
+COLUMNS: Final = SHEET_W // CELL_W
+CHARACTER_ROWS: Final = len(ROLES) * len(FACINGS)
+
+# A reference lotus (no template places one): the flower on its leaf at 3x, mid-canvas.
+GALLERY_LOTUS: Final = LotusLayer(x=540, y=1000, scale=3.0)
+# One entry per cell, in reading order: (label, layer type name, reference layer, crop).
+# The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
+# is placed so the art sits in the upper three quarters and the label stays on bare ground.
+# ``peaks`` appears twice, once per fill; ``characters`` is the character block above.
+LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
+    ("sun", "sun", tpl.GROUP_SUN, Box(165, 250, 915, 1250)),
+    ("moon", "moon", tpl.LANDSCAPE_MOON, Box(590, 258, 950, 738)),
+    ("clouds", "clouds", tpl.GROUP_CLOUDS, Box(135, 174, 405, 534)),
+    ("mountains", "mountains", tpl.GROUP_MOUNTAINS, Box(315, 730, 765, 1330)),
+    ("peaks gradient", "peaks", tpl.LANDSCAPE_BACK_PEAKS, Box(240, 390, 840, 1190)),
+    ("peaks eggshell", "peaks", tpl.LANDSCAPE_MID_PEAKS, Box(0, 515, 600, 1315)),
+    ("hills left", "hills", tpl.GROUP_HILL_LEFT, Box(0, 750, 450, 1350)),
+    ("river", "river", tpl.LANDSCAPE_RIVER, Box(315, 845, 765, 1445)),
+    ("ground", "ground", tpl.GROUP_GROUND, Box(390, 958, 690, 1358)),
+    ("boat", "boat", tpl.LANDSCAPE_BOATS[0], Box(140, 780, 440, 1180)),
+    ("birds", "birds", tpl.LANDSCAPE_BIRDS, Box(215, 297, 455, 617)),
+    ("lotus", "lotus", GALLERY_LOTUS, Box(360, 758, 720, 1238)),
+)
+LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
+
+SHEET_H: Final = HEADER_H + (CHARACTER_ROWS + LAYER_ROWS) * CELL_H
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +92,30 @@ class GalleryCell:
     prop: Prop
     box: Box
     placement: Placement
+
+
+@dataclass(frozen=True, slots=True)
+class LayerCell:
+    """One layer-type cell: its box on the sheet and what is drawn in it."""
+
+    label: str
+    type_name: str  # a key of ``LAYER_TYPES``
+    layer: Layer
+    crop: Box
+    box: Box
+
+
+def layer_cells() -> list[LayerCell]:
+    """The layer-type cells below the character block, row by row, four to a row."""
+    cells: list[LayerCell] = []
+    for k, (label, type_name, layer, crop) in enumerate(LAYER_SPECS):
+        row, column = divmod(k, COLUMNS)
+        x0 = column * CELL_W
+        y0 = HEADER_H + (CHARACTER_ROWS + row) * CELL_H
+        cells.append(
+            LayerCell(label, type_name, layer, crop, Box(x0, y0, x0 + CELL_W, y0 + CELL_H))
+        )
+    return cells
 
 
 def grid_cells() -> list[GalleryCell]:
@@ -81,7 +139,9 @@ def grid_cells() -> list[GalleryCell]:
     return cells
 
 
-def cell_label(cell: GalleryCell) -> str:
+def cell_label(cell: GalleryCell | LayerCell) -> str:
+    if isinstance(cell, LayerCell):
+        return cell.label
     return f"{cell.role} · {cell.facing:+d} · {cell.prop}"
 
 
@@ -90,8 +150,7 @@ def _draw_separators(cv: Canvas, theme: Theme) -> None:
     for column in range(1, len(PROPS)):
         cv.M(column * CELL_W, HEADER_H).L(column * CELL_W, SHEET_H)
         cv.stroke(SEPARATOR_WIDTH)
-    rows = len(ROLES) * len(FACINGS)
-    for row in range(rows + 1):
+    for row in range(CHARACTER_ROWS + LAYER_ROWS + 1):
         y = HEADER_H + row * CELL_H
         cv.M(0, y).L(SHEET_W, y)
         cv.stroke(SEPARATOR_WIDTH)
@@ -107,19 +166,19 @@ def label_font(theme: Theme) -> ImageFont.FreeTypeFont:
     return font(theme.fonts.tag, round(theme.type_scale.tag * LABEL_SCALE))
 
 
-def label_anchor(cell: GalleryCell) -> tuple[float, float]:
+def label_anchor(cell: GalleryCell | LayerCell) -> tuple[float, float]:
     """Where the cell's label is centred (Pillow anchor ``mm``)."""
     return (cell.box.x0 + cell.box.x1) / 2, cell.box.y1 - LABEL_MARGIN
 
 
-def label_box(theme: Theme, cell: GalleryCell) -> Box:
+def label_box(theme: Theme, cell: GalleryCell | LayerCell) -> Box:
     """Pixel box of the cell's label, as drawn (anchored at its middle)."""
     cx, cy = label_anchor(cell)
     x0, y0, x1, y1 = label_font(theme).getbbox(cell_label(cell), anchor="mm")
     return Box(cx + x0, cy + y0, cx + x1, cy + y1)
 
 
-def _draw_labels(img: Image.Image, theme: Theme, cells: list[GalleryCell]) -> None:
+def _draw_labels(img: Image.Image, theme: Theme, cells: Sequence[GalleryCell | LayerCell]) -> None:
     draw = ImageDraw.Draw(img)
     colour = theme.palette[TEXT_COLOR]
     header_font = font(theme.fonts.title, theme.type_scale.tag)
@@ -135,16 +194,45 @@ def _draw_labels(img: Image.Image, theme: Theme, cells: list[GalleryCell]) -> No
         )
 
 
+def canvas_ground(theme: Theme) -> FloatImage:
+    """The plain 1080x1920 lacquer ground every layer cell is drawn on."""
+    return lacquer_ground(
+        rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=CANVAS_W, height=CANVAS_H
+    )
+
+
+def scale_crop(full: FloatImage, crop: Box) -> FloatImage:
+    """``crop`` of a full-canvas buffer scaled to one cell (Lanczos, deterministic)."""
+    image = Image.fromarray((np.clip(full, 0, 1) * 255).astype(np.uint8), "RGB")
+    box = (crop.x0, crop.y0, crop.x1, crop.y1)
+    small = image.resize((CELL_W, CELL_H), Image.Resampling.LANCZOS, box=box)
+    return np.asarray(np.asarray(small, dtype=np.float32) / 255, dtype=np.float32)
+
+
+def layer_art(theme: Theme, ground: FloatImage, cell: LayerCell) -> FloatImage:
+    """The cell's pixels: the layer drawn at canvas scale on ``ground``, cropped and scaled."""
+    ctx = DrawContext(theme, theme.palette, theme.seed, SCENE_GROUND_LAYER)
+    return scale_crop(draw_layers(ground.copy(), [cell.layer], ctx), cell.crop)
+
+
+def _paste_layer_cells(buffer: FloatImage, theme: Theme) -> None:
+    ground = canvas_ground(theme)
+    for cell in layer_cells():
+        y0, x0 = int(cell.box.y0), int(cell.box.x0)
+        buffer[y0 : y0 + CELL_H, x0 : x0 + CELL_W] = layer_art(theme, ground, cell)
+
+
 def render_gallery(theme: Theme) -> Image.Image:
-    """The 1080x3000 contact sheet: separators and figures on one canvas, then the text."""
+    """The 1080x4080 contact sheet: layer cells, separators and figures, then the text."""
     cells = grid_cells()
     ground = lacquer_ground(
         rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=SHEET_W, height=SHEET_H
     )
+    _paste_layer_cells(ground, theme)
     cv = Canvas(SHEET_W, SHEET_H)
     _draw_separators(cv, theme)
     _draw_figures(cv, theme, cells)
     buffer = over(ground, cv)
     img = Image.fromarray((np.clip(buffer, 0, 1) * 255).astype(np.uint8), "RGB")
-    _draw_labels(img, theme, cells)
+    _draw_labels(img, theme, [*cells, *layer_cells()])
     return img

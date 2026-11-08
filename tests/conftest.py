@@ -10,15 +10,55 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from helpers.snapshots import SnapshotDb
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+BASELINES = REPO_ROOT / "tests" / "snapshots" / "baselines.json"
 
 _UNSET: Any = object()  # distinguishes "use the default" from an explicit ``None``
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--update-snapshots",
+        action="store_true",
+        default=False,
+        help="write the snapshot baselines for the installed library versions (intentional "
+        "visual changes only)",
+    )
 
 
 @pytest.fixture(scope="session")
 def repo_root() -> Path:
     return REPO_ROOT
+
+
+@pytest.fixture(scope="session")
+def snapshot_db(request: pytest.FixtureRequest) -> SnapshotDb:
+    return SnapshotDb(BASELINES, bool(request.config.getoption("--update-snapshots")))
+
+
+@pytest.fixture(scope="session")
+def first_slide_png(theme: Any, tmp_path_factory: pytest.TempPathFactory) -> Callable[[str], Path]:
+    """Factory: render slide 01 of ``examples/<name>`` with its scene; cached per session."""
+    from dataclasses import replace
+
+    from history_shorts.config import load_script
+    from history_shorts.render import render_slides, scene_expander
+
+    cache: dict[str, Path] = {}
+
+    def render(example: str) -> Path:
+        if example not in cache:
+            script, _warnings = load_script(REPO_ROOT / "examples" / example / "script.json")
+            first = replace(script, slides=script.slides[:1])
+            out = tmp_path_factory.mktemp(f"first_{example}") / "v.mp4"
+            cache[example] = render_slides(
+                first, theme, out, debug_safe_zone=False, expand=scene_expander
+            )[0]
+        return cache[example]
+
+    return render
 
 
 @pytest.fixture(scope="session")

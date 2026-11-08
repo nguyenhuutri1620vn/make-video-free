@@ -31,6 +31,13 @@ Covers AC-06 (formations and figures never overlap seal, tag, text or another he
 - Task 15: `gallery [--theme PATH] [--out PATH]` writes a 1080x3000 contact sheet (default `output/gallery.png`): 4 props across, 8 role x facing rows down (roles in preset order, facing +1 then -1), on one lacquer ground, each cell labelled `role · facing · prop`. Figures use their role preset's crest. Layer-type rows arrive with the scene layers (Task 20).
 - Task 15b: costume kits (FR-45). The figure is drawn, boxed and masked through `KITS[style.kit]`; today's parts moved verbatim to the `ancient_female` kit (`characters/parts.py` re-exports it). Roles name their kit; `validate` rejects unknown kits and props a kit cannot draw. No visual change (byte-identical renders and gallery). Spec: FR-45 amended, Appendix B (era packs, planned after v2.0) added.
 
+## M4 — Scenes & templates
+
+Covers AC-03 and AC-04 (first slides match the approved references; automated part is a per-region ΔE76 of at most 8 on mean Lab colour, owner sign-off still required), AC-05 and AC-06 (template and layer scenes never overlap seal, tag, text or another head), AC-10 (`render --preview` never starts a process, now with scenes) and AC-12 (two full renders of each example are byte-identical).
+
+- Tasks 16-19: layer registry and sun/moon, birds and eggshell clouds; mountains, peaks, hills, river and ground; boat with crew and lotus; characters layer; `group` and `landscape` templates that expand to the reference layers.
+- Task 20: `render --preview` draws every slide's scene (`render.scene_expander`). `validate` expands template scenes and runs the FR-48 overlap checks on their characters and boat crew with script paths (`slides[i].scene.characters[k]`, `slides[i].scene.boats[b].crew[k]`); `check_overlaps` now requires `tag` and `file`, so the tag-pill check cannot be skipped by accident. `gallery` grows to 1080x4080 with three rows of layer-type cells. New tests: ΔE76 region comparison against the approved references (`tests/helpers/visual.py`), first-slide SHA-256 snapshots keyed by library versions (`--update-snapshots`), full-run determinism. The `me_linh` example's first slide now uses the plain `landscape` template, so its second boat matches the approved image. The snapshot baseline for the pinned versions was written intentionally with `pytest --update-snapshots`.
+
 ## Unreleased
 
 ### Docs

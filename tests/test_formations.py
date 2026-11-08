@@ -244,11 +244,24 @@ def test_head_mask_is_a_subset_of_the_figure(palette: Palette) -> None:
 # --------------------------------------------------------------------------------------
 
 
+def overlaps(
+    index: int,
+    placed: list[Any],
+    text: Any,
+    theme: Theme,
+    palette: Palette,
+    *,
+    tag: str = "",
+) -> list[Issue]:
+    """``check_overlaps`` with the file name filled in (``tag`` and ``file`` are required there)."""
+    return check_overlaps(index, placed, text, theme, palette, tag=tag, file="script.json")
+
+
 def test_reference_group_has_no_overlaps(
     theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:  # AC-06
     placed = place("centre_pair", REF_SPECS, 1100)
-    issues = check_overlaps(
+    issues = overlaps(
         0, styled(placed, palette), ref_text(make_slide, theme), theme, palette, tag=REF_TAG
     )
     assert issues == []
@@ -264,7 +277,7 @@ def test_flag_over_seal_reported(theme: Theme, palette: Palette, make_slide: Sli
     spec = CharacterSpec(role="leader", x=100, baseline=1000, height=565, facing=1)
     placed = place(None, [spec], 1000)
     text = plan_text(make_slide("A"), theme)
-    issues = check_overlaps(0, styled(placed, palette), text, theme, palette)
+    issues = overlaps(0, styled(placed, palette), text, theme, palette)
     assert any("overlaps seal" in i.message for i in issues)
     assert all(i.path == "slides[0].scene.characters[0]" and i.severity == "error" for i in issues)
 
@@ -273,7 +286,7 @@ def test_overlap_message_names_both_boxes(
     theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:
     spec = CharacterSpec(role="leader", x=100, baseline=1000, height=565, facing=1)
-    issues = check_overlaps(
+    issues = overlaps(
         0,
         styled(place(None, [spec], 1000), palette),
         plan_text(make_slide("A"), theme),
@@ -288,7 +301,7 @@ def test_character_over_tag_reported(
     theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:
     spec = CharacterSpec(role="leader", x=700, baseline=700, height=565, facing=1)
-    issues = check_overlaps(
+    issues = overlaps(
         0,
         styled(place(None, [spec], 700), palette),
         plan_text(make_slide("A"), theme),
@@ -303,7 +316,7 @@ def test_character_over_title_reported(
     theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:
     spec = CharacterSpec(role="general", x=540, baseline=1350, height=475, facing=1)
-    issues = check_overlaps(
+    issues = overlaps(
         0, styled(place(None, [spec], 1350), palette), ref_text(make_slide, theme), theme, palette
     )
     assert any("overlaps title" in i.message for i in issues)
@@ -317,7 +330,7 @@ def test_character_over_subtitle_reported(
     spec = CharacterSpec(
         role="general", x=540, baseline=text.subtitle_box.y1 + 5, height=200, facing=1, prop="none"
     )
-    issues = check_overlaps(0, styled(place(None, [spec], 0), palette), text, theme, palette)
+    issues = overlaps(0, styled(place(None, [spec], 0), palette), text, theme, palette)
     assert any("overlaps subtitle" in i.message for i in issues)
 
 
@@ -326,7 +339,7 @@ def test_head_outside_frame_reported(
     x: float, theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:
     spec = CharacterSpec(role="general", x=x, baseline=1100, height=475, facing=1, prop="none")
-    issues = check_overlaps(
+    issues = overlaps(
         0,
         styled(place(None, [spec], 1100), palette),
         plan_text(make_slide("A"), theme),
@@ -341,9 +354,7 @@ def test_head_overlap_reported(theme: Theme, palette: Palette, make_slide: Slide
     # the front character stands right in front of the back one and covers its head
     front = CharacterSpec(role="leader", x=540, baseline=1106, height=700, facing=1)
     placed = place(None, [back, front], 1100)
-    issues = check_overlaps(
-        0, styled(placed, palette), plan_text(make_slide("A"), theme), theme, palette
-    )
+    issues = overlaps(0, styled(placed, palette), plan_text(make_slide("A"), theme), theme, palette)
     covers = [i for i in issues if "covers the head" in i.message]
     assert len(covers) == 1
     assert covers[0].path == "slides[0].scene.characters[1]"
@@ -357,9 +368,7 @@ def test_head_behind_a_later_character_head_order_matters(
     front = CharacterSpec(role="leader", x=540, baseline=1106, height=700, facing=1)
     # drawn the other way round, the tall one is behind and nothing covers its head
     placed = place(None, [front, back], 1100)
-    issues = check_overlaps(
-        0, styled(placed, palette), plan_text(make_slide("A"), theme), theme, palette
-    )
+    issues = overlaps(0, styled(placed, palette), plan_text(make_slide("A"), theme), theme, palette)
     assert not [i for i in issues if "covers the head" in i.message]
 
 
@@ -367,7 +376,7 @@ def test_empty_tag_adds_no_tag_check(
     theme: Theme, palette: Palette, make_slide: SlideFactory
 ) -> None:
     spec = CharacterSpec(role="leader", x=700, baseline=700, height=565, facing=1)
-    issues = check_overlaps(
+    issues = overlaps(
         0,
         styled(place(None, [spec], 700), palette),
         plan_text(make_slide("A"), theme),
@@ -440,6 +449,33 @@ def test_check_all_layer_baseline_applies_to_items(tmp_script: ScriptFactory, th
     )
 
 
-def test_check_all_skips_template_scenes(tmp_script: ScriptFactory, theme: Theme) -> None:
-    slide = {"title": "A", "scene": {"template": "group", "characters": [{"role": "leader"}] * 3}}
+def test_check_all_expands_template_scenes(tmp_script: ScriptFactory, theme: Theme) -> None:
+    roles = [{"role": "leader"}] * 2 + [{"role": "general_alt"}] * 2
+    slide = {"title": "A", "scene": {"template": "group", "characters": roles}}
     assert check_all(load(tmp_script, [slide]), theme) == []
+
+
+def test_check_all_reports_template_overlaps_with_script_paths(
+    tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    """A third character in a centre pair stands in the middle, in front of a head (FR-48)."""
+    slide = {"title": "A", "scene": {"template": "group", "characters": [{"role": "leader"}] * 3}}
+    issues = check_all(load(tmp_script, [slide]), theme)
+    assert issues
+    assert all(i.severity == "error" and "head" in i.message for i in issues)
+    assert {i.path for i in issues} <= {f"slides[0].scene.characters[{k}]" for k in range(3)}
+
+
+def test_check_all_passes_the_slide_tag_to_the_overlap_check(
+    tmp_script: ScriptFactory, theme: Theme
+) -> None:
+    """The tag pill sits in the header; a tall flag on the right runs into it (FR-48)."""
+    crew = {"role": "leader", "x": 700, "baseline": 700, "height": 565, "facing": 1}
+    layers = [{"type": "characters", "items": [crew]}]
+    with_tag = layer_slide(layers, tag=REF_TAG)
+    without = layer_slide(layers)
+    hit = [i.message for i in check_all(load(tmp_script, [with_tag]), theme)]
+    assert any("overlaps tag" in m for m in hit)
+    assert not any(
+        "overlaps tag" in i.message for i in check_all(load(tmp_script, [without]), theme)
+    )

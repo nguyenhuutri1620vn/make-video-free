@@ -29,11 +29,22 @@ python -m history_shorts render --script examples/me_linh/script.json --preview 
 python -m history_shorts gallery --out output/gallery.png
 ```
 
-`render --preview` validates the script first (exit 3 and nothing written on any error), then writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; the video itself is not produced yet (milestone M5), so without `--preview` the command renders the PNGs and then exits 1 with a clear message. Slides are chrome and text only until the scenes arrive in M4.
+`render --preview` validates the script first (exit 3 and nothing written on any error), then writes one PNG per slide to `slides/NN.png` (1-based) in the directory of `--out` and prints the slide count, that directory, the elapsed time and the sources. It never starts FFmpeg. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; the video itself is not produced yet (milestone M5), so without `--preview` the command renders the PNGs and then exits 1 with a clear message.  A slide's `scene` (a `group` or `landscape` template, or explicit layers) is drawn between the ground and the chrome; a slide without a scene is chrome and text on the lacquer ground.
 
 PNGs are written atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--music`, `--music-volume`, `--keep-temp` and `--jobs` are accepted but ignored for now (a `WARN` says so). `--verbose` logs the time per slide; `--debug-safe-zone` outlines the safe zone and regions.
 
-`gallery` renders a 1080x3000 contact sheet of every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest; layer types join the sheet with the scene layers.
+`gallery` renders a 1080x4080 contact sheet. The top block is every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. Below it, three rows of 270x360 cells show each scene layer type with the reference template's parameters (sun, moon, clouds, mountains, peaks gradient, peaks eggshell, hills left, river, ground, boat, birds, lotus); each is the layer drawn at full canvas scale, with a fixed 3:4 crop scaled into its cell (`gallery.LAYER_SPECS`). `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest.
+
+## Tests and snapshots
+
+```bash
+pytest -q                        # everything; E2E tests marked `ffmpeg` skip without FFmpeg
+pytest --update-snapshots        # write the snapshot baselines for the installed library versions
+```
+
+Snapshot tests hash the first slide's PNG of both examples (`tests/test_compose_snapshot.py`). Baselines live in `tests/snapshots/baselines.json`, keyed by `pycairo=...;numpy=...;scipy=...;Pillow=...` (spec R-02): a pixel is only reproducible for one set of library versions. On any other set the snapshot tests skip with "run pytest --update-snapshots". Use that flag only for an intentional visual change (or a deliberate version bump), say so in the change, and review the new PNGs by eye before committing `baselines.json`.
+
+`tests/test_visual.py` also compares the first slide of each example with the approved references in `docs/reference/approved/`: the mean colour of each layout region (header, visual, title, subtitle, chrome) is converted to CIE Lab (D65) and the ΔE76 must stay at or below 8 (AC-03, AC-04). This is a coarse automated gate; owner sign-off on the preview PNGs is still required.
 
 ## Fonts
 
