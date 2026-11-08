@@ -49,6 +49,26 @@ def cloud_mask() -> Any:
 
 
 @pytest.fixture
+def ctx(theme: Any) -> Any:
+    """A draw context for the default theme, slide 0."""
+    from history_shorts.compose import DrawContext
+
+    return DrawContext(theme, theme.palette, theme.seed, 0)
+
+
+@pytest.fixture
+def flat_base(palette: Any) -> Callable[[], Any]:
+    """Factory: a fresh float32 1920x1080x3 buffer filled with a mid lacquer colour."""
+    import numpy as np
+
+    def make() -> Any:
+        r, g, b = palette["deep"]
+        return np.full((1920, 1080, 3), (r / 255, g / 255, b / 255), dtype=np.float32)
+
+    return make
+
+
+@pytest.fixture
 def tmp_theme(tmp_path: Path) -> Callable[..., Path]:
     """Factory: copy the default theme directory into ``tmp_path``, edit it, return theme.json.
 
