@@ -199,3 +199,75 @@ def test_no_pure_black_in_figure(role: str, palette: Any) -> None:
     rgb, a = cv.to_premul()
     solid = a > 0.99
     assert not np.any(solid & (rgb.sum(axis=-1) == 0))
+
+
+# --------------------------------------------------------------------------------------
+# Per-character variety (FR-49)
+# --------------------------------------------------------------------------------------
+
+
+def test_variation_none_is_identity() -> None:
+    from history_shorts.characters.kits.base import Variation, variation_for
+
+    assert variation_for(None) == Variation(1.0, 1.0, 1.0)
+
+
+def test_variation_bounds_and_determinism() -> None:
+    from history_shorts.characters.kits.base import variation_for
+
+    for seed in range(51):
+        v = variation_for(seed)
+        assert v == variation_for(seed)
+        assert all(0.9 <= f <= 1.1 for f in (v.bun, v.sash, v.dot_spacing))
+
+
+def test_variation_differs_between_seeds() -> None:
+    from history_shorts.characters.kits.base import variation_for
+
+    assert len({variation_for(s) for s in range(20)}) > 15
+
+
+def test_style_carries_variation(palette: Any) -> None:
+    from history_shorts.characters.kits.base import Variation, variation_for
+
+    assert resolve_style(CharacterSpec(role="leader"), palette).variation == Variation(1, 1, 1)
+    seeded = resolve_style(CharacterSpec(role="leader", seed=7), palette)
+    assert seeded.variation == variation_for(7)
+
+
+def _figure_alpha(palette: Any, seed: int | None) -> Any:
+    cv = Canvas(500, 760)
+    style = resolve_style(CharacterSpec(role="leader", seed=seed), palette)
+    draw_figure(cv, style, Placement(250, 650, 400, 1), palette)
+    return cv.mask()
+
+
+def test_seeded_figure_differs_but_stays_in_boxes(palette: Any) -> None:
+    from history_shorts.characters.figure import figure_boxes
+
+    plain = _figure_alpha(palette, None)
+    assert np.array_equal(plain, _figure_alpha(palette, None))
+    placement = Placement(250, 650, 400, 1)
+    style = resolve_style(CharacterSpec(role="leader", seed=3), palette)
+    boxes = figure_boxes(style, placement)
+    for seed in (3, 11, 29):
+        seeded = _figure_alpha(palette, seed)
+        assert not np.array_equal(plain, seeded)
+        ys, xs = np.nonzero(seeded > 0.01)
+        union = boxes.head.union(boxes.body)
+        assert boxes.prop is not None
+        union = union.union(boxes.prop)
+        assert xs.min() >= union.x0 - 4 and xs.max() <= union.x1 + 4
+        assert ys.min() >= union.y0 - 4 and ys.max() <= union.y1 + 4
+
+
+def test_hem_dots_stay_inside_hem() -> None:
+    from history_shorts.characters.kits.ancient_female import hem_dot_xs
+    from history_shorts.characters.kits.base import variation_for
+
+    limit = HEM_HALF_WIDTH * 0.92
+    for seed in [None, *range(51)]:
+        xs = hem_dot_xs(variation_for(seed).dot_spacing)
+        assert xs == sorted(xs)
+        assert all(abs(x) <= limit for x in xs)
+    assert len(hem_dot_xs(1.0)) == 19

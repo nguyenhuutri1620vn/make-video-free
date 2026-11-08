@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from history_shorts.canvas import Canvas
-from history_shorts.compose import DrawContext, fill_mask, over
+from history_shorts.compose import DrawContext, EggshellCache, fill_mask, over
 from history_shorts.layout import CANVAS_H, CANVAS_W
-from history_shorts.primitives import RGB, FloatImage
+from history_shorts.primitives import RGB, FloatImage, FloatMask
 from history_shorts.textures import eggshell
 
 from .registry import WHITE
@@ -24,6 +24,20 @@ def cell_and_gap(ctx: DrawContext, cell: int | None, gap: float | None) -> tuple
     return (spec.cell if cell is None else cell, spec.gap if gap is None else gap)
 
 
+def eggshell_texture(
+    ctx: DrawContext, index: int, mask: FloatMask, cell: int, gap: float
+) -> FloatImage:
+    """The eggshell texture for ``mask``, from the run's cache when the context has one."""
+
+    def compute() -> FloatImage:
+        return eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
+
+    if ctx.cache is None:
+        return compute()
+    key = EggshellCache.key(mask, cell, gap, ctx.seed, index)
+    return ctx.cache.get_or_compute(key, compute)
+
+
 def inlay_fill(
     img: FloatImage,
     ctx: DrawContext,
@@ -38,7 +52,7 @@ def inlay_fill(
     paint(shape)
     mask = shape.mask()
     the_cell, the_gap = cell_and_gap(ctx, cell, gap)
-    tex = eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, the_cell, the_gap)
+    tex = eggshell_texture(ctx, index, mask, the_cell, the_gap)
     return fill_mask(img, tex, mask)
 
 

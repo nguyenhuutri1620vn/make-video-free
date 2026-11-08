@@ -10,13 +10,15 @@ path control points are geometry copied from the approved prototype. Colours com
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from history_shorts.canvas import Canvas
 from history_shorts.characters.kits.base import Kit, KitExtents
-from history_shorts.characters.roles import CharacterStyle
 from history_shorts.config import Palette
 from history_shorts.primitives import Point
+
+if TYPE_CHECKING:
+    from history_shorts.characters.roles import CharacterStyle
 
 # Proportions (local units).
 HEAD_CENTER_Y: Final = -88.5
@@ -52,6 +54,25 @@ SHAFT_BOTTOM: Final = 1
 HEM_DOT_COUNT_HALF: Final = 9
 HEM_DOT_SPACING: Final = 2.5
 HEM_DOT_RADIUS: Final = 0.45
+HEM_DOT_LIMIT: Final = HEM_HALF_WIDTH * 0.92  # varied dots never leave the hem (FR-49)
+BELT_Y: Final = -54.0  # the sash ribbons hang from here; the sash factor scales their length
+BUN_CENTER: Final[Point] = (0.0, -99.6)
+BUN_RADII: Final[Point] = (3.6, 2.7)
+
+
+def hem_dot_xs(spacing_factor: float) -> list[float]:
+    """x of each hem dot: ``HEM_DOT_COUNT_HALF`` either side of 0, at the varied spacing,
+    minus any beyond ``HEM_DOT_LIMIT``."""
+    xs = [
+        k * (HEM_DOT_SPACING * spacing_factor)
+        for k in range(-HEM_DOT_COUNT_HALF, HEM_DOT_COUNT_HALF + 1)
+    ]
+    return [x for x in xs if abs(x) <= HEM_DOT_LIMIT]
+
+
+def _drop(y: float, factor: float) -> float:
+    """Ribbon y scaled toward the belt; exactly ``y`` at factor 1 (no float round trip)."""
+    return y if factor == 1.0 else BELT_Y + (y - BELT_Y) * factor
 
 
 def shaft_segment(prop: str) -> tuple[Point, Point] | None:
@@ -165,8 +186,7 @@ def _robe_body(cv: Canvas) -> None:
 def _hem(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     cv.color(style.trim).M(-24.2, -4.5).C(-12, -1.8, 12, -1.8, 24.2, -4.5).stroke(2.2)
     dot = palette["vermilion"] if style.trim_is_gold else palette["egg"]
-    for k in range(-HEM_DOT_COUNT_HALF, HEM_DOT_COUNT_HALF + 1):
-        x = k * HEM_DOT_SPACING
+    for x in hem_dot_xs(style.variation.dot_spacing):
         cv.color(dot).ellipse(x, -3.3 + abs(x) * 0.02, HEM_DOT_RADIUS, HEM_DOT_RADIUS).fill()
 
 
@@ -198,12 +218,17 @@ def belt(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
         0.3
     )
     ribbon = style.wrap if style.wrap != style.trim else palette["vermilion"]
-    cv.color(ribbon).M(-1, -54).C(-3, -46, -1.5, -38, -3.8, -29).C(
-        -2.6, -29.6, -1.6, -29.4, -0.8, -28.5
-    ).C(0.4, -37, -0.6, -46, 0.6, -54).Z().fill()
-    cv.color(ribbon).M(1.4, -54).C(2.6, -47, 4.8, -40, 4.2, -32).C(
-        5.2, -32.6, 6, -32.2, 6.4, -31.4
-    ).C(6.2, -40, 4.6, -47, 3, -54).Z().fill()
+    d = style.variation.sash
+
+    def y(v: float) -> float:
+        return _drop(v, d)
+
+    cv.color(ribbon).M(-1, y(-54)).C(-3, y(-46), -1.5, y(-38), -3.8, y(-29)).C(
+        -2.6, y(-29.6), -1.6, y(-29.4), -0.8, y(-28.5)
+    ).C(0.4, y(-37), -0.6, y(-46), 0.6, y(-54)).Z().fill()
+    cv.color(ribbon).M(1.4, y(-54)).C(2.6, y(-47), 4.8, y(-40), 4.2, y(-32)).C(
+        5.2, y(-32.6), 6, y(-32.2), 6.4, y(-31.4)
+    ).C(6.2, y(-40), 4.6, y(-47), 3, y(-54)).Z().fill()
     cv.color(palette["gold"]).ellipse(0.8, -54.6, 1.6, 1.3).fill()
 
 
@@ -324,7 +349,9 @@ def hair_front(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
 
 
 def bun(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
-    cv.color(palette["black"]).ellipse(0, -99.6, 3.6, 2.7).fill()
+    rx, ry = BUN_RADII
+    scale = style.variation.bun
+    cv.color(palette["black"]).ellipse(BUN_CENTER[0], BUN_CENTER[1], rx * scale, ry * scale).fill()
     cv.color(palette["gold"]).M(-5.4, -100.6).L(5.6, -99.2).stroke(0.45)
     cv.color(palette["gold_lt"]).ellipse(5.8, -99.2, 0.7, 0.7).fill()
 

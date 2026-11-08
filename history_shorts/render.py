@@ -13,6 +13,7 @@ from PIL import Image
 
 from history_shorts.compose import (
     DrawContext,
+    EggshellCache,
     SceneDrawer,
     SceneStyle,
     SlideContext,
@@ -63,25 +64,30 @@ def render_slides(
     *,
     debug_safe_zone: bool,
     expand: Expand | None = None,
+    eggshell_cache: bool = True,
 ) -> list[Path]:
     """Write ``<out dir>/slides/NN.png`` (1-based) for every slide and return the paths.
 
     ``expand`` maps a slide to its scene style and drawing callback (``scene_expander`` is the
     one ``render`` uses); without it every slide is chrome and text on the plain lacquer
-    ground. Stale ``NN.png`` files beyond the slide count are left alone (the CLI reports
+    ground. One eggshell cache serves the whole run (FR-66) unless ``eggshell_cache`` is false.
+    Stale ``NN.png`` files beyond the slide count are left alone (the CLI reports
     them).
     """
     directory = slides_dir(out)
     directory.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
+    cache = EggshellCache() if eggshell_cache else None
     for index, slide in enumerate(script.slides):
         started = time.perf_counter()
         style, draw_scene = expand(slide, theme) if expand else (default_style(theme), None)
-        ctx = SlideContext(script, theme, index, style, draw_scene, debug_safe_zone)
+        ctx = SlideContext(script, theme, index, style, draw_scene, debug_safe_zone, cache)
         target = slide_path(directory, index + 1)
         write_png(render_slide(ctx), target)
         written.append(target)
         log.debug(
             "slide %d rendered in %.2f s: %s", index + 1, time.perf_counter() - started, target
         )
+    if cache is not None:
+        log.debug("eggshell cache: %d hits, %d misses", cache.hits, cache.misses)
     return written

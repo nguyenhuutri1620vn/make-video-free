@@ -233,3 +233,91 @@ def test_text_is_drawn_after_finish_and_carries_no_grain(theme: Any, script_one_
     assert (b[ys, xs][interior] == title_color).all()
     # while the background (outside the text boxes) does differ between the two renders
     assert (a[300:900] != b[300:900]).any()
+
+
+# --------------------------------------------------------------------------------------
+# Eggshell cache (FR-66)
+# --------------------------------------------------------------------------------------
+
+
+def _blob_mask() -> Any:
+    cv = Canvas(CANVAS_W, CANVAS_H)
+    cv.color((255, 255, 255)).ellipse(400, 600, 120, 60).fill()
+    return cv.mask()
+
+
+def test_cache_hit_returns_identical_array_and_skips_compute(
+    theme: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from history_shorts import textures
+    from history_shorts.compose import EggshellCache
+    from history_shorts.scene import inlay
+
+    calls: list[int] = []
+    real = textures.eggshell
+
+    def counting(*args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(inlay, "eggshell", counting)
+    cache = EggshellCache()
+    ctx = DrawContext(theme, theme.palette, theme.seed, 0, cache)
+    other = DrawContext(theme, theme.palette, theme.seed, 5, cache)  # another slide
+    mask = _blob_mask()
+    first = inlay.eggshell_texture(ctx, 3, mask, 15, 1.0)
+    second = inlay.eggshell_texture(other, 3, mask, 15, 1.0)
+    assert second is first
+    assert len(calls) == 1
+    assert (cache.hits, cache.misses) == (1, 1)
+    assert not first.flags.writeable
+
+
+def test_cache_key_changes_with_each_component(theme: Any) -> None:
+    from history_shorts.compose import EggshellCache
+
+    mask = _blob_mask()
+    other = mask.copy()
+    other[0, 0] = 1.0
+    base = EggshellCache.key(mask, 15, 1.0, 40, 3)
+    assert base == EggshellCache.key(mask.copy(), 15, 1.0, 40, 3)
+    for changed in (
+        EggshellCache.key(other, 15, 1.0, 40, 3),
+        EggshellCache.key(mask, 16, 1.0, 40, 3),
+        EggshellCache.key(mask, 15, 1.5, 40, 3),
+        EggshellCache.key(mask, 15, 1.0, 41, 3),
+        EggshellCache.key(mask, 15, 1.0, 40, 4),
+        EggshellCache.key(mask[:, :-1], 15, 1.0, 40, 3),
+    ):
+        assert changed != base
+
+
+def test_cache_without_context_cache_computes_directly(theme: Any) -> None:
+    from history_shorts.scene import inlay
+
+    ctx = DrawContext(theme, theme.palette, theme.seed, 0)
+    mask = _blob_mask()
+    a = inlay.eggshell_texture(ctx, 3, mask, 15, 1.0)
+    b = inlay.eggshell_texture(ctx, 3, mask, 15, 1.0)
+    assert a is not b
+    assert np.array_equal(a, b)
+
+
+def test_render_identical_with_and_without_cache(repo_root: Any, theme: Any, tmp_path: Any) -> None:
+    from history_shorts.config import load_script
+    from history_shorts.render import render_slides, scene_expander
+
+    script, _ = load_script(repo_root / "examples" / "nu_tuong" / "script.json")
+    with_cache = render_slides(
+        script, theme, tmp_path / "a" / "v.mp4", debug_safe_zone=False, expand=scene_expander
+    )
+    without = render_slides(
+        script,
+        theme,
+        tmp_path / "b" / "v.mp4",
+        debug_safe_zone=False,
+        expand=scene_expander,
+        eggshell_cache=False,
+    )
+    assert len(with_cache) == len(without) == len(script.slides)
+    assert all(x.read_bytes() == y.read_bytes() for x, y in zip(with_cache, without, strict=True))

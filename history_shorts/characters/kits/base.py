@@ -10,13 +10,46 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
+
+import numpy as np
 
 from history_shorts.canvas import Canvas
-from history_shorts.characters.roles import CharacterStyle
 from history_shorts.config import Palette
 from history_shorts.primitives import Point
 
-PartFn = Callable[[Canvas, CharacterStyle, Palette], None]
+if TYPE_CHECKING:
+    from history_shorts.characters.roles import CharacterStyle
+
+VARIATION_STREAM: Final = 49  # second RNG word, so a character seed never collides with others
+VARIATION_RANGE: Final = 0.1  # factors are uniform in 1 +- 10 % (FR-49)
+
+
+@dataclass(frozen=True, slots=True)
+class Variation:
+    """Per-character scale factors (FR-49); 1.0 everywhere is the reference look.
+
+    A kit may honour any of them: ``bun`` scales the bun, ``sash`` the sash ribbons'
+    length, ``dot_spacing`` the gap between hem dots.
+    """
+
+    bun: float
+    sash: float
+    dot_spacing: float
+
+
+def variation_for(seed: int | None) -> Variation:
+    """The identity for no seed; otherwise bun, sash and dot spacing drawn in that order."""
+    if seed is None:
+        return Variation(1.0, 1.0, 1.0)
+    rng = np.random.default_rng([seed, VARIATION_STREAM])
+    lo, hi = 1 - VARIATION_RANGE, 1 + VARIATION_RANGE
+    return Variation(
+        float(rng.uniform(lo, hi)), float(rng.uniform(lo, hi)), float(rng.uniform(lo, hi))
+    )
+
+
+PartFn = Callable[[Canvas, "CharacterStyle", Palette], None]
 ShaftFn = Callable[[str], tuple[Point, Point] | None]
 LocalBox = tuple[float, float, float, float]  # (x0, y0, x1, y1) in local units
 

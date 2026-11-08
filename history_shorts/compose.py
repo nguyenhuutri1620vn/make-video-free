@@ -77,6 +77,42 @@ def eggshell_rng(seed: int, layer_index: int, mask: FloatMask) -> Generator:
 
 
 # --------------------------------------------------------------------------------------
+# Eggshell cache (FR-66)
+# --------------------------------------------------------------------------------------
+
+EggshellKey = tuple[int, int, float, int, int, tuple[int, ...]]
+
+
+class EggshellCache:
+    """Eggshell textures of one render run, keyed by mask hash and parameters.
+
+    The eggshell RNG does not depend on the slide (FR-65), so equal masks on different
+    slides give equal textures and share one entry. Stored arrays are read-only.
+    """
+
+    def __init__(self) -> None:
+        self._items: dict[EggshellKey, FloatImage] = {}
+        self.hits = 0
+        self.misses = 0
+
+    @staticmethod
+    def key(mask: FloatMask, cell: int, gap: float, seed: int, layer_index: int) -> EggshellKey:
+        crc = zlib.crc32(np.packbits(mask > MASK_THRESHOLD).tobytes())
+        return (crc, cell, gap, seed, layer_index, tuple(mask.shape))
+
+    def get_or_compute(self, key: EggshellKey, compute: Callable[[], FloatImage]) -> FloatImage:
+        found = self._items.get(key)
+        if found is not None:
+            self.hits += 1
+            return found
+        self.misses += 1
+        value = compute()
+        value.setflags(write=False)
+        self._items[key] = value
+        return value
+
+
+# --------------------------------------------------------------------------------------
 # Contexts
 # --------------------------------------------------------------------------------------
 
@@ -89,6 +125,7 @@ class DrawContext:
     palette: Palette
     seed: int
     slide_index: int
+    cache: EggshellCache | None = None
 
     def rng(self, layer_index: int) -> Generator:
         return rng_for(self.seed, self.slide_index, layer_index)
@@ -117,6 +154,7 @@ class SlideContext:
     style: SceneStyle
     draw_scene: SceneDrawer | None
     debug_safe_zone: bool
+    cache: EggshellCache | None = None
 
 
 def default_style(theme: Theme) -> SceneStyle:
@@ -174,7 +212,7 @@ def _step_ground(ctx: SlideContext, state: SlideState) -> None:
 def _step_scene(ctx: SlideContext, state: SlideState) -> None:
     if ctx.draw_scene is None:
         return
-    draw_ctx = DrawContext(ctx.theme, ctx.theme.palette, ctx.style.seed, ctx.slide_index)
+    draw_ctx = DrawContext(ctx.theme, ctx.theme.palette, ctx.style.seed, ctx.slide_index, ctx.cache)
     result = ctx.draw_scene(state.array(), draw_ctx)
     expected = (CANVAS_H, CANVAS_W, 3)
     if result.dtype != np.float32:

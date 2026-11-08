@@ -378,6 +378,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `prop`     | enum   | no  | preset          | `flag` \| `spear` \| `oar` \| `none`.                      |
 | `crest`    | bool   | no  | preset          | Fan crest on the bun.                                      |
 | `x`, `baseline`, `height` | number | no | formation | Explicit placement.                                   |
+| `seed`     | int ≥ 0 | no | none (reference look) | Varies bun size, sash length and hem dot spacing within ±10 % (FR-49). |
 
 Optional texture overrides (`tile`, `worn`, `cell`, `gap`) take the same units as the corresponding `textures` entries in the theme and override them for that layer only. Boat `crew` items follow the Character contract above; their `x`, `baseline`, and `height` are canvas pixels, and when omitted they are computed from the boat's slots.
 

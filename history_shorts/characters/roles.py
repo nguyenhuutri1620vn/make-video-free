@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Final
 
+from history_shorts.characters.kits.base import Variation, variation_for
 from history_shorts.config import CharacterSpec, Palette
 from history_shorts.primitives import RGB
 
@@ -43,6 +44,7 @@ class CharacterStyle:
     crest: bool
     prop: str
     kit: str = DEFAULT_KIT
+    variation: Variation = Variation(1.0, 1.0, 1.0)
 
 
 ROLES: Mapping[str, RolePreset] = MappingProxyType(
@@ -88,6 +90,7 @@ def resolve_style(
         crest=preset.crest if spec.crest is None else spec.crest,
         prop=resolved_prop(spec, preset),
         kit=preset.kit,
+        variation=variation_for(spec.seed),
     )
 
 

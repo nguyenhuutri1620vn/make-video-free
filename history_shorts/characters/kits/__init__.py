@@ -9,10 +9,21 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from history_shorts.characters.kits import ancient_female
-from history_shorts.characters.kits.base import Kit, KitExtents, LocalBox, PartFn, ShaftFn
-from history_shorts.characters.roles import CharacterStyle
+from history_shorts.characters.kits.base import (
+    Kit,
+    KitExtents,
+    LocalBox,
+    PartFn,
+    ShaftFn,
+    Variation,
+    variation_for,
+)
+
+if TYPE_CHECKING:
+    from history_shorts.characters.roles import CharacterStyle
 
 KITS: Mapping[str, Kit] = MappingProxyType({kit.name: kit for kit in (ancient_female.KIT,)})
 
@@ -30,4 +41,15 @@ def kit_for(style: CharacterStyle) -> Kit:
     return kit_named(style.kit)
 
 
-__all__ = ["KITS", "Kit", "KitExtents", "LocalBox", "PartFn", "ShaftFn", "kit_for", "kit_named"]
+__all__ = [
+    "KITS",
+    "Kit",
+    "KitExtents",
+    "LocalBox",
+    "PartFn",
+    "ShaftFn",
+    "Variation",
+    "kit_for",
+    "kit_named",
+    "variation_for",
+]
