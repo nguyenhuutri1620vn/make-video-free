@@ -9,10 +9,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from scipy.ndimage import binary_dilation
+from scipy.ndimage import binary_dilation, binary_opening, label
 
 from history_shorts.config import SheenSpec
 from history_shorts.textures import (
+    EGG_MIN_SEED_SEPARATION,
+    EGG_SHADE_RANGE,
     GOLD_GRAIN_AMOUNT,
     GOLD_GRAIN_SIGMA,
     GOLD_SEAM_DARKEN,
@@ -31,6 +33,7 @@ from history_shorts.textures import (
     GROUND_NOISE_SIGMA,
     GROUND_PROFILE_POWER,
     _cover,
+    _separated,
     eggshell,
     finish,
     gold_leaf,
@@ -215,6 +218,73 @@ def test_eggshell_contained_and_gap_ratio(palette: Any, cloud_mask: Any) -> None
     assert e[outside].max() == 0
     gap = np.all(np.isclose(e, palette.rgb01("egg_gap"), atol=1e-6), axis=-1) & (cloud_mask > 0.99)
     assert 0.04 < gap.sum() / (cloud_mask > 0.99).sum() < 0.25
+
+
+EGG_CELLS = (11, 12, 15, 16)  # the cell sizes the shipped templates use
+BLOB_SEEDS = range(4)
+
+
+def _slab() -> Any:
+    from history_shorts.canvas import Canvas
+
+    cv = Canvas(W, H)
+    cv.color((255, 255, 255)).rect(100, 300, 300, 240).fill()
+    return cv.mask()
+
+
+def _largest_gap_blob(palette: Any, mask: Any, cell: int, seed: int) -> int:
+    """Pixels in the biggest gap-coloured region that is thicker than a hairline.
+
+    Gap pixels along every cell edge form one connected network, so a plain component count
+    measures the whole network. A 5x5 opening removes the edge lines (about 1-3 px wide) and
+    keeps only blobs: regions where a cell itself turned gap-coloured.
+    """
+    e = eggshell(np.random.default_rng([40, 0, seed]), mask, palette, cell=cell, gap=1.0)
+    gap = np.all(np.isclose(e, palette.rgb01("egg_gap"), atol=1e-6), axis=-1) & (mask > 0.5)
+    blobs, count = label(binary_opening(gap, np.ones((5, 5), bool)), structure=np.ones((3, 3)))
+    return int(np.bincount(blobs.ravel())[1:].max()) if count else 0
+
+
+@pytest.mark.parametrize("cell", EGG_CELLS)
+def test_eggshell_has_no_dark_blobs(cell: int, palette: Any) -> None:  # C-08
+    mask = _slab()
+    worst = max(_largest_gap_blob(palette, mask, cell, seed) for seed in BLOB_SEEDS)
+    assert worst < 0.5 * cell * cell
+
+
+@pytest.mark.parametrize("cell", EGG_CELLS)
+def test_blob_check_fails_without_seed_separation(
+    cell: int, palette: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Negative control: with near-duplicate seeds kept (the old behaviour) the check trips."""
+    monkeypatch.setattr(
+        "history_shorts.textures._separated", lambda pts, r: np.ones(len(pts), bool)
+    )
+    mask = _slab()
+    worst = max(_largest_gap_blob(palette, mask, cell, seed) for seed in BLOB_SEEDS)
+    assert worst >= 0.5 * cell * cell
+
+
+def test_separated_drops_the_later_of_each_close_pair() -> None:
+    pts = np.array([[0, 0], [1, 1], [10, 10], [10.5, 10], [30, 30], [0, 1]], dtype=np.float32)
+    keep = _separated(pts, 2.0)
+    assert keep.tolist() == [True, False, True, False, True, False]
+    assert _separated(pts[:0].reshape(0, 2), 2.0).tolist() == []
+
+
+def test_eggshell_seeds_keep_cell_separation_and_rng_count(palette: Any) -> None:
+    """Dropping seeds must not change how many random numbers are drawn (determinism)."""
+    mask = _slab()
+    cell = 16
+    rng = np.random.default_rng([40, 0, 3])
+    eggshell(rng, mask, palette, cell=cell, gap=1.0)
+    ys, xs = np.nonzero(mask > 0.01)
+    n = len(range(ys.min(), ys.max() + 1, cell)) * len(range(xs.min(), xs.max() + 1, cell))
+    ref = np.random.default_rng([40, 0, 3])
+    ref.uniform(0, cell, (n, 2))
+    ref.uniform(*EGG_SHADE_RANGE, n)
+    assert rng.bit_generator.state == ref.bit_generator.state
+    assert 0 < EGG_MIN_SEED_SEPARATION < 1
 
 
 def test_eggshell_empty_mask(palette: Any) -> None:

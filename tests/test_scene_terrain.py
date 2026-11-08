@@ -24,6 +24,12 @@ from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.registry import WHITE, entry, merge
 from history_shorts.scene.terrain import (
+    CURL_X_START,
+    CURL_X_STEP,
+    PEAK_BASE_COLOR,
+    PEAK_GRADIENT_OUTLINE_WIDTH,
+    PEAK_OUTLINE_COLOR,
+    PEAK_SHADE_STEP,
     draw_ground,
     draw_hills,
     draw_mountains,
@@ -31,6 +37,7 @@ from history_shorts.scene.terrain import (
     draw_river,
     hill_path,
     peak_path,
+    peak_top_color,
 )
 from history_shorts.textures import eggshell
 
@@ -132,12 +139,12 @@ def wrong_order_peaks(img: FloatImage, items: tuple[PeakItem, ...], y: float, pa
     """Negative control: every fill first, then every outline (what FR-35 forbids)."""
     cv = Canvas()
     for i, it in enumerate(items):
-        top = tuple(int(v * (1 - i * 0.06)) for v in pal["vermilion_dk"])
         peak_path(cv, it, y)
-        cv.vgrad(y - it.height, y, [(0, top, 1), (1, pal["peak_base"], 1)]).fill()
+        stops = [(0, peak_top_color(pal, i), 1), (1, pal[PEAK_BASE_COLOR], 1)]
+        cv.vgrad(y - it.height, y, stops).fill()
     for it in items:
         peak_path(cv, it, y)
-        cv.color(pal["gold"]).stroke(1.8)
+        cv.color(pal[PEAK_OUTLINE_COLOR]).stroke(PEAK_GRADIENT_OUTLINE_WIDTH)
     return over(img, cv)
 
 
@@ -178,13 +185,21 @@ def test_crossing_check_catches_fills_then_outlines(
     assert shown > checked * 0.5
 
 
+def test_peak_top_color_truncates_each_channel(palette: Any) -> None:
+    r, g, b = palette["vermilion_dk"]
+    assert peak_top_color(palette, 0) == (r, g, b)
+    for i in range(6):
+        shade = 1 - i * PEAK_SHADE_STEP
+        assert peak_top_color(palette, i) == (int(r * shade), int(g * shade), int(b * shade))
+    assert peak_top_color(palette, 3) == (int(112 * 0.82), int(22 * 0.82), int(14 * 0.82))
+
+
 def test_gradient_peak_top_shade_steps_down(ctx: Any, palette: Any, flat_base: Base) -> None:
     img = draw_peaks(flat_base(), GRADIENT, ctx, 1)
-    dk = np.array(palette["vermilion_dk"], dtype=np.float32) / 255
     for index, (x, apex) in ((0, (470, 520)), (3, (660, 610))):
-        want = np.floor(dk * 255 * (1 - index * 0.06)) / 255
-        got = img[apex + 5, x]  # just under the apex the gradient is still at its top colour
-        assert np.abs(got - want).max() < 0.03, index
+        want = np.array(peak_top_color(palette, index), dtype=np.float32) / 255
+        got = img[apex + 1, x]  # right under the apex the gradient is still at its top colour
+        assert np.abs(got - want).max() <= 1 / 255 + 1e-6, index
     assert img[525, 470].sum() > img[615, 660].sum()  # farther peaks are brighter
 
 
@@ -360,6 +375,9 @@ def test_ground_band_bounds_and_gradient(ctx: Any, palette: Any, flat_base: Base
 def test_ground_curls_are_gold_dk_every_120px(ctx: Any, palette: Any, flat_base: Base) -> None:
     out = draw_ground(flat_base(), GroundLayer(1092, 52), ctx, 1)
     dk = np.array(palette.rgb01("gold_dk"), dtype=np.float32)
-    # the curl that starts at x = 80 + 120 n is cusped at (x + 56, y + 30)
-    hits = [gold_near(out, 80 + 56 + 120 * n, 1092 + 30, dk, tol=0.12) for n in range(8)]
-    assert all(hits)
+    # the curl that starts at x = -40 + 120 n is jointed at (x + 56, y + 30)
+    # and its second segment passes (x + 52.75, y + 39) at t = 1/2
+    for n in range(8):
+        x = CURL_X_START + CURL_X_STEP * n
+        assert gold_near(out, x + 56, 1092 + 30, dk, tol=0.12), n
+        assert gold_near(out, x + 52.75, 1092 + 39, dk, tol=0.12), n

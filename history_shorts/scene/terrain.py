@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Final, Literal
 
 from history_shorts.canvas import Canvas
-from history_shorts.compose import DrawContext, fill_mask, over
+from history_shorts.compose import DrawContext, over
 from history_shorts.config import (
     GroundLayer,
     HillsLayer,
     MountainsLayer,
+    Palette,
     PeakItem,
     PeaksLayer,
     RiverLayer,
 )
 from history_shorts.layout import CANVAS_H, CANVAS_W
-from history_shorts.primitives import FloatImage
-from history_shorts.textures import eggshell
+from history_shorts.primitives import RGB, FloatImage
 
-from .registry import WHITE, LayerDrawer, entry
+from .inlay import inlay_outlined
+from .registry import LayerDrawer, entry
 
 # -- far mountains -----------------------------------------------------------------------
 MOUNTAIN_GRADIENT_TOP: Final = -100.0  # gradient runs from y + top to y + bottom
@@ -126,39 +128,48 @@ def draw_mountains(
     return over(img, cv)
 
 
+def peak_top_color(pal: Palette, i: int) -> RGB:
+    """Top colour of the i-th peak: ``vermilion_dk`` darkened per step, truncated per channel."""
+    shade = 1.0 - i * PEAK_SHADE_STEP
+    r, g, b = pal[PEAK_TOP_COLOR]
+    return (int(r * shade), int(g * shade), int(b * shade))
+
+
 def _gradient_peaks(img: FloatImage, layer: PeaksLayer, ctx: DrawContext) -> FloatImage:
     pal = ctx.palette
     cv = Canvas(CANVAS_W, CANVAS_H)
     for i, item in enumerate(layer.items):
-        shade = 1.0 - i * PEAK_SHADE_STEP
-        top = tuple(int(v * shade) for v in pal[PEAK_TOP_COLOR])
         peak_path(cv, item, layer.y)
         cv.vgrad(
             layer.y - item.height,
             layer.y,
-            [(0, (top[0], top[1], top[2]), 1), (1, pal[PEAK_BASE_COLOR], 1)],
+            [(0, peak_top_color(pal, i), 1), (1, pal[PEAK_BASE_COLOR], 1)],
         ).fill()
         peak_path(cv, item, layer.y)  # outline now, so the next peak's fill can hide its overlap
         cv.color(pal[PEAK_OUTLINE_COLOR]).stroke(PEAK_GRADIENT_OUTLINE_WIDTH)
     return over(img, cv)
 
 
+def _peak_tracer(item: PeakItem, y: float) -> Callable[[Canvas], None]:
+    def trace(cv: Canvas) -> None:
+        peak_path(cv, item, y)
+
+    return trace
+
+
 def _eggshell_peaks(img: FloatImage, layer: PeaksLayer, ctx: DrawContext, index: int) -> FloatImage:
-    spec = ctx.theme.textures.eggshell
-    cell = spec.cell if layer.cell is None else layer.cell
-    gap = spec.gap if layer.gap is None else layer.gap
-    for item in layer.items:
-        shape = Canvas(CANVAS_W, CANVAS_H)
-        shape.color(WHITE)
-        peak_path(shape, item, layer.y)
-        shape.fill()
-        mask = shape.mask()
-        tex = eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
-        img = fill_mask(img, tex, mask)
-        line = Canvas(CANVAS_W, CANVAS_H)
-        peak_path(line, item, layer.y)
-        line.color(ctx.palette[PEAK_OUTLINE_COLOR]).stroke(PEAK_EGGSHELL_OUTLINE_WIDTH)
-        img = over(img, line)
+    outline = ctx.palette[PEAK_OUTLINE_COLOR]
+    for item in layer.items:  # one mask, texture and outline per peak, in order
+        img = inlay_outlined(
+            img,
+            ctx,
+            index,
+            _peak_tracer(item, layer.y),
+            layer.cell,
+            layer.gap,
+            outline,
+            PEAK_EGGSHELL_OUTLINE_WIDTH,
+        )
     return img
 
 
@@ -171,20 +182,16 @@ def draw_peaks(img: FloatImage, layer: PeaksLayer, ctx: DrawContext, index: int)
 
 def draw_hills(img: FloatImage, layer: HillsLayer, ctx: DrawContext, index: int) -> FloatImage:
     """Eggshell-inlaid hill at one canvas edge with a gold outline."""
-    spec = ctx.theme.textures.eggshell
-    cell = spec.cell if layer.cell is None else layer.cell
-    gap = spec.gap if layer.gap is None else layer.gap
-    shape = Canvas(CANVAS_W, CANVAS_H)
-    shape.color(WHITE)
-    hill_path(shape, layer.side, layer.base, layer.top)
-    shape.fill()
-    mask = shape.mask()
-    tex = eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
-    img = fill_mask(img, tex, mask)
-    line = Canvas(CANVAS_W, CANVAS_H)
-    hill_path(line, layer.side, layer.base, layer.top)
-    line.color(ctx.palette[HILL_OUTLINE_COLOR]).stroke(HILL_OUTLINE_WIDTH)
-    return over(img, line)
+    return inlay_outlined(
+        img,
+        ctx,
+        index,
+        lambda cv: hill_path(cv, layer.side, layer.base, layer.top),
+        layer.cell,
+        layer.gap,
+        ctx.palette[HILL_OUTLINE_COLOR],
+        HILL_OUTLINE_WIDTH,
+    )
 
 
 def _wave(cv: Canvas, x: float, y: float) -> None:

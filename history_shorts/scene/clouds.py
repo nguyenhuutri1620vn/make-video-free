@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Final
 
 from history_shorts.canvas import Canvas
-from history_shorts.compose import DrawContext, fill_mask, over
+from history_shorts.compose import DrawContext, over
 from history_shorts.config import CloudItem, CloudsLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
-from history_shorts.textures import eggshell
 
-from .registry import WHITE, LayerDrawer, entry
+from .inlay import inlay_fill
+from .registry import LayerDrawer, entry
 
 OUTLINE_WIDTH: Final = 2.2  # divided by the item scale
 CURL_WIDTH: Final = 1.6
@@ -44,17 +44,13 @@ def cloud_lines(cv: Canvas, item: CloudItem, color: tuple[int, int, int]) -> Non
 
 def draw_clouds(img: FloatImage, layer: CloudsLayer, ctx: DrawContext, index: int) -> FloatImage:
     """All clouds share one mask and one eggshell texture, then get their outlines."""
-    spec = ctx.theme.textures.eggshell
-    cell = spec.cell if layer.cell is None else layer.cell
-    gap = spec.gap if layer.gap is None else layer.gap
-    shape = Canvas(CANVAS_W, CANVAS_H)
-    shape.color(WHITE)
-    for item in layer.items:
-        cloud_path(shape, item)
-        shape.fill()
-    mask = shape.mask()
-    tex = eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
-    img = fill_mask(img, tex, mask)
+
+    def paint(cv: Canvas) -> None:
+        for item in layer.items:
+            cloud_path(cv, item)
+            cv.fill()
+
+    img = inlay_fill(img, ctx, index, paint, layer.cell, layer.gap)
     lines = Canvas(CANVAS_W, CANVAS_H)
     color = ctx.palette[layer.outline]
     for item in layer.items:

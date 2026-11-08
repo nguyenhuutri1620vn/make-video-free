@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import numpy.typing as npt
 from numpy.random import Generator
 from scipy.ndimage import binary_dilation, gaussian_filter
 from scipy.spatial import cKDTree
@@ -38,6 +39,7 @@ GOLD_WORN_DILATE = 3
 GOLD_WORN_KEEP = 0.35
 
 EGG_SHADE_RANGE = (-0.16, 0.02)
+EGG_MIN_SEED_SEPARATION = 0.35  # of the cell size: closer seeds blur into one dark blob
 
 FINISH_GRAIN_SIGMA = 0.7
 
@@ -126,6 +128,17 @@ def gold_leaf(
     return np.asarray(np.clip(g, 0, 1), dtype=np.float32)
 
 
+def _separated(pts: FloatImage, radius: float) -> npt.NDArray[np.bool_]:
+    """Boolean keep-mask: of any two points closer than ``radius`` the later one is dropped.
+
+    Two seeds that close make the whole region between them read as one gap-coloured blob.
+    """
+    drop = {max(a, b) for a, b in cKDTree(pts).query_pairs(r=radius)}
+    keep = np.ones(len(pts), dtype=bool)
+    keep[sorted(drop)] = False
+    return keep
+
+
 def eggshell(
     rng: Generator, mask: FloatMask, palette: Palette, cell: int, gap: float
 ) -> FloatImage:
@@ -139,12 +152,14 @@ def eggshell(
     gy, gx = np.mgrid[y0:y1:cell, x0:x1:cell]
     pts = np.stack([gy.ravel(), gx.ravel()], 1).astype(np.float32)
     pts += rng.uniform(0, cell, pts.shape)
+    shade = rng.uniform(*EGG_SHADE_RANGE, len(pts)).astype(np.float32)  # drawn for every point
+    keep = _separated(pts, EGG_MIN_SEED_SEPARATION * cell)
+    pts, shade = pts[keep], shade[keep]
     tree = cKDTree(pts)
     py, px = np.mgrid[y0:y1, x0:x1]
     query = np.stack([py.ravel(), px.ravel()], 1)
     dist, idx = tree.query(query, k=2)
     edge = (dist[:, 1] - dist[:, 0]) < gap
-    shade = rng.uniform(*EGG_SHADE_RANGE, len(pts)).astype(np.float32)
     region = _colour(palette, "egg_tone")[None, :] * (1 + shade[idx[:, 0]])[:, None]
     region[edge] = _colour(palette, "egg_gap")
     out[y0:y1, x0:x1] = region.reshape(y1 - y0, x1 - x0, 3)
