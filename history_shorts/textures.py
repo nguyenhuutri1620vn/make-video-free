@@ -139,16 +139,17 @@ def _separated(pts: FloatImage, radius: float) -> npt.NDArray[np.bool_]:
     return keep
 
 
-def eggshell(
+def eggshell_crop(
     rng: Generator, mask: FloatMask, palette: Palette, cell: int, gap: float
-) -> FloatImage:
-    """Voronoi eggshell mosaic (can vo trung), computed only inside the mask's bounding box."""
-    h, w = mask.shape
-    out = np.zeros((h, w, 3), dtype=np.float32)
+) -> tuple[FloatImage, tuple[int, int]]:
+    """Voronoi eggshell mosaic of the mask's bounding box, plus the box's ``(y0, x0)`` offset.
+
+    An empty mask gives a ``(0, 0, 3)`` crop at offset ``(0, 0)``.
+    """
     ys, xs = np.nonzero(mask > 0.01)
     if len(ys) == 0:
-        return out
-    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        return np.zeros((0, 0, 3), dtype=np.float32), (0, 0)
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1
     gy, gx = np.mgrid[y0:y1:cell, x0:x1:cell]
     pts = np.stack([gy.ravel(), gx.ravel()], 1).astype(np.float32)
     pts += rng.uniform(0, cell, pts.shape)
@@ -162,7 +163,17 @@ def eggshell(
     edge = (dist[:, 1] - dist[:, 0]) < gap
     region = _colour(palette, "egg_tone")[None, :] * (1 + shade[idx[:, 0]])[:, None]
     region[edge] = _colour(palette, "egg_gap")
-    out[y0:y1, x0:x1] = region.reshape(y1 - y0, x1 - x0, 3)
+    return region.reshape(y1 - y0, x1 - x0, 3).astype(np.float32, copy=False), (y0, x0)
+
+
+def eggshell(
+    rng: Generator, mask: FloatMask, palette: Palette, cell: int, gap: float
+) -> FloatImage:
+    """Full-frame eggshell texture: the bounding-box crop on zeros."""
+    h, w = mask.shape
+    out = np.zeros((h, w, 3), dtype=np.float32)
+    crop, (y0, x0) = eggshell_crop(rng, mask, palette, cell, gap)
+    out[y0 : y0 + crop.shape[0], x0 : x0 + crop.shape[1]] = crop
     return out
 
 

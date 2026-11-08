@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import numpy as np
+
 from history_shorts.canvas import Canvas
-from history_shorts.compose import DrawContext, EggshellCache, fill_mask, over
+from history_shorts.compose import DrawContext, EggshellCache, EggshellCrop, fill_mask, over
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import RGB, FloatImage, FloatMask
-from history_shorts.textures import eggshell
+from history_shorts.textures import eggshell_crop
 
 from .registry import WHITE
 
@@ -26,11 +28,11 @@ def cell_and_gap(ctx: DrawContext, cell: int | None, gap: float | None) -> tuple
 
 def eggshell_texture(
     ctx: DrawContext, index: int, mask: FloatMask, cell: int, gap: float
-) -> FloatImage:
-    """The eggshell texture for ``mask``, from the run's cache when the context has one."""
+) -> EggshellCrop:
+    """The eggshell crop (bbox texture, (y0, x0)) for ``mask``; cached when the context has one."""
 
-    def compute() -> FloatImage:
-        return eggshell(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
+    def compute() -> EggshellCrop:
+        return eggshell_crop(ctx.eggshell_rng(index, mask), mask, ctx.palette, cell, gap)
 
     if ctx.cache is None:
         return compute()
@@ -52,8 +54,20 @@ def inlay_fill(
     paint(shape)
     mask = shape.mask()
     the_cell, the_gap = cell_and_gap(ctx, cell, gap)
-    tex = eggshell_texture(ctx, index, mask, the_cell, the_gap)
-    return fill_mask(img, tex, mask)
+    tex, (y0, x0) = eggshell_texture(ctx, index, mask, the_cell, the_gap)
+    h, w = tex.shape[:2]
+    out = img.copy()
+    if h and w:
+        window = (slice(y0, y0 + h), slice(x0, x0 + w))
+        out[window] = fill_mask(img[window], tex, mask[window])
+        outside = mask.copy()
+        outside[window] = 0
+    else:
+        outside = mask
+    if outside.any():  # faint mask pixels (alpha <= 0.01) beyond the bbox still dim the base
+        keep = 1 - outside[..., None]
+        out = np.asarray(out * keep, dtype=np.float32)
+    return out
 
 
 def inlay_outlined(

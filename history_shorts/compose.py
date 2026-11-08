@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import zlib
+from collections import OrderedDict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Final
@@ -80,35 +82,53 @@ def eggshell_rng(seed: int, layer_index: int, mask: FloatMask) -> Generator:
 # Eggshell cache (FR-66)
 # --------------------------------------------------------------------------------------
 
-EggshellKey = tuple[int, int, float, int, int, tuple[int, ...]]
+EggshellKey = tuple[bytes, int, float, int, int, tuple[int, ...], str]
+EggshellCrop = tuple[FloatImage, tuple[int, int]]  # bbox texture, (y0, x0)
+
+EGGSHELL_CACHE_MAX_ENTRIES: Final = 32
+MASK_DIGEST_SIZE: Final = 16
 
 
 class EggshellCache:
-    """Eggshell textures of one render run, keyed by mask hash and parameters.
+    """Eggshell texture crops of one render run, keyed by mask hash and parameters.
 
     The eggshell RNG does not depend on the slide (FR-65), so equal masks on different
-    slides give equal textures and share one entry. Stored arrays are read-only.
+    slides give equal textures and share one entry. Only the mask's bounding-box crop is
+    stored (not the full frame) and the least recently used entry is evicted beyond
+    ``EGGSHELL_CACHE_MAX_ENTRIES``, which keeps NFR-03 memory bounded. Arrays are read-only.
     """
 
-    def __init__(self) -> None:
-        self._items: dict[EggshellKey, FloatImage] = {}
+    def __init__(self, max_entries: int = EGGSHELL_CACHE_MAX_ENTRIES) -> None:
+        self._items: OrderedDict[EggshellKey, EggshellCrop] = OrderedDict()
+        self._max = max_entries
         self.hits = 0
         self.misses = 0
 
+    def __len__(self) -> int:
+        return len(self._items)
+
+    @property
+    def nbytes(self) -> int:
+        return sum(crop.nbytes for crop, _ in self._items.values())
+
     @staticmethod
     def key(mask: FloatMask, cell: int, gap: float, seed: int, layer_index: int) -> EggshellKey:
-        crc = zlib.crc32(np.packbits(mask > MASK_THRESHOLD).tobytes())
-        return (crc, cell, gap, seed, layer_index, tuple(mask.shape))
+        digest = hashlib.blake2b(mask.tobytes(), digest_size=MASK_DIGEST_SIZE).digest()
+        return (digest, cell, gap, seed, layer_index, tuple(mask.shape), mask.dtype.str)
 
-    def get_or_compute(self, key: EggshellKey, compute: Callable[[], FloatImage]) -> FloatImage:
+    def get_or_compute(self, key: EggshellKey, compute: Callable[[], EggshellCrop]) -> EggshellCrop:
         found = self._items.get(key)
         if found is not None:
             self.hits += 1
+            self._items.move_to_end(key)
             return found
         self.misses += 1
-        value = compute()
-        value.setflags(write=False)
+        crop, offset = compute()
+        crop.setflags(write=False)
+        value = (crop, offset)
         self._items[key] = value
+        while len(self._items) > self._max:
+            self._items.popitem(last=False)
         return value
 
 

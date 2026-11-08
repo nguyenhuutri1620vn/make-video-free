@@ -254,13 +254,13 @@ def test_cache_hit_returns_identical_array_and_skips_compute(
     from history_shorts.scene import inlay
 
     calls: list[int] = []
-    real = textures.eggshell
+    real = textures.eggshell_crop
 
     def counting(*args: Any, **kwargs: Any) -> Any:
         calls.append(1)
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(inlay, "eggshell", counting)
+    monkeypatch.setattr(inlay, "eggshell_crop", counting)
     cache = EggshellCache()
     ctx = DrawContext(theme, theme.palette, theme.seed, 0, cache)
     other = DrawContext(theme, theme.palette, theme.seed, 5, cache)  # another slide
@@ -270,7 +270,8 @@ def test_cache_hit_returns_identical_array_and_skips_compute(
     assert second is first
     assert len(calls) == 1
     assert (cache.hits, cache.misses) == (1, 1)
-    assert not first.flags.writeable
+    assert not first[0].flags.writeable
+    assert first[0].shape[:2] == (121, 241) or first[0].shape[0] < CANVAS_H  # bbox-sized
 
 
 def test_cache_key_changes_with_each_component(theme: Any) -> None:
@@ -299,8 +300,9 @@ def test_cache_without_context_cache_computes_directly(theme: Any) -> None:
     mask = _blob_mask()
     a = inlay.eggshell_texture(ctx, 3, mask, 15, 1.0)
     b = inlay.eggshell_texture(ctx, 3, mask, 15, 1.0)
-    assert a is not b
-    assert np.array_equal(a, b)
+    assert a[0] is not b[0]
+    assert a[1] == b[1]
+    assert np.array_equal(a[0], b[0])
 
 
 def test_render_identical_with_and_without_cache(repo_root: Any, theme: Any, tmp_path: Any) -> None:
@@ -321,3 +323,80 @@ def test_render_identical_with_and_without_cache(repo_root: Any, theme: Any, tmp
     )
     assert len(with_cache) == len(without) == len(script.slides)
     assert all(x.read_bytes() == y.read_bytes() for x, y in zip(with_cache, without, strict=True))
+
+
+def _ellipse_mask(cx: float, cy: float) -> Any:
+    cv = Canvas(CANVAS_W, CANVAS_H)
+    cv.color((255, 255, 255)).ellipse(cx, cy, 60, 40).fill()
+    return cv.mask()
+
+
+def test_cache_entries_are_bbox_sized(theme: Any) -> None:
+    from history_shorts.compose import EggshellCache
+    from history_shorts.scene import inlay
+
+    cache = EggshellCache()
+    ctx = DrawContext(theme, theme.palette, theme.seed, 0, cache)
+    crop, (y0, x0) = inlay.eggshell_texture(ctx, 3, _blob_mask(), 15, 1.0)
+    assert crop.shape[0] < 200 and crop.shape[1] < 300
+    assert 0 < y0 < CANVAS_H and 0 < x0 < CANVAS_W
+    assert cache.nbytes == crop.nbytes < CANVAS_W * CANVAS_H * 3 * 4 // 20
+
+
+def test_cache_lru_eviction_keeps_recently_used() -> None:
+    from history_shorts.compose import EggshellCache
+
+    cache = EggshellCache(max_entries=2)
+
+    def make(v: float) -> Any:
+        return lambda: (np.full((2, 2, 3), v, dtype=np.float32), (0, 0))
+
+    cache.get_or_compute(("a",), make(1))  # type: ignore[arg-type]
+    cache.get_or_compute(("b",), make(2))  # type: ignore[arg-type]
+    cache.get_or_compute(("a",), make(9))  # type: ignore[arg-type]  # refresh a
+    cache.get_or_compute(("c",), make(3))  # type: ignore[arg-type]  # evicts b
+    assert len(cache) == 2
+    assert cache.get_or_compute(("a",), make(9))[0][0, 0, 0] == 1  # type: ignore[arg-type]
+    before = cache.misses
+    cache.get_or_compute(("b",), make(2))  # type: ignore[arg-type]
+    assert cache.misses == before + 1
+
+
+def test_cache_bytes_stay_bounded_over_many_masks(theme: Any) -> None:
+    from history_shorts.compose import EGGSHELL_CACHE_MAX_ENTRIES, EggshellCache
+    from history_shorts.scene import inlay
+
+    cache = EggshellCache()
+    ctx = DrawContext(theme, theme.palette, theme.seed, 0, cache)
+    one = 0
+    for i in range(40):
+        crop, _ = inlay.eggshell_texture(ctx, 3, _ellipse_mask(200 + 10 * i, 800), 15, 1.0)
+        one = max(one, crop.nbytes)
+    assert len(cache) == EGGSHELL_CACHE_MAX_ENTRIES
+    assert cache.misses == 40
+    assert cache.nbytes <= EGGSHELL_CACHE_MAX_ENTRIES * one
+    assert cache.nbytes < 20 * CANVAS_W * CANVAS_H * 3 * 4 // 20
+
+
+def test_eggshell_full_frame_matches_crop(theme: Any) -> None:
+    from numpy.random import default_rng
+
+    from history_shorts.textures import eggshell, eggshell_crop
+
+    mask = _blob_mask()
+    full = eggshell(default_rng(1), mask, theme.palette, 15, 1.0)
+    crop, (y0, x0) = eggshell_crop(default_rng(1), mask, theme.palette, 15, 1.0)
+    assert np.array_equal(full[y0 : y0 + crop.shape[0], x0 : x0 + crop.shape[1]], crop)
+    assert full.sum() == pytest.approx(float(crop.sum()), rel=1e-5)
+
+
+def test_cache_key_hashes_exact_mask_bytes(theme: Any) -> None:
+    from history_shorts.compose import EggshellCache
+
+    mask = _blob_mask()
+    faint = mask.copy()
+    faint[0, 0] = 0.004  # below every threshold: the eggshell RNG ignores it, the key must not
+    assert EggshellCache.key(faint, 15, 1.0, 40, 3) != EggshellCache.key(mask, 15, 1.0, 40, 3)
+    assert EggshellCache.key(mask.astype(np.float64), 15, 1.0, 40, 3) != EggshellCache.key(
+        mask, 15, 1.0, 40, 3
+    )
