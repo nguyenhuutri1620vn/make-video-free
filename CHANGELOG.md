@@ -51,7 +51,6 @@ Covers AC-01 and AC-02 (1080x1920, 30 fps, h264, yuv420p, duration = sum of slid
 - Task 23: `--jobs N` encodes clips in parallel (FR-87) with a thread pool; the default is CPU count - 1 (`video.default_jobs`), `--jobs 0` is a usage error (exit 2), `--jobs 1` is serial. The concat order is always slide order. The first failure cancels pending clips, waits for running ones, raises the first error in slide order, then cleans up as before.
 - Task 24: `"motion": "zoom_in"` (FR-84). `clip_cmd` pre-scales the slide 4x and runs `zoompan` from 100 % to 106 % about the centre, then the usual fades; `RenderOptions.motions` carries each slide's motion to the clip encoder and the "not implemented" `WARN` is gone. Slide 2 of both examples uses it.
 - Task 25: eggshell cache (FR-66): `compose.EggshellCache` is created once per `render_slides` run and shared by every slide through `DrawContext.cache`; identical masks (same crc32, cell, gap, seed, layer, shape) are computed once and the arrays are read-only. Per-character `seed` (FR-49): `Variation(bun, sash, dot_spacing)` from `variation_for(seed)`, carried by `CharacterStyle.variation` and applied by the `ancient_female` kit; no seed leaves the figure exactly as before.
-
 - Task 26: final QA. Performance measured against NFR-01 and NFR-03 (all targets met), line coverage measured against NFR-08 (every required group at least 98 %, no tests needed), the AC-01..AC-15 walkthrough, and the README completed (setup per OS, data contracts, sources workflow, performance, coverage, acceptance). `pytest-cov` added as an owner-approved dev dependency (pinned 7.1.0; spec C-03, CLAUDE.md and README updated); it is not part of the default `pytest -q` run.
 
 ## v2.0.0
@@ -67,9 +66,16 @@ First complete release. `history-shorts` turns a `script.json` and a `theme.json
 
 Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04 given 2026-11-08.
 
-## Unreleased
-
 ### Docs
 
 - Spec amended to 2.0.1: optional palette keys, sheen position, per-layer texture overrides, oar grip, text and chrome placement, eggshell RNG, dependency pinning note, and Appendix A (v2.1 storyboard, planned).
 - README: macOS setup and decisions log.
+
+### Final review fixes
+
+- NFR-03: the eggshell cache stores bounding-box crops (`textures.eggshell_crop`) instead of full frames and evicts least recently used entries beyond 32 (`EGGSHELL_CACHE_MAX_ENTRIES`). A 10-slide script with unique eggshell scenes peaks at 0.55 GB (was 2.09 GB); output is byte-identical. The cache key now hashes the exact mask bytes (blake2b).
+- A non-UTF-8 redirected stdout/stderr (for example cp1252 on Windows) no longer crashes a finished render on Vietnamese text.
+- `validate` rejects corrupt font files (exit 3, not "internal error"), blank-only `title`/`tag`/`subtitle`, and seal lines or an enabled footer with glyphs their font lacks; theme text is NFC-normalised.
+- `render --music` is probed for an audio stream before any slide is rendered (exit 3 otherwise). An FFmpeg dev build now prints a `WARN` line. `--verbose` logs the traceback of an unexpected error.
+- Snapshot baselines are keyed by the Cairo C library and FreeType versions too; Pillow text uses the BASIC layout engine so Raqm cannot change layout. Pixels unchanged.
+- `FORMATION_NAMES` has a single definition (`scene_config`); README notes that `pip install -e .` is the supported v2.0 install.

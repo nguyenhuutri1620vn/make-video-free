@@ -32,6 +32,8 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]" -c constraints.txt
 ```
 
+> **Install note (v2.0):** `pip install -e .` from a checkout of this repository is the supported install. The default theme (`themes/son_mai/`) is found relative to the source tree, so a plain `pip install` of a built wheel, which does not ship `themes/`, is not supported; pass `--theme PATH` there.
+
 ### Windows (not verified on this machine)
 
 ```bat
@@ -40,6 +42,8 @@ pip install -e ".[dev]" -c constraints.txt
 ```
 
 pycairo, numpy, scipy and Pillow ship Windows wheels on PyPI, so no Cairo install is needed. Install FFmpeg (a release build that includes `ffprobe`) and put its `bin` folder on PATH. If a wheel cannot be installed on a restricted machine, use conda-forge packages, `pip install --user`, or a portable FFmpeg build.
+
+On Windows, when stdout or stderr is redirected to a file or pipe and the console code page is not UTF-8 (for example cp1252), the CLI switches those streams to UTF-8 so Vietnamese text (the Sources block) never crashes a finished render; on a real console it keeps the console encoding and replaces unencodable characters with `?`. Use a UTF-8 capable terminal (Windows Terminal) for readable output.
 
 `python -m history_shorts validate` checks the runtime imports first and prints a per-OS install hint (exit 1) if one is missing.
 
@@ -103,7 +107,7 @@ pytest -m ffmpeg -q              # only the end-to-end tests that run FFmpeg
 pytest --cov=history_shorts --cov-report=term-missing   # coverage (see Coverage)
 ```
 
-Snapshot tests hash the first slide's PNG of both examples (`tests/test_compose_snapshot.py`). Baselines live in `tests/snapshots/baselines.json`, keyed by `pycairo=...;numpy=...;scipy=...;Pillow=...` (spec R-02): a pixel is only reproducible for one set of library versions. On any other set the snapshot tests skip with "run pytest --update-snapshots". Use that flag only for an intentional visual change (or a deliberate version bump), say so in the change, and review the new PNGs by eye before committing `baselines.json`.
+Snapshot tests hash the first slide's PNG of both examples (`tests/test_compose_snapshot.py`). Baselines live in `tests/snapshots/baselines.json`, keyed by `pycairo=...;numpy=...;scipy=...;Pillow=...;cairo_c=...;freetype=...` (spec R-02; the bundled Cairo and FreeType C library versions are part of the key): a pixel is only reproducible for one set of library versions. On any other set the snapshot tests skip with "run pytest --update-snapshots". Use that flag only for an intentional visual change (or a deliberate version bump), say so in the change, and review the new PNGs by eye before committing `baselines.json`.
 
 `tests/test_visual.py` also compares the first slide of each example with the approved references in `docs/reference/approved/`: the mean colour of each layout region (header, visual, title, subtitle, chrome) is converted to CIE Lab (D65) and the ΔE76 must stay at or below 8 (AC-03, AC-04). This is a coarse automated gate; owner sign-off on the preview PNGs is still required.
 
@@ -139,7 +143,10 @@ NFR-01 and NFR-03, measured on 2026-11-08 with `/usr/bin/time -l` on an Apple M1
 | `render` full video, 1 slide | 6 s | 4.3 s | 0.51 GB |
 | `render --preview`, 10 slides | 60 s | 9.2 s | 0.77 GB |
 | `render` full video, 10 slides | 120 s | 25.8 s | 0.75 GB |
-| Peak RSS (NFR-03) | 1.5 GB | 0.77 GB | |
+| Peak RSS (NFR-03), 10 slides repeated from the examples (`render`, full video) | 1.5 GB | 0.54 GB | |
+| Peak RSS (NFR-03), 10 slides with unique hand-written eggshell scenes (`render`, full video) | 1.5 GB | 0.55 GB | |
+
+The unique-scene script has 7 layer-scene slides (8 eggshell peaks and 2 hills each, positions and heights varied per slide so no eggshell mask repeats) and 3 `landscape` template slides with distinct seeds; it is the worst case for the eggshell cache. Before the final fix wave the cache stored full-frame textures without a bound and that script peaked at 2.09 GB (NFR-03 not met); the cache now stores bounding-box crops only and keeps at most 32 entries (`compose.EGGSHELL_CACHE_MAX_ENTRIES`), and the output is byte-identical. The time rows were measured before that change and are unchanged by it (same work, byte-identical output); the repeated-slide Peak RSS was 0.76 GB before and is 0.54 GB now.
 
 All targets are met with wide margins. The targets name a 4-core laptop; this machine has 8 cores, and the parallel clip encode accounts for part of the 10-slide video time.
 
