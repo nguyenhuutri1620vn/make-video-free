@@ -40,7 +40,7 @@ from history_shorts.scene_config import (
     SunLayer,
     TemplateScene,
 )
-from history_shorts.script_config import Script, Slide, load_script, slide_duration
+from history_shorts.script_config import Script, Slide, Source, load_script, slide_duration
 from history_shorts.validation import Ctx, is_int, read_json_object
 
 SCHEMA_VERSION = "2.0"
@@ -468,6 +468,7 @@ __all__ = [
     "SealSpec",
     "SheenSpec",
     "Slide",
+    "Source",
     "SunLayer",
     "TagSpec",
     "TemplateScene",

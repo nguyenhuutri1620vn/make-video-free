@@ -35,8 +35,18 @@ def test_sources_block() -> None:
     text = sources_block(script)
     lines = text.splitlines()
     assert lines[0] == "Sources:"
-    assert lines[1:] == [f"[{i}] {s}" for i, s in enumerate(script.sources, start=1)]
     assert len(lines) == len(script.sources) + 1
+    assert all(line.startswith(f"[{i}] ") for i, line in enumerate(lines[1:], start=1))
+
+
+def test_sources_block_shows_type_only_when_given(tmp_script) -> None:  # type: ignore[no-untyped-def]
+    sources = ["Sách A", {"text": "Bài B", "type": "journal"}, {"text": "Bài C"}]
+    script = load_script(tmp_script(sources=sources))[0]
+    assert sources_block(script).splitlines()[1:] == [
+        "[1] Sách A",
+        "[2] (journal) Bài B",
+        "[3] Bài C",
+    ]
 
 
 def test_sources_block_empty_when_no_sources(tmp_script) -> None:  # type: ignore[no-untyped-def]
@@ -74,7 +84,7 @@ def test_report_contents(tmp_path: Path, theme: Theme) -> None:
     assert data["total_duration"] == pytest.approx(27.9)
     assert data["warnings"] == ["script.json › slides[0]: careful"]
     assert data["timings"] == TIMINGS
-    assert data["sources"] == list(script.sources)
+    assert data["sources"] == [{"text": s.text, "type": s.type} for s in script.sources]
     versions = data["versions"]
     assert isinstance(versions, dict)
     assert set(versions) == {"python", "pycairo", "cairo", "numpy", "scipy", "Pillow", "ffmpeg"}

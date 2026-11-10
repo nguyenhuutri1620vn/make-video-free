@@ -40,6 +40,9 @@ DEFAULT_FPS = 30
 
 MOTION_NAMES: tuple[str, ...] = ("none", "zoom_in")
 
+# Optional kind of a citation in ``sources`` (spec 6.1), shown in the sources block.
+SOURCE_TYPES: tuple[str, ...] = ("book", "journal", "news", "web", "other")
+
 # Emoji and pictographs (spec 8.4), by code point: ranges are inclusive.
 _EMOJI_RANGES: tuple[tuple[int, int], ...] = (
     (0x1F000, 0x1FAFF),
@@ -49,6 +52,7 @@ _EMOJI_RANGES: tuple[tuple[int, int], ...] = (
 )
 
 _SCRIPT_KEYS = ("schema_version", "title", "sources", "slides")
+_SOURCE_KEYS = ("text", "type")
 _SLIDE_KEYS = (
     "tag",
     "title",
@@ -62,6 +66,14 @@ _SLIDE_KEYS = (
 
 
 @dataclass(frozen=True, slots=True)
+class Source:
+    """One citation: its text and, optionally, its kind (one of ``SOURCE_TYPES``)."""
+
+    text: str
+    type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Slide:
     tag: str
     title: str
@@ -70,14 +82,14 @@ class Slide:
     scene: LayerScene | TemplateScene | None
     motion: Literal["none", "zoom_in"]
     claim: bool
-    source: int | None
+    source: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class Script:
     schema_version: str
     title: str
-    sources: tuple[str, ...]
+    sources: tuple[Source, ...]
     slides: tuple[Slide, ...]
     path: Path
 
@@ -137,7 +149,23 @@ def _text(
     return value
 
 
-def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...] | None:
+def _parse_source(ctx: Ctx, raw: object) -> Source | None:
+    """A citation: a non-empty string, or ``{"text": ..., "type": ...}``."""
+    if isinstance(raw, str) and raw:
+        return Source(unicodedata.normalize("NFC", raw))
+    if not isinstance(raw, dict):
+        ctx.error("must be a non-empty string or an object")
+        return None
+    obj = ctx.mapping(raw, _SOURCE_KEYS)
+    errors = len(ctx.issues.errors)
+    text = ctx.str_(obj, "text")
+    kind = ctx.choice(obj, "type", SOURCE_TYPES) if "type" in obj else None
+    if len(ctx.issues.errors) > errors:
+        return None
+    return Source(unicodedata.normalize("NFC", text), kind)
+
+
+def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[Source, ...] | None:
     """The citations, or None when ``sources`` itself is invalid (errors recorded).
 
     None tells slides to skip their ``source`` range check: with a broken ``sources`` list
@@ -146,14 +174,14 @@ def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...] | None:
     if "sources" not in obj:
         ctx.at("sources").warning("missing: factual claims cannot be traced to a source")
         return ()
-    sources: list[str] = []
+    sources: list[Source] = []
     valid = True
     for child, raw in ctx.at("sources").items(obj["sources"]):
-        if isinstance(raw, str) and raw:
-            sources.append(unicodedata.normalize("NFC", raw))
-        else:
-            child.error("must be a non-empty string")
+        source = _parse_source(child, raw)
+        if source is None:
             valid = False
+        else:
+            sources.append(source)
     if not valid or not isinstance(obj["sources"], list):
         return None
     if not sources:
@@ -161,25 +189,36 @@ def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...] | None:
     return tuple(sources)
 
 
-def _parse_source_index(
-    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
-) -> int | None:
-    if "source" not in obj:
+def _source_index(ctx: Ctx, value: object, sources: tuple[Source, ...] | None) -> int | None:
+    if not is_int(value) or cast(int, value) < 0:
+        ctx.error("must be an integer ≥ 0")
         return None
-    index = ctx.int_(obj, "source", lo=0)
-    if sources is not None and is_int(obj["source"]) and index >= len(sources):
+    index = cast(int, value)
+    if sources is not None and index >= len(sources):
         noun = "item" if len(sources) == 1 else "items"
-        ctx.at("source").error(f"index out of range (sources has {len(sources)} {noun})")
+        ctx.error(f"index out of range (sources has {len(sources)} {noun})")
     return index
 
 
-def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...] | None) -> Slide | None:
+def _parse_source_indices(
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[Source, ...] | None
+) -> tuple[int, ...]:
+    """``source``: one index into ``sources`` or a non-empty array of them."""
+    if "source" not in obj:
+        return ()
+    child, value = ctx.at("source"), obj["source"]
+    pairs = child.items(value, non_empty=True) if isinstance(value, list) else [(child, value)]
+    indices = (_source_index(c, v, sources) for c, v in pairs)
+    return tuple(i for i in indices if i is not None)
+
+
+def _parse_slide(ctx: Ctx, raw: object, sources: tuple[Source, ...] | None) -> Slide | None:
     if not isinstance(raw, dict):
         ctx.error("must be an object")
         return None
     obj = ctx.mapping(raw, _SLIDE_KEYS)
     claim = ctx.bool_(obj, "claim", default=False)
-    source = _parse_source_index(ctx, obj, sources)
+    source = _parse_source_indices(ctx, obj, sources)
     if claim and "source" not in obj:
         ctx.at("source").warning("claim is true but no source index is given")
     duration = (
@@ -202,7 +241,7 @@ def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...] | None) -> Slid
 
 
 def _parse_slides(
-    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[Source, ...] | None
 ) -> tuple[Slide, ...]:
     slides_ctx = ctx.at("slides")
     if "slides" not in obj:

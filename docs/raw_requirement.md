@@ -4,10 +4,10 @@
 |--------------|-----------------------------------------------------------------------|
 | Document     | Raw Requirements Specification                                        |
 | Project      | history-shorts                                                        |
-| Version      | 2.0.1 (amended)                                                       |
+| Version      | 2.0.2 (amended)                                                       |
 | Status       | Approved for implementation                                           |
 | Owner        | Tri Nguyen                                                            |
-| Last updated | 2026-11-07 (owner decisions recorded; see §6.2, §6.3, §8, §16, App. A) |
+| Last updated | 2026-11-10 (typed sources, multiple source indices; see §6.1)         |
 | Implementer  | Claude Code (working rules in `CLAUDE.md`)                            |
 | Supersedes   | v1.1 (Pillow-only renderer, crackle effect, single static motif)      |
 
@@ -241,7 +241,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 |------------------|-----------------|-----|---------|-----------------------------------------|
 | `schema_version` | string          | yes | —       | `"2.0"`.                                |
 | `title`          | string          | yes | —       | Used for default output name and report.|
-| `sources`        | array of string | no  | `[]`    | Citations or URLs.                      |
+| `sources`        | array of Source | no  | `[]`    | Citations or URLs.                      |
 | `slides`         | array of Slide  | yes | —       | 1–30 items.                             |
 
 **Slide**
@@ -255,7 +255,9 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `scene`    | Scene   | no  | none    | §6.3. Without a scene, the slide is chrome + text only. |
 | `motion`   | enum    | no  | `none`  | `none` \| `zoom_in` (FR-84).                             |
 | `claim`    | boolean | no  | `false` | Marks a factual statement.                               |
-| `source`   | integer | no  | —       | Index into `sources`.                                    |
+| `source`   | integer or array of integer | no | — | Index into `sources`, or a non-empty array of indices. |
+
+**Source**: a non-empty string, or an object `{"text": string, "type": enum}`. `text` is required and non-empty; `type` is optional, one of `book` \| `journal` \| `news` \| `web` \| `other`. The sources block prints a typed source as `[n] (type) text`; the render report stores every source as `{"text", "type"}` (`type` is `null` when not given).
 
 ### 6.2 `theme.json`
 

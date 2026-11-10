@@ -3,7 +3,18 @@
   "title": "Nữ tướng thời Hai Bà Trưng",
   "sources": [
     "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
-    "[CẦN NGUỒN] Thần tích về nữ tướng Lê Chân và đền Nghè (Hải Phòng) — chủ dự án bổ sung tài liệu cụ thể."
+    {
+      "text": "Bùi Đức Mậu, Lại Thị Thanh Bình (2025). \"Tục thờ nữ tướng Lê Chân của cư dân thành phố Hải Phòng\". Tạp chí Thông tin Khoa học xã hội, số 2(506), tr. 51–58. ISSN 0866-8647. https://vjol.info.vn/ssir/article/view/129011",
+      "type": "journal"
+    },
+    {
+      "text": "Báo Dân Việt, \"Một nữ đại tướng huyền thoại của dân tộc Việt Nam, tên tục là Vũ Thị Thục...\"",
+      "type": "news"
+    },
+    {
+      "text": "Báo Phú Thọ, \"Nữ đại tướng huyền thoại của dân tộc Việt\"",
+      "type": "news"
+    }
   ],
   "slides": [
     {
@@ -43,9 +54,11 @@
       }
     },
     {
-      "tag": "NỮ TƯỚNG",
-      "title": "[CẦN NỘI DUNG]\nNữ tướng khác",
-      "subtitle": "[CẦN NỘI DUNG] Chủ dự án bổ sung tên, quê quán và nguồn của một nữ tướng khác.",
+      "tag": "PHƯỢNG LÂU",
+      "title": "Bát Nàn Đại tướng\nVũ Thị Thục",
+      "subtitle": "Bát Nàn Đại tướng – từ làng Phượng Lâu ra trận, nay thành Mẫu thần được thờ khắp Sơn Nam",
+      "claim": true,
+      "source": [2, 3],
       "scene": {
         "template": "group",
         "characters": [ { "role": "general_alt" }, { "role": "general_alt" } ]

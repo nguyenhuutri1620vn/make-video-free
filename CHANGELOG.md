@@ -79,3 +79,9 @@ Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04
 - `render --music` is probed for an audio stream before any slide is rendered (exit 3 otherwise). An FFmpeg dev build now prints a `WARN` line. `--verbose` logs the traceback of an unexpected error.
 - Snapshot baselines are keyed by the Cairo C library and FreeType versions too; Pillow text uses the BASIC layout engine so Raqm cannot change layout. Pixels unchanged.
 - `FORMATION_NAMES` has a single definition (`scene_config`); README notes that `pip install -e .` is the supported v2.0 install.
+
+## v2.0.1
+
+- `sources` items may be objects `{"text", "type"}` with `type` one of `book`, `journal`, `news`, `web`, `other`; plain strings still work. The sources block prints `[n] (type) text`, and the report stores `{text, type}` for every source.
+- A slide's `source` may be an array of indices, for claims backed by several sources.
+- `nu_tuong`: slide 4 is now Bát Nàn Đại tướng (Vũ Thị Thục) with two news sources; the Lê Chân placeholder source is replaced by a journal article (Bùi Đức Mậu, Lại Thị Thanh Bình, 2025).

@@ -29,6 +29,7 @@ from history_shorts.config import (
     PeaksLayer,
     RiverLayer,
     Script,
+    Source,
     SunLayer,
     TemplateScene,
     load_script,
@@ -189,8 +190,8 @@ def test_slide_defaults(tmp_script: ScriptFactory) -> None:
     script, _ = load_script(tmp_script())
     slide = script.slides[0]
     assert (slide.tag, slide.subtitle, slide.duration, slide.scene) == ("", "", None, None)
-    assert (slide.motion, slide.claim, slide.source) == ("none", False, None)
-    assert script.sources == ("Nguồn thử nghiệm",)
+    assert (slide.motion, slide.claim, slide.source) == ("none", False, ())
+    assert script.sources == (Source("Nguồn thử nghiệm"),)
 
 
 def test_nfd_text_normalised_to_nfc(tmp_script: ScriptFactory) -> None:  # Review Focus 2
@@ -205,7 +206,7 @@ def test_nfd_text_normalised_to_nfc(tmp_script: ScriptFactory) -> None:  # Revie
     )
     slide = s.slides[0]
     assert (slide.title, slide.tag, slide.subtitle) == ("Trưng Trắc",) * 3
-    assert s.title == "Hai Bà" and s.sources == ("Nguồn",)
+    assert s.title == "Hai Bà" and s.sources == (Source("Nguồn"),)
 
 
 def test_length_is_measured_after_nfc(tmp_script: ScriptFactory) -> None:
@@ -229,8 +230,8 @@ def test_top_level_errors(tmp_script: ScriptFactory) -> None:
     assert sorted(_errors(path)) == [
         'script.json › schema_version: unsupported schema_version "1.1" (expected "2.0")',
         "script.json › slides: must be an array",
-        "script.json › sources[0]: must be a non-empty string",
-        "script.json › sources[1]: must be a non-empty string",
+        "script.json › sources[0]: must be a non-empty string or an object",
+        "script.json › sources[1]: must be a non-empty string or an object",
         "script.json › title: must be a non-empty string",
     ]
 
@@ -769,6 +770,60 @@ def test_invalid_sources_do_not_cascade_into_source_index_errors(
     errors = _errors(tmp_script(sources=sources, slides=[{"title": "A", "source": 0}]))
     assert errors and all(e.startswith("script.json › sources") for e in errors)
     assert not any("index out of range" in e for e in errors)
+
+
+# -- typed sources and multiple source indices --------------------------------------------
+
+
+def test_sources_accept_strings_and_typed_objects(tmp_script: ScriptFactory) -> None:
+    nfd = unicodedata.normalize("NFD", "Báo Phú Thọ")
+    sources = ["Sách", {"text": nfd, "type": "news"}, {"text": "Tạp chí"}]
+    script, _ = load_script(tmp_script(sources=sources))
+    assert script.sources == (Source("Sách"), Source("Báo Phú Thọ", "news"), Source("Tạp chí"))
+
+
+@pytest.mark.parametrize(
+    ("source", "path", "msg"),
+    [
+        ({"type": "news"}, "sources[0].text", "required"),
+        ({"text": "", "type": "news"}, "sources[0].text", "must be a non-empty string"),
+        ({"text": "A", "type": "blog"}, "sources[0].type", "must be one of"),
+        ({"text": "A", "type": 3}, "sources[0].type", "must be one of"),
+    ],
+)
+def test_typed_source_errors(
+    tmp_script: ScriptFactory, source: object, path: str, msg: str
+) -> None:
+    errors = _errors(tmp_script(sources=[source], slides=[{"title": "A", "source": 0}]))
+    assert len(errors) == 1 and errors[0].startswith(f"script.json › {path}: {msg}")
+
+
+def test_typed_source_unknown_key_warns(tmp_script: ScriptFactory) -> None:
+    _, issues = load_script(tmp_script(sources=[{"text": "A", "url": "x"}]))
+    assert "sources[0].url" in [i.path for i in issues]
+
+
+def test_slide_source_accepts_an_index_or_an_array(tmp_script: ScriptFactory) -> None:
+    slides = [{"title": "A", "source": 1}, {"title": "B", "source": [1, 0]}]
+    script, _ = load_script(tmp_script(sources=["X", "Y"], slides=slides))
+    assert [s.source for s in script.slides] == [(1,), (1, 0)]
+
+
+@pytest.mark.parametrize(
+    ("value", "path", "msg"),
+    [
+        ([], "slides[0].source", "must be a non-empty array"),
+        ([0, 2], "slides[0].source[1]", "index out of range (sources has 2 items)"),
+        ([0, -1], "slides[0].source[1]", "must be an integer ≥ 0"),
+        ([True], "slides[0].source[0]", "must be an integer ≥ 0"),
+        ("0", "slides[0].source", "must be an integer ≥ 0"),
+    ],
+)
+def test_slide_source_array_errors(
+    tmp_script: ScriptFactory, value: object, path: str, msg: str
+) -> None:
+    script = tmp_script(sources=["X", "Y"], slides=[{"title": "A", "source": value}])
+    assert _errors(script) == [f"script.json › {path}: {msg}"]
 
 
 def test_empty_tag_and_subtitle_stay_allowed(tmp_script: ScriptFactory) -> None:

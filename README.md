@@ -82,19 +82,19 @@ Next to the video, `render` writes `<video name>.report.json` (UTF-8, indented, 
 | `warnings` | validation warnings, formatted like the console lines |
 | `versions` | `python`, `pycairo`, `cairo`, `numpy`, `scipy`, `Pillow`, `ffmpeg` (`"dev"` for a development build) |
 | `timings` | seconds per phase: `validate`, `render_slides`, `encode`, `concat`, `mux`, `total` |
-| `sources` | the script's `sources`, in order |
+| `sources` | the script's `sources`, in order, each as `{text, type}` (`type` is `null` when not given) |
 
 ### Data contracts
 
 The full contracts are in [`docs/raw_requirement.md`](docs/raw_requirement.md) section 6 (script 6.1, theme 6.2, scene 6.3). In short:
 
-- `script.json`: `schema_version` (`"2.0"`), `title`, `sources` (list of citation strings) and `slides`. A slide has `tag`, `title`, `subtitle`, and optionally `duration` (seconds; otherwise derived from the text), `motion` (`none` or `zoom_in`), `claim` (true for a factual statement), `source` (index into `sources`) and `scene`. A `scene` is either `{"template": "group" | "landscape", ...overrides}` or explicit `layers`; no `scene` gives chrome and text on the lacquer ground. Look at `examples/nu_tuong/script.json` and `examples/me_linh/script.json`.
+- `script.json`: `schema_version` (`"2.0"`), `title`, `sources` (citation strings, or `{"text": ..., "type": "book" | "journal" | "news" | "web" | "other"}`) and `slides`. A slide has `tag`, `title`, `subtitle`, and optionally `duration` (seconds; otherwise derived from the text), `motion` (`none` or `zoom_in`), `claim` (true for a factual statement), `source` (an index into `sources`, or an array of indices) and `scene`. A `scene` is either `{"template": "group" | "landscape", ...overrides}` or explicit `layers`; no `scene` gives chrome and text on the lacquer ground. Look at `examples/nu_tuong/script.json` and `examples/me_linh/script.json`.
 - `theme.json` (`themes/son_mai/theme.json`): `seed`, `palette` (13 required colour keys and 14 optional ones), `fonts`, `type_scale`, `textures`, `chrome`, `transition`, `video`. No colour, font or size is hardcoded in drawing code, so changing `palette.gold` recolours every gold element.
 - Validation reports every error at once with its JSON path (exit 3); warnings (text auto-shrunk, total duration outside 15-90 s, missing `sources`, `claim` without `source`, unknown keys) never fail.
 
 ### Sources workflow
 
-Every example lists `sources` and marks each factual slide with `"claim": true` and a `source` index. `validate` warns about a missing `sources` list and about a claim without a `source`; `render` prints a numbered `Sources:` block, ready to paste into a caption, and stores the same list in the report. Folk-record claims are worded as such ("theo thần tích", "theo truyền thuyết"). Never invent a fact, date, name or quote: where a citation is still needed, write a placeholder such as `[CẦN NGUỒN] ...` in `sources` (the `nu_tuong` example does this for the Lê Chân hagiography) and the owner supplies the document.
+Every example lists `sources` and marks each factual slide with `"claim": true` and a `source` index. `validate` warns about a missing `sources` list and about a claim without a `source`; `render` prints a numbered `Sources:` block, ready to paste into a caption (a typed source reads `[2] (journal) ...`), and stores the same list in the report. Folk-record claims are worded as such ("theo thần tích", "theo truyền thuyết"). Never invent a fact, date, name or quote: where a citation is still needed, write a placeholder such as `[CẦN NGUỒN] ...` in `sources` and the owner supplies the document.
 
 `gallery` renders a 1080x4080 contact sheet. The top block is every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. Below it, three rows of 270x360 cells show each scene layer type with the reference template's parameters (sun, moon, clouds, mountains, peaks gradient, peaks eggshell, hills left, river, ground, boat, birds, lotus); each is the layer drawn at full canvas scale, with a fixed 3:4 crop scaled into its cell (`gallery.LAYER_SPECS`). `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest.
 

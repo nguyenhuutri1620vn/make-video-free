@@ -9,7 +9,7 @@ import platform
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from history_shorts.config import Script, Theme
+from history_shorts.config import Script, Source, Theme
 from history_shorts.errors import Issue
 from history_shorts.ffmpeg import FfmpegInfo
 from history_shorts.video import RenderOptions
@@ -18,11 +18,17 @@ REPORT_SUFFIX = ".report.json"
 DEV_VERSION = "dev"
 
 
+def _source_line(number: int, source: Source) -> str:
+    kind = f"({source.type}) " if source.type else ""
+    return f"[{number}] {kind}{source.text}"
+
+
 def sources_block(script: Script) -> str:
-    """``Sources:`` then ``[n] text`` lines, ready to paste into a caption; ``""`` if none."""
+    """``Sources:`` then ``[n] (type) text`` lines, ready to paste into a caption; ``""`` if
+    none. The ``(type)`` part appears only for sources that give a type."""
     if not script.sources:
         return ""
-    lines = ["Sources:", *(f"[{n}] {text}" for n, text in enumerate(script.sources, start=1))]
+    lines = ["Sources:", *(_source_line(n, s) for n, s in enumerate(script.sources, start=1))]
     return "\n".join(lines)
 
 
@@ -89,7 +95,7 @@ def build_report(
         "warnings": [w.format() if isinstance(w, Issue) else w for w in warnings],
         "versions": _versions(info),
         "timings": {name: round(seconds, 3) for name, seconds in timings.items()},
-        "sources": list(script.sources),
+        "sources": [{"text": s.text, "type": s.type} for s in script.sources],
     }
 
 
