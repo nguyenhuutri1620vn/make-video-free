@@ -1,0 +1,62 @@
+{
+  "schema_version": "2.0",
+  "title": "Nữ tướng thời Hai Bà Trưng",
+  "sources": [
+    "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
+    "[CẦN NGUỒN] Thần tích về nữ tướng Lê Chân và đền Nghè (Hải Phòng) — chủ dự án bổ sung tài liệu cụ thể."
+  ],
+  "slides": [
+    {
+      "tag": "NĂM 40 SAU CÔNG NGUYÊN",
+      "title": "Những nữ tướng\nbên Hai Bà Trưng",
+      "subtitle": "Khi phụ nữ cầm quân giữ nước",
+      "scene": {
+        "template": "group",
+        "characters": [
+          { "role": "leader" }, { "role": "leader" },
+          { "role": "general_alt" }, { "role": "general_alt" },
+          { "role": "general" }, { "role": "general" }
+        ]
+      }
+    },
+    {
+      "tag": "NỮ TƯỚNG",
+      "title": "Khởi nghĩa\nnăm Canh Tý",
+      "subtitle": "Năm 40, Trưng Trắc và Trưng Nhị dấy binh chống Thái thú Tô Định.",
+      "motion": "zoom_in",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "group",
+        "characters": [ { "role": "leader" }, { "role": "leader" } ]
+      }
+    },
+    {
+      "tag": "LÊ CHÂN",
+      "title": "Nữ tướng Lê Chân",
+      "subtitle": "Theo thần tích, bà quê An Biên, lập trang An Biên, vùng đất nay thuộc Hải Phòng.",
+      "claim": true,
+      "source": 1,
+      "scene": {
+        "template": "group",
+        "characters": [ { "role": "general" }, { "role": "general" } ]
+      }
+    },
+    {
+      "tag": "NỮ TƯỚNG",
+      "title": "[CẦN NỘI DUNG]\nNữ tướng khác",
+      "subtitle": "[CẦN NỘI DUNG] Chủ dự án bổ sung tên, quê quán và nguồn của một nữ tướng khác.",
+      "scene": {
+        "template": "group",
+        "characters": [ { "role": "general_alt" }, { "role": "general_alt" } ]
+      }
+    },
+    {
+      "tag": "GHI NHỚ",
+      "title": "Đền Nghè\nHải Phòng",
+      "subtitle": "Đền Nghè ở Hải Phòng là nơi thờ nữ tướng Lê Chân.",
+      "claim": true,
+      "source": 1
+    }
+  ]
+}

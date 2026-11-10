@@ -1,0 +1,108 @@
+"""Role presets and style resolution (FR-45, FR-46).
+
+A role is pure data: palette keys, a prop, a crest flag and the costume kit that draws it
+(``characters.kits``). Adding a role means adding a ``RolePreset`` to a mapping; no drawing
+code changes.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Final
+
+from history_shorts.characters.kits.base import Variation, variation_for
+from history_shorts.config import CharacterSpec, Palette
+from history_shorts.primitives import RGB
+
+DEFAULT_KIT: Final = "ancient_female"
+
+
+@dataclass(frozen=True, slots=True)
+class RolePreset:
+    """Default look of a role; every colour is a palette key, ``kit`` a key of ``KITS``."""
+
+    robe: str
+    robe_dk: str
+    trim: str
+    wrap: str
+    crest: bool
+    prop: str
+    kit: str = DEFAULT_KIT
+
+
+@dataclass(frozen=True, slots=True)
+class CharacterStyle:
+    """Concrete colours and flags for drawing one character."""
+
+    robe: RGB
+    robe_dk: RGB
+    trim: RGB
+    wrap: RGB
+    trim_is_gold: bool
+    crest: bool
+    prop: str
+    kit: str = DEFAULT_KIT
+    variation: Variation = Variation(1.0, 1.0, 1.0)
+
+
+ROLES: Mapping[str, RolePreset] = MappingProxyType(
+    {
+        "leader": RolePreset("vermilion", "vermilion_dk", "gold", "gold", True, "flag"),
+        "general": RolePreset(
+            "vermilion_dk", "robe_general_dk", "gold_dk", "vermilion", False, "spear"
+        ),
+        "general_alt": RolePreset(
+            "brown", "robe_general_alt_dk", "vermilion", "vermilion", False, "spear"
+        ),
+        "boat_crew": RolePreset("jade", "robe_crew_dk", "gold_dk", "vermilion", False, "oar"),
+    }
+)
+
+
+def _colour(palette: Palette, key: str) -> RGB:
+    try:
+        return palette[key]
+    except KeyError:
+        raise KeyError(f"unknown palette key '{key}'") from None
+
+
+def resolve_style(
+    spec: CharacterSpec,
+    palette: Palette,
+    roles: Mapping[str, RolePreset] | None = None,
+) -> CharacterStyle:
+    """Role preset plus the spec's overrides, with palette keys turned into RGB.
+
+    ``roles`` defaults to ``ROLES`` as it is at call time. Raises ``KeyError`` for an
+    unknown role or palette key; validation reports those earlier, so this is the
+    programming-error path. The kit name is copied as is; ``kits.kit_for`` resolves it.
+    """
+    preset = preset_for(spec, roles)
+    trim = _colour(palette, spec.trim or preset.trim)
+    return CharacterStyle(
+        robe=_colour(palette, spec.robe or preset.robe),
+        robe_dk=_colour(palette, spec.robe_dk or preset.robe_dk),
+        trim=trim,
+        wrap=_colour(palette, spec.wrap or preset.wrap),
+        trim_is_gold=trim == _colour(palette, "gold"),
+        crest=preset.crest if spec.crest is None else spec.crest,
+        prop=resolved_prop(spec, preset),
+        kit=preset.kit,
+        variation=variation_for(spec.seed),
+    )
+
+
+def preset_for(spec: CharacterSpec, roles: Mapping[str, RolePreset] | None = None) -> RolePreset:
+    """The spec's role preset from ``roles`` (default ``ROLES`` at call time)."""
+    table = ROLES if roles is None else roles
+    try:
+        return table[spec.role]
+    except KeyError:
+        raise KeyError(f"unknown role '{spec.role}'") from None
+
+
+def resolved_prop(spec: CharacterSpec, preset: RolePreset) -> str:
+    """The spec's prop, or the preset's when the spec leaves it out."""
+    return preset.prop if spec.prop is None else spec.prop

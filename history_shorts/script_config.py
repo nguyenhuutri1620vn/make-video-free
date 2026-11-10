@@ -1,0 +1,255 @@
+"""Script contract (spec 6.1): ``script.json`` becomes a frozen ``Script``.
+
+All text fields are NFC-normalised before any check, so a decomposed (NFD) Vietnamese
+string is measured, validated and rendered the same as its composed form. Messages use the
+terse style of AC-11, e.g. ``script.json › slides[2].scene.layers[0].x: must be 0–1080``.
+"""
+
+from __future__ import annotations
+
+import unicodedata
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal, cast
+
+from history_shorts.errors import Issue, Issues
+from history_shorts.scene_config import LayerScene, TemplateScene, parse_scene
+from history_shorts.validation import Ctx, is_int, read_json_object
+
+SCRIPT_SCHEMA_VERSION = "2.0"
+
+MAX_TAG_CHARS = 28
+MAX_TITLE_CHARS = 60
+MAX_SUBTITLE_CHARS = 120
+MIN_SLIDES = 1
+MAX_SLIDES = 30
+MIN_SLIDE_SECONDS = 0.5
+MAX_SLIDE_SECONDS = 15.0
+
+# FR-83: auto-duration = clamp(chars x SECONDS_PER_CHAR, AUTO_MIN, AUTO_MAX).
+SECONDS_PER_CHAR = 0.08
+AUTO_MIN_SECONDS = 2.5
+AUTO_MAX_SECONDS = 6.0
+
+# FR-13: warn when the total length leaves this range. The theme's fps is not known while
+# the script loads, so the total is estimated at DEFAULT_FPS.
+MIN_TOTAL_SECONDS = 15.0
+MAX_TOTAL_SECONDS = 90.0
+DEFAULT_FPS = 30
+
+MOTION_NAMES: tuple[str, ...] = ("none", "zoom_in")
+
+# Emoji and pictographs (spec 8.4), by code point: ranges are inclusive.
+_EMOJI_RANGES: tuple[tuple[int, int], ...] = (
+    (0x1F000, 0x1FAFF),
+    (0x2600, 0x27BF),
+    (0xFE0F, 0xFE0F),
+    (0x200D, 0x200D),
+)
+
+_SCRIPT_KEYS = ("schema_version", "title", "sources", "slides")
+_SLIDE_KEYS = (
+    "tag",
+    "title",
+    "subtitle",
+    "duration",
+    "scene",
+    "motion",
+    "claim",
+    "source",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class Slide:
+    tag: str
+    title: str
+    subtitle: str
+    duration: float | None
+    scene: LayerScene | TemplateScene | None
+    motion: Literal["none", "zoom_in"]
+    claim: bool
+    source: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class Script:
+    schema_version: str
+    title: str
+    sources: tuple[str, ...]
+    slides: tuple[Slide, ...]
+    path: Path
+
+
+# --------------------------------------------------------------------------------------
+# Durations
+# --------------------------------------------------------------------------------------
+
+
+def slide_duration(slide: Slide, fps: int) -> float:
+    """Seconds this slide is shown, rounded to the nearest frame (FR-83).
+
+    An explicit ``duration`` wins; otherwise ``clamp(chars x 0.08, 2.5, 6.0)`` where
+    ``chars`` counts the title and subtitle without line breaks.
+    """
+    if slide.duration is not None:
+        seconds = slide.duration
+    else:
+        chars = len((slide.title + slide.subtitle).replace("\n", ""))
+        seconds = min(max(chars * SECONDS_PER_CHAR, AUTO_MIN_SECONDS), AUTO_MAX_SECONDS)
+    return round(seconds * fps) / fps
+
+
+# --------------------------------------------------------------------------------------
+# Parsing
+# --------------------------------------------------------------------------------------
+
+
+def _first_emoji(text: str) -> str | None:
+    for ch in text:
+        code = ord(ch)
+        if any(lo <= code <= hi for lo, hi in _EMOJI_RANGES):
+            return f"U+{code:04X}"
+    return None
+
+
+def _text(
+    ctx: Ctx,
+    obj: Mapping[str, Any],
+    key: str,
+    *,
+    required: bool = False,
+    max_chars: int | None = None,
+) -> str:
+    """Read a text field: NFC-normalise, then reject emoji and over-long values."""
+    child = ctx.at(key)
+    raw = ctx.str_(obj, key) if required else ctx.str_(obj, key, default="", non_empty=False)
+    value = unicodedata.normalize("NFC", raw)
+    if value and not value.strip():
+        child.error("must not be blank")
+        return value
+    emoji = _first_emoji(value)
+    if emoji is not None:
+        child.error(f"emoji are not supported ({emoji})")
+    elif max_chars is not None and len(value) > max_chars:
+        child.error(f"must be at most {max_chars} characters")
+    return value
+
+
+def _parse_sources(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, ...] | None:
+    """The citations, or None when ``sources`` itself is invalid (errors recorded).
+
+    None tells slides to skip their ``source`` range check: with a broken ``sources`` list
+    the length is unknown and a range error would be a spurious follow-on.
+    """
+    if "sources" not in obj:
+        ctx.at("sources").warning("missing: factual claims cannot be traced to a source")
+        return ()
+    sources: list[str] = []
+    valid = True
+    for child, raw in ctx.at("sources").items(obj["sources"]):
+        if isinstance(raw, str) and raw:
+            sources.append(unicodedata.normalize("NFC", raw))
+        else:
+            child.error("must be a non-empty string")
+            valid = False
+    if not valid or not isinstance(obj["sources"], list):
+        return None
+    if not sources:
+        ctx.at("sources").warning("empty: factual claims cannot be traced to a source")
+    return tuple(sources)
+
+
+def _parse_source_index(
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
+) -> int | None:
+    if "source" not in obj:
+        return None
+    index = ctx.int_(obj, "source", lo=0)
+    if sources is not None and is_int(obj["source"]) and index >= len(sources):
+        noun = "item" if len(sources) == 1 else "items"
+        ctx.at("source").error(f"index out of range (sources has {len(sources)} {noun})")
+    return index
+
+
+def _parse_slide(ctx: Ctx, raw: object, sources: tuple[str, ...] | None) -> Slide | None:
+    if not isinstance(raw, dict):
+        ctx.error("must be an object")
+        return None
+    obj = ctx.mapping(raw, _SLIDE_KEYS)
+    claim = ctx.bool_(obj, "claim", default=False)
+    source = _parse_source_index(ctx, obj, sources)
+    if claim and "source" not in obj:
+        ctx.at("source").warning("claim is true but no source index is given")
+    duration = (
+        ctx.num(obj, "duration", lo=MIN_SLIDE_SECONDS, hi=MAX_SLIDE_SECONDS)
+        if "duration" in obj
+        else None
+    )
+    return Slide(
+        tag=_text(ctx, obj, "tag", max_chars=MAX_TAG_CHARS),
+        title=_text(ctx, obj, "title", required=True, max_chars=MAX_TITLE_CHARS),
+        subtitle=_text(ctx, obj, "subtitle", max_chars=MAX_SUBTITLE_CHARS),
+        duration=duration,
+        scene=parse_scene(ctx.at("scene"), obj["scene"]) if "scene" in obj else None,
+        motion=cast(
+            "Literal['none', 'zoom_in']", ctx.choice(obj, "motion", MOTION_NAMES, default="none")
+        ),
+        claim=claim,
+        source=source,
+    )
+
+
+def _parse_slides(
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[str, ...] | None
+) -> tuple[Slide, ...]:
+    slides_ctx = ctx.at("slides")
+    if "slides" not in obj:
+        slides_ctx.missing()
+        return ()
+    pairs = slides_ctx.items(obj["slides"])
+    if isinstance(obj["slides"], list) and not MIN_SLIDES <= len(pairs) <= MAX_SLIDES:
+        slides_ctx.error(f"must contain {MIN_SLIDES}–{MAX_SLIDES} slides")
+    slides = (_parse_slide(child, raw, sources) for child, raw in pairs)
+    return tuple(s for s in slides if s is not None)
+
+
+def _check_total_duration(ctx: Ctx, slides: tuple[Slide, ...]) -> None:
+    total = sum(slide_duration(s, DEFAULT_FPS) for s in slides)
+    if not MIN_TOTAL_SECONDS <= total <= MAX_TOTAL_SECONDS:
+        ctx.at("slides").warning(
+            f"total duration {total:.1f} s is outside {MIN_TOTAL_SECONDS:g}–{MAX_TOTAL_SECONDS:g} s"
+        )
+
+
+def _parse_script(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Script:
+    for key in data:
+        if key not in _SCRIPT_KEYS:
+            ctx.at(str(key)).warning("unknown key (ignored)")
+    version = ctx.str_(data, "schema_version")
+    if version and version != SCRIPT_SCHEMA_VERSION:
+        ctx.at("schema_version").error(
+            f'unsupported schema_version "{version}" (expected "{SCRIPT_SCHEMA_VERSION}")'
+        )
+    title = _text(ctx, data, "title", required=True)
+    sources = _parse_sources(ctx, data)
+    slides = _parse_slides(ctx, data, sources)
+    if not ctx.issues.errors:
+        _check_total_duration(ctx, slides)
+    return Script(version, title, sources or (), slides, path)
+
+
+def load_script(path: Path) -> tuple[Script, list[Issue]]:
+    """Load and validate a script file.
+
+    Returns the script and its warnings. Raises ``ValidationFailed`` carrying every error.
+    """
+    issues = Issues()
+    data = read_json_object(path, issues)
+    if data is None:
+        issues.raise_if_errors()
+        raise AssertionError("unreachable")  # pragma: no cover
+    script = _parse_script(Ctx(path.name, issues, terse=True), data, path.resolve())
+    issues.raise_if_errors()
+    return script, issues.warnings

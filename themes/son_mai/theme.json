@@ -1,0 +1,39 @@
+{
+  "schema_version": "2.0",
+  "name": "Sơn mài — Sử Việt",
+  "seed": 40,
+  "palette": {
+    "black": [16, 9, 7], "deep": [48, 14, 9],
+    "vermilion": [176, 36, 24], "vermilion_dk": [112, 22, 14],
+    "gold": [212, 166, 76], "gold_lt": [242, 210, 130], "gold_dk": [138, 96, 40],
+    "egg": [236, 225, 200], "brown": [92, 50, 28], "brown_lt": [128, 74, 40],
+    "skin_line": [96, 52, 32], "pink": [224, 140, 120], "jade": [52, 84, 70],
+    "robe_general_dk": [70, 14, 10], "robe_general_alt_dk": [56, 28, 16], "robe_crew_dk": [30, 50, 42],
+    "egg_tone": [226, 212, 184], "egg_gap": [58, 30, 20], "sheen": [255, 210, 160],
+    "shadow": [10, 4, 2], "deep_warm": [70, 20, 12], "mountain_base": [60, 14, 10],
+    "peak_base": [44, 11, 8], "river_top": [40, 12, 8], "hull_dk": [40, 20, 12],
+    "leaf_dk": [24, 40, 34], "petal_tip": [240, 170, 150]
+  },
+  "fonts": {
+    "title": "fonts/LiberationSerif-Bold.ttf",
+    "subtitle": "fonts/LiberationSerif-Italic.ttf",
+    "tag": "fonts/LiberationSerif-Bold.ttf"
+  },
+  "type_scale": { "tag": 34, "title": 92, "title_min": 64, "subtitle": 46, "subtitle_min": 34 },
+  "textures": {
+    "gold_leaf": { "tile": 34, "worn": 0.05 },
+    "eggshell": { "cell": 16, "gap": 1.0 },
+    "sheen": { "x": 330, "y": 760, "r": 620, "strength": 0.10 },
+    "grain": { "strength": 0.025 }
+  },
+  "chrome": {
+    "frame": { "enabled": true },
+    "seal": { "lines": ["SỬ", "VIỆT"], "x": 92, "y": 160, "size": 118 },
+    "tag": { "cx": 590, "y": 180 },
+    "waves": { "y": 1600, "rows": 4 },
+    "progress_bar": { "enabled": false },
+    "footer": { "enabled": false, "text": "" }
+  },
+  "transition": { "fade_in": 0.3, "fade_out": 0.3 },
+  "video": { "fps": 30, "crf": 20 }
+}
