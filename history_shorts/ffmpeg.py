@@ -271,7 +271,10 @@ def _voice_graph(
         parts.append(
             "".join(labels) + f"amix=inputs={len(voices)}:normalize=0:duration=longest[voice]"
         )
-    source = "voice"
+    # Pad the voice track to the full length: the sidechain and loudnorm stop at the shortest
+    # input, so without this the music and the audio stream would end with the last voice.
+    parts.append(f"[voice]apad=whole_dur={_secs(total)}[padded]")
+    source = "padded"
     if music:
         fade_in, fade_out = _music_fades(total)
         duck = audio.duck
@@ -281,7 +284,7 @@ def _voice_graph(
             f"afade=t=out:st={_secs(max(total - fade_out, 0.0))}:d={fade_out:g},"
             f"aresample={AUDIO_RATE},aformat=channel_layouts=stereo[mus]"
         )
-        parts.append("[voice]asplit=2[vk][vm]")
+        parts.append("[padded]asplit=2[vk][vm]")
         parts.append(
             f"[mus][vk]sidechaincompress=threshold={duck.threshold:g}:ratio={duck.ratio:g}"
             f":attack={duck.attack_ms:g}:release={duck.release_ms:g}[ducked]"

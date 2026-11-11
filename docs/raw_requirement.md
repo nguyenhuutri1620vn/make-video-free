@@ -7,7 +7,7 @@
 | Version      | 2.0.3 (amended)                                                       |
 | Status       | Approved for implementation                                           |
 | Owner        | Tri Nguyen                                                            |
-| Last updated | 2026-11-11 (v2.1 narration/audio contract drafted; see Appendix A.1) |
+| Last updated | 2026-11-11 (v2.1 narration/audio implemented; see Appendix A.1) |
 | Implementer  | Claude Code (working rules in `CLAUDE.md`)                            |
 | Supersedes   | v1.1 (Pillow-only renderer, crackle effect, single static motif)      |
 
@@ -576,6 +576,9 @@ history-shorts/
 | pycairo / scipy import fails      | Install hint per OS.                                              | 1    |
 | FFmpeg missing / old              | Install hint per OS.                                              | 4    |
 | FFmpeg failure                    | Last 20 lines of stderr; full command with `--verbose`.          | 5    |
+| Stale narration (A.1.5)           | Names the slide ids whose `narration` changed since export.      | 3    |
+| Bad audio file (A.1.5)            | Resolved path; missing, outside the manifest folder, unreadable or 0.3–14.0 s. | 3 |
+| Slide too long for its voice (A.1.6) | Voice length and the 15 s limit.                              | 3    |
 
 ---
 
@@ -666,7 +669,7 @@ Recorded so later work does not contradict it. Nothing here is implemented in v2
 - Duck the music under the voice.
 - Fit each slide's duration to the length of its voice file.
 
-The contract below (A.1.1–A.1.9) fixes how history-shorts and the owner's separate sound project exchange data. It is planned for milestone M7 and drafted 2026-11-11; nothing in it is implemented yet.
+The contract below (A.1.1–A.1.9) fixes how history-shorts and the owner's separate sound project exchange data. It is milestone M7; drafted 2026-11-11 and implemented on branch `feat/m7-narration`. The owner's voice files and the narrated example stay outside the repo.
 
 #### A.1.1 Boundary
 

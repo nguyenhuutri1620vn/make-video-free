@@ -27,7 +27,8 @@ def test_voice_only_exact_graph() -> None:
         "-filter_complex",
         "[1:a]aresample=48000,aformat=channel_layouts=stereo,volume=0dB,adelay=300|300[v1];"
         "[v1]anull[voice];"
-        "[voice]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,aformat=channel_layouts=stereo[a]",
+        "[voice]apad=whole_dur=4.000[padded];"
+        "[padded]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,aformat=channel_layouts=stereo[a]",
         "-map", "0:v", "-map", "[a]",
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
         "-t", "4.000", "-movflags", "+faststart", "/t/o.mp4",
@@ -48,7 +49,7 @@ def test_music_is_ducked_by_the_voice() -> None:
     graph = _graph(cmd)
     assert cmd[cmd.index("-stream_loop") + 1] == "-1"
     assert "[2:a]atrim=0:6.000" in graph
-    assert "[voice]asplit=2[vk][vm]" in graph
+    assert "[padded]asplit=2[vk][vm]" in graph
     assert (
         "[mus][vk]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=300[ducked]" in graph
     )

@@ -189,10 +189,10 @@ Automated evidence for each acceptance criterion in the spec (section 13). AC-03
 | AC-14 | `tests/test_cli_render.py::test_without_ffmpeg_exit_4`, `tests/test_e2e.py::test_without_ffmpeg_on_path_exit_4` | met |
 | AC-15 | the quality gates below and `tests/test_guards.py` (no network imports, no `shell=True`, only `cli.py` prints, no crackle) | met |
 | AC-16 | `tests/test_audio.py::test_export_writes_one_txt_per_narrated_slide`, `test_export_sha_matches_file_bytes`, `test_export_second_run_is_byte_identical` | met (unit) |
-| AC-17 | `tests/test_audio.py::test_timing_uses_required_length_and_frame_grid`, `test_explicit_duration_shorter_than_voice_is_an_error`; end to end on a 4-slide narrated script: video 11.366 s = sum of slides | met (unit + manual end to end) |
+| AC-17 | `tests/test_audio.py::test_timing_uses_required_length_and_frame_grid`, `test_explicit_duration_shorter_than_voice_is_an_error`; end to end on a 4-slide narrated script: video 11.366 s = sum of slides; `tests/test_ducking.py::test_mix_keeps_the_audio_for_the_whole_video` (audio as long as the video) | met (unit + manual end to end) |
 | AC-18 | `tests/test_audio.py::test_stale_narration_names_every_stale_slide` | met (unit) |
 | AC-19 | `tests/test_voice_mux.py::test_v2_mux_command_untouched_without_voices`, `test_no_voice_needs_the_old_mux_command` | met (unit) |
-| AC-20 | ducking: a controlled check (same voice key, sidechain on vs off) gives music 3.7 dB lower in voiced windows and 0.0 dB in voice-free windows; integrated loudness −13.9 LUFS for target −14 (within ±1 LU). Not an automated test. | partly met |
+| AC-20 | `tests/test_ducking.py::test_voice_ducks_music_by_several_dB` (music drops about 3.7 dB under the voice, measured on FFmpeg output); integrated loudness −13.9 LUFS for target −14 (within ±1 LU) on the scratch render | met (ducking automated; loudness checked by hand) |
 | AC-21 | `tests/test_guards.py::test_no_speech_imports`, `test_no_network_imports` | met |
 
 Quality gates (all must pass): `ruff check . && ruff format --check . && mypy --strict history_shorts && pytest -q`, plus `pytest -m ffmpeg -q` for the end-to-end tests alone.
