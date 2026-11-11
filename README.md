@@ -56,6 +56,8 @@ python -m history_shorts render --script examples/me_linh/script.json --music so
 python -m history_shorts render --script examples/nu_tuong/script.json --preview
 python -m history_shorts render --script examples/me_linh/script.json --preview --out output/me_linh.mp4 --debug-safe-zone
 python -m history_shorts gallery --out output/gallery.png
+python -m history_shorts export-narration --script examples/nu_tuong/script.json --out output/narration
+python -m history_shorts render --script examples/nu_tuong/script.json --audio output/voice/audio_manifest.json
 ```
 
 `render` validates the script first (exit 3 and nothing written on any error). Without `--preview` it then looks for FFmpeg (exit 4 with an install hint when it is missing or older than 4.4, before any slide is drawn), renders the slide PNGs, encodes one H.264 clip per slide with the theme's fades, joins the clips, adds the audio track and writes the MP4 (1080x1920, 30 fps, `yuv420p`, CRF from the theme, `+faststart`), a render report and a console summary. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; its folder is created when missing, and paths with spaces, apostrophes and Vietnamese characters work.
@@ -91,6 +93,21 @@ The full contracts are in [`docs/raw_requirement.md`](docs/raw_requirement.md) s
 - `script.json`: `schema_version` (`"2.0"`), `title`, `sources` (citation strings, or `{"text": ..., "type": "book" | "journal" | "news" | "web" | "other"}`) and `slides`. A slide has `tag`, `title`, `subtitle`, and optionally `duration` (seconds; otherwise derived from the text), `motion` (`none` or `zoom_in`), `claim` (true for a factual statement), `source` (an index into `sources`, or an array of indices) and `scene`. A `scene` is either `{"template": "group" | "landscape", ...overrides}` or explicit `layers`; no `scene` gives chrome and text on the lacquer ground. Look at `examples/nu_tuong/script.json` and `examples/me_linh/script.json`.
 - `theme.json` (`themes/son_mai/theme.json`): `seed`, `palette` (13 required colour keys and 14 optional ones), `fonts`, `type_scale`, `textures`, `chrome`, `transition`, `video`. No colour, font or size is hardcoded in drawing code, so changing `palette.gold` recolours every gold element.
 - Validation reports every error at once with its JSON path (exit 3); warnings (text auto-shrunk, total duration outside 15-90 s, missing `sources`, `claim` without `source`, unknown keys) never fail.
+
+### Narration workflow (v2.1)
+
+Narration is voiced by the owner's separate sound project (VoiceStudio). history-shorts and that project exchange files only: no imports, no subprocess calls and no network between them. The contract is spec Appendix A.1.
+
+1. Add `"schema_version": "2.1"` and, on each slide, `narration` (Vietnamese, 1 to 600 characters, `[pause Nms]` with N from 50 to 3000 is the only bracket tag) and an explicit `id` (`^[a-z0-9][a-z0-9_-]{0,31}$`, unique). `id` is required on every slide once any slide has `narration`.
+2. `python -m history_shorts export-narration --script S --out DIR` writes `DIR/<id>.txt` (UTF-8, LF, one final newline) and `DIR/manifest.json`, which records the SHA-256 of each file. Re-running on an unchanged script gives byte-identical output. Only files named in the manifest are written.
+3. The sound project turns each `.txt` into a WAV or FLAC file (0.3 to 14.0 s) and writes `audio_manifest.json` next to them, copying each `text_sha256` unchanged.
+4. `validate --audio PATH` and `render --audio PATH` check the manifest. Editing a narration after export fails with exit 3 and names the stale slide ids (re-record those). A voice file that is missing, outside the manifest folder, unreadable or out of range also exits 3.
+
+Timing: a voiced slide lasts `ceil_to_frame(lead_in + voice + tail)` (defaults 0.3 s and 0.5 s, from the theme's `audio` block). An explicit `duration` is kept when it is at least that long, and is an error when shorter. A slide cannot exceed 15 s. The voice starts `lead_in` after the slide starts.
+
+Mix: each voice is delayed to its slide, the voices are summed, the music (if any) is ducked by the voice with a sidechain compressor, and the result goes through one `loudnorm` pass to `loudness_lufs` and `true_peak_db`. Without `--audio` the FFmpeg commands are the v2.0 commands, unchanged. A script with `narration` rendered without `--audio` gives a `WARN` and no voice.
+
+The report adds an `audio` block (manifest path and SHA-256, and per slide `id`, `voice_file`, `voice_seconds`, `duration`). The console summary adds the voiced-slide count.
 
 ### Sources workflow
 
@@ -171,6 +188,12 @@ Automated evidence for each acceptance criterion in the spec (section 13). AC-03
 | AC-13 | `tests/test_e2e.py::test_music_matches_length_and_fades` | met |
 | AC-14 | `tests/test_cli_render.py::test_without_ffmpeg_exit_4`, `tests/test_e2e.py::test_without_ffmpeg_on_path_exit_4` | met |
 | AC-15 | the quality gates below and `tests/test_guards.py` (no network imports, no `shell=True`, only `cli.py` prints, no crackle) | met |
+| AC-16 | `tests/test_audio.py::test_export_writes_one_txt_per_narrated_slide`, `test_export_sha_matches_file_bytes`, `test_export_second_run_is_byte_identical` | met (unit) |
+| AC-17 | `tests/test_audio.py::test_timing_uses_required_length_and_frame_grid`, `test_explicit_duration_shorter_than_voice_is_an_error`; end to end on a 4-slide narrated script: video 11.366 s = sum of slides | met (unit + manual end to end) |
+| AC-18 | `tests/test_audio.py::test_stale_narration_names_every_stale_slide` | met (unit) |
+| AC-19 | `tests/test_voice_mux.py::test_v2_mux_command_untouched_without_voices`, `test_no_voice_needs_the_old_mux_command` | met (unit) |
+| AC-20 | ducking: a controlled check (same voice key, sidechain on vs off) gives music 3.7 dB lower in voiced windows and 0.0 dB in voice-free windows; integrated loudness −13.9 LUFS for target −14 (within ±1 LU). Not an automated test. | partly met |
+| AC-21 | `tests/test_guards.py::test_no_speech_imports`, `test_no_network_imports` | met |
 
 Quality gates (all must pass): `ruff check . && ruff format --check . && mypy --strict history_shorts && pytest -q`, plus `pytest -m ffmpeg -q` for the end-to-end tests alone.
 
@@ -207,5 +230,7 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Variety (FR-49): a character `seed` draws bun, sash and hem-dot-spacing factors in [0.9, 1.1] (`variation_for`); without a seed all three are 1.0 and the figure is unchanged. Boxes keep the unvaried extents (the bun grows at most 0.3 unit), and varied hem dots outside 92 % of the hem half-width are dropped.
 - Eggshell cache (FR-66): one cache per render run, keyed by mask crc32, cell, gap, seed, layer and mask shape.
 - Coverage (NFR-08): `pytest-cov` is an owner-approved dev dependency (2026-11-08, spec C-03); coverage runs as a separate command and is not part of `pytest -q`.
-- Planned for v2.1, not implemented: narration export for the owner's VoiceStudio, extra motions, and extra poses (Appendix A).
-- Narration audio (planned v2.1, M7): history-shorts and the owner's separate sound project exchange files only — `export-narration` writes `<id>.txt` + a narration manifest with `text_sha256`; the sound project returns `audio_manifest.json` + voice files; `render --audio` fits slide timing to the voice, ducks music and normalises loudness. No TTS inside history-shorts (spec Appendix A.1).
+- Planned for v2.1, not implemented: extra motions and extra poses (Appendix A.2 onward).
+- Narration audio (v2.1, M7): history-shorts and the owner's separate sound project exchange files only. `export-narration` writes `<id>.txt` and a manifest with `text_sha256`; the sound project returns `audio_manifest.json` and voice files; `render --audio` fits slide timing to the voice, ducks music and normalises loudness. No TTS inside history-shorts (spec Appendix A.1, C-01, C-02).
+- Narration timing: a voiced slide is `ceil_to_frame(lead_in + voice + tail)` long; an explicit `duration` wins only when it is at least that long (spec A.1.6).
+- Narration ducking uses FFmpeg `sidechaincompress` with the theme's `audio.duck` values; loudness is one `loudnorm` pass to `audio.loudness_lufs` / `audio.true_peak_db` (spec A.1.7).

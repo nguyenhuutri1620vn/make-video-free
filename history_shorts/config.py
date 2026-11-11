@@ -199,6 +199,28 @@ class VideoSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class DuckSpec:
+    """Music ducking under the voice: a sidechain compressor (spec A.1.7)."""
+
+    threshold: float
+    ratio: float
+    attack_ms: float
+    release_ms: float
+
+
+@dataclass(frozen=True, slots=True)
+class AudioSpec:
+    """Voice and loudness settings, the theme's optional ``audio`` block (spec A.1.7)."""
+
+    lead_in: float = 0.3
+    tail: float = 0.5
+    voice_gain_db: float = 0.0
+    duck: DuckSpec = DuckSpec(threshold=0.05, ratio=8.0, attack_ms=20.0, release_ms=300.0)
+    loudness_lufs: float = -14.0
+    true_peak_db: float = -1.5
+
+
+@dataclass(frozen=True, slots=True)
 class Theme:
     schema_version: str
     name: str
@@ -211,6 +233,7 @@ class Theme:
     transition: Transition
     video: VideoSpec
     path: Path
+    audio: AudioSpec = field(default_factory=AudioSpec)
 
 
 # --------------------------------------------------------------------------------------
@@ -228,6 +251,7 @@ _THEME_KEYS = (
     "chrome",
     "transition",
     "video",
+    "audio",
 )
 
 
@@ -386,6 +410,43 @@ def _parse_chrome(ctx: Ctx, obj: Mapping[str, Any]) -> Chrome:
     )
 
 
+AUDIO_KEYS = (
+    "lead_in",
+    "tail",
+    "voice_gain_db",
+    "duck",
+    "loudness_lufs",
+    "true_peak_db",
+)
+DUCK_KEYS = ("threshold", "ratio", "attack_ms", "release_ms")
+
+
+def _parse_audio(ctx: Ctx, data: Mapping[str, Any]) -> AudioSpec:
+    """The optional ``audio`` block; every key has a default (spec A.1.7)."""
+    obj = ctx.section(data, "audio", AUDIO_KEYS)
+    au = ctx.at("audio")
+    defaults = AudioSpec()
+    duck_obj = au.section(obj, "duck", DUCK_KEYS)
+    du = au.at("duck")
+    return AudioSpec(
+        lead_in=au.num(obj, "lead_in", default=defaults.lead_in, lo=0, hi=5),
+        tail=au.num(obj, "tail", default=defaults.tail, lo=0, hi=5),
+        voice_gain_db=au.num(obj, "voice_gain_db", default=0.0, lo=-12, hi=12),
+        duck=DuckSpec(
+            threshold=du.num(duck_obj, "threshold", default=defaults.duck.threshold, lo=0, hi=1),
+            ratio=du.num(duck_obj, "ratio", default=defaults.duck.ratio, lo=1, hi=20),
+            attack_ms=du.num(
+                duck_obj, "attack_ms", default=defaults.duck.attack_ms, lo=0.01, hi=2000
+            ),
+            release_ms=du.num(
+                duck_obj, "release_ms", default=defaults.duck.release_ms, lo=0.01, hi=9000
+            ),
+        ),
+        loudness_lufs=au.num(obj, "loudness_lufs", default=defaults.loudness_lufs, lo=-70, hi=-5),
+        true_peak_db=au.num(obj, "true_peak_db", default=defaults.true_peak_db, lo=-9, hi=0),
+    )
+
+
 def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
     for key in data:
         if key not in _THEME_KEYS:
@@ -416,6 +477,7 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
             crf=vd.int_(video, "crf", default=20, lo=0, hi=51),
         ),
         path=path,
+        audio=_parse_audio(ctx, data),
     )
 
 

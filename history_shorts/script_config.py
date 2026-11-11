@@ -7,17 +7,22 @@ terse style of AC-11, e.g. ``script.json › slides[2].scene.layers[0].x: must b
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal, cast
 
 from history_shorts.errors import Issue, Issues
+from history_shorts.narration import MAX_NARRATION_CHARS, normalise, pause_problems
 from history_shorts.scene_config import LayerScene, TemplateScene, parse_scene
 from history_shorts.validation import Ctx, is_int, read_json_object
 
-SCRIPT_SCHEMA_VERSION = "2.0"
+SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
+NARRATED_SCHEMA_VERSION = "2.1"  # adds slide ``id`` and ``narration`` (spec A.1.2)
+SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (SCRIPT_SCHEMA_VERSION, NARRATED_SCHEMA_VERSION)
+SLIDE_ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 
 MAX_TAG_CHARS = 28
 MAX_TITLE_CHARS = 60
@@ -62,6 +67,8 @@ _SLIDE_KEYS = (
     "motion",
     "claim",
     "source",
+    "id",
+    "narration",
 )
 
 
@@ -83,6 +90,8 @@ class Slide:
     motion: Literal["none", "zoom_in"]
     claim: bool
     source: tuple[int, ...]
+    id: str = ""  # "sNN" unless the script gives one (2.1); set by the parser
+    narration: str | None = None  # normalised spoken text (2.1), None when absent
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,11 +221,45 @@ def _parse_source_indices(
     return tuple(i for i in indices if i is not None)
 
 
-def _parse_slide(ctx: Ctx, raw: object, sources: tuple[Source, ...] | None) -> Slide | None:
+def _narration(ctx: Ctx, obj: Mapping[str, Any]) -> str | None:
+    """Spoken text (2.1): normalised, 1–600 characters, no emoji, only ``[pause Nms]`` tags."""
+    if "narration" not in obj:
+        return None
+    text = normalise(ctx.str_(obj, "narration", default="", non_empty=False))
+    if not text:
+        ctx.at("narration").error("must not be blank")
+        return None
+    emoji = _first_emoji(text)
+    if emoji is not None:
+        ctx.at("narration").error(f"emoji are not supported ({emoji})")
+    elif len(text) > MAX_NARRATION_CHARS:
+        ctx.at("narration").error(f"must be at most {MAX_NARRATION_CHARS} characters")
+    for problem in pause_problems(text):
+        ctx.at("narration").error(problem)
+    return text
+
+
+def _slide_id(ctx: Ctx, obj: Mapping[str, Any]) -> str:
+    """The explicit ``id`` (2.1) or ``""`` when absent; the parser fills in ``sNN`` later."""
+    if "id" not in obj:
+        return ""
+    value = ctx.str_(obj, "id")
+    if not SLIDE_ID_RE.fullmatch(value):
+        ctx.at("id").error("must match ^[a-z0-9][a-z0-9_-]{0,31}$")
+    return value
+
+
+def _parse_slide(
+    ctx: Ctx, raw: object, sources: tuple[Source, ...] | None, narrated: bool
+) -> Slide | None:
     if not isinstance(raw, dict):
         ctx.error("must be an object")
         return None
     obj = ctx.mapping(raw, _SLIDE_KEYS)
+    if not narrated:
+        for key in ("id", "narration"):
+            if key in obj:
+                ctx.at(key).error(f'requires schema_version "{NARRATED_SCHEMA_VERSION}"')
     claim = ctx.bool_(obj, "claim", default=False)
     source = _parse_source_indices(ctx, obj, sources)
     if claim and "source" not in obj:
@@ -237,11 +280,26 @@ def _parse_slide(ctx: Ctx, raw: object, sources: tuple[Source, ...] | None) -> S
         ),
         claim=claim,
         source=source,
+        id=_slide_id(ctx, obj),
+        narration=_narration(ctx, obj),
     )
 
 
+def _check_slide_ids(pairs: list[tuple[Ctx, Slide | None]]) -> None:
+    """Narrated scripts need an explicit, unique ``id`` on every slide (A.1.2)."""
+    slides = [(child, slide) for child, slide in pairs if slide is not None]
+    any_narration = any(slide.narration is not None for _, slide in slides)
+    seen: dict[str, int] = {}
+    for position, (child, slide) in enumerate(slides, start=1):
+        if any_narration and not slide.id:
+            child.at("id").error("required when any slide has narration")
+        if slide.id and slide.id in seen:
+            child.at("id").error(f'duplicate id "{slide.id}" (also on slide {seen[slide.id]})')
+        seen.setdefault(slide.id, position)
+
+
 def _parse_slides(
-    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[Source, ...] | None
+    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[Source, ...] | None, narrated: bool
 ) -> tuple[Slide, ...]:
     slides_ctx = ctx.at("slides")
     if "slides" not in obj:
@@ -250,8 +308,13 @@ def _parse_slides(
     pairs = slides_ctx.items(obj["slides"])
     if isinstance(obj["slides"], list) and not MIN_SLIDES <= len(pairs) <= MAX_SLIDES:
         slides_ctx.error(f"must contain {MIN_SLIDES}–{MAX_SLIDES} slides")
-    slides = (_parse_slide(child, raw, sources) for child, raw in pairs)
-    return tuple(s for s in slides if s is not None)
+    parsed = [(child, _parse_slide(child, raw, sources, narrated)) for child, raw in pairs]
+    _check_slide_ids(parsed)
+    return tuple(
+        replace(slide, id=slide.id or f"s{index:02d}")
+        for index, (_, slide) in enumerate(parsed, start=1)
+        if slide is not None
+    )
 
 
 def _check_total_duration(ctx: Ctx, slides: tuple[Slide, ...]) -> None:
@@ -267,13 +330,14 @@ def _parse_script(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Script:
         if key not in _SCRIPT_KEYS:
             ctx.at(str(key)).warning("unknown key (ignored)")
     version = ctx.str_(data, "schema_version")
-    if version and version != SCRIPT_SCHEMA_VERSION:
+    if version and version not in SUPPORTED_SCHEMA_VERSIONS:
+        expected = " or ".join(f'"{v}"' for v in SUPPORTED_SCHEMA_VERSIONS)
         ctx.at("schema_version").error(
-            f'unsupported schema_version "{version}" (expected "{SCRIPT_SCHEMA_VERSION}")'
+            f'unsupported schema_version "{version}" (expected {expected})'
         )
     title = _text(ctx, data, "title", required=True)
     sources = _parse_sources(ctx, data)
-    slides = _parse_slides(ctx, data, sources)
+    slides = _parse_slides(ctx, data, sources, narrated=version == NARRATED_SCHEMA_VERSION)
     if not ctx.issues.errors:
         _check_total_duration(ctx, slides)
     return Script(version, title, sources or (), slides, path)

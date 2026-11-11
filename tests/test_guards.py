@@ -115,6 +115,31 @@ def test_only_cli_prints() -> None:
     assert not _scan(find_prints)
 
 
+# Speech synthesis and recognition packages: narration audio comes from the owner's own sound
+# project (C-01, spec A.1), so none may be imported by the package.
+SPEECH_MODULES = {"pyttsx3", "gtts", "TTS", "whisper", "vosk", "speech_recognition", "piper"}
+
+
+def find_speech_imports(source: str, filename: str) -> list[str]:
+    violations: list[str] = []
+    for node in ast.walk(ast.parse(source, filename=filename)):
+        names: list[str] = []
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        violations += [
+            f"{filename}:{node.lineno}: {name}"
+            for name in names
+            if name.split(".")[0] in SPEECH_MODULES
+        ]
+    return violations
+
+
+def test_no_speech_imports() -> None:
+    assert not _scan(find_speech_imports)
+
+
 NETWORK_BAD = [
     "from urllib import request",
     "from urllib import parse",

@@ -228,7 +228,7 @@ def test_slide_count_bounds(tmp_script: ScriptFactory, count: int, ok: bool) -> 
 def test_top_level_errors(tmp_script: ScriptFactory) -> None:
     path = tmp_script(slides="nope", sources=[1, ""], extra={"schema_version": "1.1", "title": ""})
     assert sorted(_errors(path)) == [
-        'script.json › schema_version: unsupported schema_version "1.1" (expected "2.0")',
+        'script.json › schema_version: unsupported schema_version "1.1" (expected "2.0" or "2.1")',
         "script.json › slides: must be an array",
         "script.json › sources[0]: must be a non-empty string or an object",
         "script.json › sources[1]: must be a non-empty string or an object",

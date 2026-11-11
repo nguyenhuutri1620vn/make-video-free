@@ -9,6 +9,7 @@ import platform
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from history_shorts.audio import AudioPlan
 from history_shorts.config import Script, Source, Theme
 from history_shorts.errors import Issue
 from history_shorts.ffmpeg import FfmpegInfo
@@ -73,6 +74,23 @@ def _slide_rows(slides: Sequence[Path], durations: Sequence[float], base: Path) 
     ]
 
 
+def _audio_section(plan: AudioPlan, durations: Sequence[float], base: Path) -> dict[str, object]:
+    """The ``audio`` block (A.1.8): the manifest and, per voiced slide, its voice and length."""
+    return {
+        "manifest": _relative(plan.manifest.path, base),
+        "manifest_sha256": plan.manifest.sha256,
+        "slides": [
+            {
+                "id": voice.slide_id,
+                "voice_file": _relative(voice.path, base),
+                "voice_seconds": round(voice.seconds, 3),
+                "duration": round(durations[voice.slide_index], 3),
+            }
+            for voice in plan.voices
+        ],
+    }
+
+
 def build_report(
     script: Script,
     theme: Theme,
@@ -82,11 +100,12 @@ def build_report(
     timings: Mapping[str, float],
     warnings: Sequence[Issue | str],
     info: FfmpegInfo,
+    audio: AudioPlan | None = None,
 ) -> dict[str, object]:
     """Everything needed to reproduce and audit a render. PNG paths are relative to the
-    report's directory; ``timings`` are seconds per phase."""
+    report's directory; ``timings`` are seconds per phase. ``audio`` adds the narration block."""
     base = opts.out.parent
-    return {
+    data: dict[str, object] = {
         "script_sha256": _sha256(script.path),
         "theme_sha256": _sha256(theme.path),
         "music_sha256": _sha256(opts.music) if opts.music is not None else None,
@@ -97,6 +116,9 @@ def build_report(
         "timings": {name: round(seconds, 3) for name, seconds in timings.items()},
         "sources": [{"text": s.text, "type": s.type} for s in script.sources],
     }
+    if audio is not None:
+        data["audio"] = _audio_section(audio, durations, base)
+    return data
 
 
 def write_report(out: Path, data: Mapping[str, object]) -> Path:

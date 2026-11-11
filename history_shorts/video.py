@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Final
 
 from history_shorts import ffmpeg
-from history_shorts.config import Theme
+from history_shorts.config import AudioSpec, Theme
 from history_shorts.ffmpeg import FfmpegInfo
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,8 @@ class RenderOptions:
     jobs: int = 1
     verbose: bool = False
     motions: tuple[str, ...] = ()  # per slide; missing entries mean "none" (FR-84)
+    voices: tuple[ffmpeg.VoiceInput, ...] = ()  # narration clips (v2.1); none means no voice
+    audio: AudioSpec = AudioSpec()  # voice mix and loudness settings, used with ``voices``
 
 
 def default_jobs() -> int:
@@ -130,7 +132,15 @@ def _run_steps(
 
     started = time.perf_counter()
     total = round(sum(durations), TOTAL_DECIMALS)
-    mux = ffmpeg.mux_cmd(info, joined, partial_path(opts.out), total, opts.music, opts.music_volume)
+    if opts.voices:
+        mux = ffmpeg.voice_mux_cmd(
+            info, joined, partial_path(opts.out), total, list(opts.voices),
+            opts.music, opts.music_volume, opts.audio,
+        )  # fmt: skip
+    else:
+        mux = ffmpeg.mux_cmd(
+            info, joined, partial_path(opts.out), total, opts.music, opts.music_volume
+        )
     ffmpeg.run(mux, verbose=opts.verbose)
     timings["mux"] = time.perf_counter() - started
 

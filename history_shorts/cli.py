@@ -16,6 +16,7 @@ from pathlib import Path
 from types import ModuleType
 
 from history_shorts import __version__
+from history_shorts.audio import AudioPlan
 from history_shorts.config import Script, Theme, load_script, load_theme
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
 from history_shorts.video import (
@@ -26,7 +27,7 @@ from history_shorts.video import (
     default_jobs,
 )
 
-COMMANDS = ("render", "validate", "gallery")
+COMMANDS = ("render", "validate", "gallery", "export-narration")
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -99,8 +100,11 @@ def _print_report(issues: list[Issue]) -> int:
 # --------------------------------------------------------------------------------------
 
 
-def _load_and_check(args: argparse.Namespace) -> tuple[Script | None, Theme | None, list[Issue]]:
-    """Load theme and script (each may fail on its own), then run the cross-file checks."""
+def _load_and_check(
+    args: argparse.Namespace,
+) -> tuple[Script | None, Theme | None, list[Issue], AudioPlan | None]:
+    """Load theme and script (each may fail on its own), run the cross-file checks and, with
+    ``--audio``, check the narration voices (v2.1). The plan is None unless all of it passed."""
     from history_shorts import checks  # imports Pillow: only after the runtime check passed
 
     issues: list[Issue] = []
@@ -116,9 +120,36 @@ def _load_and_check(args: argparse.Namespace) -> tuple[Script | None, Theme | No
         issues.extend(warnings)
     except ValidationFailed as exc:
         issues.extend(exc.issues.items)
+    plan: AudioPlan | None = None
     if theme is not None and script is not None:
         issues.extend(checks.check_all(script, theme))
-    return script, theme, issues
+        plan = _plan_audio(args, script, theme, issues)
+    return script, theme, issues, plan
+
+
+def _plan_audio(
+    args: argparse.Namespace, script: Script, theme: Theme, issues: list[Issue]
+) -> AudioPlan | None:
+    """Check ``--audio`` against the script (A.1.5). Without it, warn when the script narrates."""
+    from history_shorts import audio as au
+    from history_shorts import ffmpeg as ff
+
+    if args.audio is None:
+        warning = au.narration_without_audio(script, script.path.name)
+        if warning is not None:
+            issues.append(warning)
+        return None
+    if not args.audio.is_file():
+        issues.append(Issue(args.audio.name, "(file)", f"file not found: {args.audio}", "error"))
+        return None
+    info = ff.find_ffmpeg()  # durations need ffprobe: exit 4 when it is missing (A.1.5)
+    found = Issues()
+    manifest = au.load_manifest(args.audio, found)
+    plan = None
+    if manifest is not None:
+        plan = au.plan_audio(script, theme, manifest, lambda p: ff.audio_duration(info, p), found)
+    issues.extend(found.items)
+    return plan
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
@@ -135,6 +166,7 @@ def _warn_ignored_flags(args: argparse.Namespace) -> None:
                 ("--music-volume", args.music_volume),
                 ("--keep-temp", args.keep_temp),
                 ("--jobs", args.jobs),
+                ("--audio", args.audio),
             )
             if value is not None and value is not False
         ]
@@ -179,9 +211,17 @@ def _render_pngs(
 
 
 def _print_summary(
-    script: Script, out: Path, report: Path, total: float, elapsed: float, count: int
+    script: Script,
+    out: Path,
+    report: Path,
+    total: float,
+    elapsed: float,
+    count: int,
+    voiced: int | None = None,
 ) -> None:
     print(f"Slides: {count}")
+    if voiced is not None:
+        print(f"Voiced slides: {voiced}")
     print(f"Duration: {total:.1f} s")
     print(f"Video: {out}")
     print(f"Report: {report}")
@@ -197,8 +237,10 @@ def _encode_video(
     out: Path,
     began: float,
     validated: float,
+    plan: AudioPlan | None,
 ) -> int:
     """Everything after validation for a full render; see the order in the module docs."""
+    from history_shorts import audio as au
     from history_shorts import ffmpeg as ff
     from history_shorts import report as rp
     from history_shorts.script_config import slide_duration
@@ -216,6 +258,11 @@ def _encode_video(
     if music is not None and not ff.has_audio(info, music):
         print(f"ERROR --music: no audio stream in {music}")
         return ValidationFailed.exit_code
+    durations = (
+        list(plan.durations)
+        if plan is not None
+        else [slide_duration(s, theme.video.fps) for s in script.slides]
+    )
     opts = RenderOptions(
         out=out,
         music=music,
@@ -224,13 +271,14 @@ def _encode_video(
         jobs=default_jobs() if args.jobs is None else args.jobs,
         verbose=args.verbose,
         motions=tuple(slide.motion for slide in script.slides),
+        voices=au.voice_inputs(plan, durations, theme.audio) if plan is not None else (),
+        audio=theme.audio,
     )
     phase = time.perf_counter()
     paths = _render_pngs(args, script, theme, out)
     if paths is None:
         return EXIT_ERROR
     timings = {"validate": validated - began, "render_slides": time.perf_counter() - phase}
-    durations = [slide_duration(s, theme.video.fps) for s in script.slides]
     try:
         assemble(info, paths, durations, theme, opts, timings)
     except OSError as exc:
@@ -238,13 +286,16 @@ def _encode_video(
         return EXIT_ERROR
     timings["total"] = time.perf_counter() - began
     warnings = [i for i in issues if i.severity == "warning"]
-    data = rp.build_report(script, theme, opts, durations, paths, timings, warnings, info)
+    data = rp.build_report(
+        script, theme, opts, durations, paths, timings, warnings, info, audio=plan
+    )
     try:
         report = rp.write_report(out, data)
     except OSError as exc:
         print(f"ERROR cannot write report to {rp.report_path(out)}: {exc.strerror or exc}")
         return EXIT_ERROR
-    _print_summary(script, out, report, sum(durations), timings["total"], len(paths))
+    voiced = len(plan.voices) if plan is not None else None
+    _print_summary(script, out, report, sum(durations), timings["total"], len(paths), voiced)
     return EXIT_OK
 
 
@@ -256,7 +307,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO if args.keep_temp else logging.ERROR,
         format="%(levelname)s %(name)s: %(message)s",
     )
-    script, theme, issues = _load_and_check(args)
+    script, theme, issues, plan = _load_and_check(args)
     validated = time.perf_counter()
     code = _print_report(issues)
     if code != EXIT_OK or script is None or theme is None:
@@ -264,7 +315,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
     _warn_ignored_flags(args)
     out: Path = args.out if args.out is not None else default_out_path(script)
     if not args.preview:
-        return _encode_video(args, script, theme, issues, out, began, validated)
+        return _encode_video(args, script, theme, issues, out, began, validated, plan)
     paths = _render_pngs(args, script, theme, out)
     if paths is None:
         return EXIT_ERROR
@@ -272,6 +323,28 @@ def _cmd_render(args: argparse.Namespace) -> int:
     elapsed = time.perf_counter() - validated
     print(f"Rendered {len(paths)} {noun} to {slides_dir(out)} in {elapsed:.1f} s")
     _print_sources(script)
+    return EXIT_OK
+
+
+def _cmd_export_narration(args: argparse.Namespace) -> int:
+    """Write the narration ``.txt`` files and manifest for the sound project (A.1.3)."""
+    from history_shorts.audio import export_narration
+
+    try:
+        script, warnings = load_script(args.script)
+    except ValidationFailed as exc:
+        return _print_report(exc.issues.items)
+    for issue in warnings:
+        print(f"WARN {issue.format()}")
+    if not any(slide.narration is not None for slide in script.slides):
+        print("WARN no slide has narration; the manifest lists no segments")
+    try:
+        manifest = export_narration(script, args.out)
+    except OSError as exc:
+        print(f"ERROR cannot write narration to {args.out}: {exc.strerror or exc}")
+        return EXIT_ERROR
+    narrated = sum(slide.narration is not None for slide in script.slides)
+    print(f"Wrote {narrated} narration files and {manifest}")
     return EXIT_OK
 
 
@@ -324,6 +397,15 @@ def _jobs(text: str) -> int:
     return value
 
 
+def _add_audio_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--audio",
+        type=Path,
+        default=None,
+        help="audio_manifest.json from the sound project: narration voices (v2.1)",
+    )
+
+
 def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     render = sub.add_parser("render", help="render the slides and assemble the MP4 video")
     render.add_argument("--script", type=Path, required=True, help="path to script.json")
@@ -340,6 +422,7 @@ def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser])
         default=None,
         help="music volume, 0 to 2 (default: 0.6)",
     )
+    _add_audio_option(render)
     render.add_argument("--preview", action="store_true", help="write slide PNGs only, no video")
     render.add_argument(
         "--keep-temp", action="store_true", help="keep the temp directory with the clips"
@@ -365,7 +448,9 @@ def build_parser() -> argparse.ArgumentParser:
         description="Render Vietnamese-history lacquer-style vertical videos offline.",
     )
     parser.add_argument("--version", action="version", version=f"history-shorts {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True, metavar="{render,validate,gallery}")
+    sub = parser.add_subparsers(
+        dest="command", required=True, metavar="{render,validate,gallery,export-narration}"
+    )
     _add_render_parser(sub)
     gallery = sub.add_parser("gallery", help="contact sheet of every role, facing and prop")
     _add_theme_option(gallery)
@@ -376,7 +461,14 @@ def build_parser() -> argparse.ArgumentParser:
     validate = sub.add_parser("validate", help="check a script and theme without rendering")
     validate.add_argument("--script", type=Path, required=True, help="path to script.json")
     _add_theme_option(validate)
+    _add_audio_option(validate)
     validate.set_defaults(run=_cmd_validate)
+    export = sub.add_parser(
+        "export-narration", help="write narration .txt files and manifest.json (v2.1)"
+    )
+    export.add_argument("--script", type=Path, required=True, help="path to script.json")
+    export.add_argument("--out", type=Path, required=True, help="output folder")
+    export.set_defaults(run=_cmd_export_narration)
     return parser
 
 

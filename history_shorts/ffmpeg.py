@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .config import AudioSpec
 from .errors import FfmpegFailed, FfmpegMissing, FfmpegTooOld
 from .layout import CANVAS_H, CANVAS_W
 
@@ -49,6 +50,15 @@ class FfmpegInfo:
     ffmpeg: Path
     ffprobe: Path
     version: tuple[int, int] | None
+
+
+@dataclass(frozen=True, slots=True)
+class VoiceInput:
+    """One narration clip placed on the timeline: its file, its start (ms) and its gain."""
+
+    path: Path
+    delay_ms: int
+    gain_db: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,6 +251,81 @@ def mux_cmd(
     ]  # fmt: skip
 
 
+def _voice_graph(
+    voices: list[VoiceInput], total: float, volume: float, audio: AudioSpec, music: bool
+) -> str:
+    """Filter graph for voices (A.1.7): each clip to 48 kHz stereo at its gain and delay,
+    summed with ``amix``; music (if any) ducked by the voice; then one ``loudnorm`` pass."""
+    parts: list[str] = []
+    labels: list[str] = []
+    for number, voice in enumerate(voices, start=1):
+        label = f"v{number}"
+        labels.append(f"[{label}]")
+        parts.append(
+            f"[{number}:a]aresample={AUDIO_RATE},aformat=channel_layouts=stereo,"
+            f"volume={voice.gain_db:g}dB,adelay={voice.delay_ms}|{voice.delay_ms}[{label}]"
+        )
+    if len(voices) == 1:
+        parts.append("[v1]anull[voice]")
+    else:
+        parts.append(
+            "".join(labels) + f"amix=inputs={len(voices)}:normalize=0:duration=longest[voice]"
+        )
+    source = "voice"
+    if music:
+        fade_in, fade_out = _music_fades(total)
+        duck = audio.duck
+        parts.append(
+            f"[{len(voices) + 1}:a]atrim=0:{_secs(total)},asetpts=N/SR/TB,volume={volume:.2f},"
+            f"afade=t=in:st=0:d={fade_in:g},"
+            f"afade=t=out:st={_secs(max(total - fade_out, 0.0))}:d={fade_out:g},"
+            f"aresample={AUDIO_RATE},aformat=channel_layouts=stereo[mus]"
+        )
+        parts.append("[voice]asplit=2[vk][vm]")
+        parts.append(
+            f"[mus][vk]sidechaincompress=threshold={duck.threshold:g}:ratio={duck.ratio:g}"
+            f":attack={duck.attack_ms:g}:release={duck.release_ms:g}[ducked]"
+        )
+        parts.append("[ducked][vm]amix=inputs=2:normalize=0:duration=longest[mix]")
+        source = "mix"
+    parts.append(
+        f"[{source}]loudnorm=I={audio.loudness_lufs:g}:TP={audio.true_peak_db:g}:LRA=11,"
+        f"aresample={AUDIO_RATE},aformat=channel_layouts=stereo[a]"
+    )
+    return ";".join(parts)
+
+
+def voice_mux_cmd(
+    info: FfmpegInfo,
+    video: Path,
+    out: Path,
+    total: float,
+    voices: list[VoiceInput],
+    music: Path | None,
+    volume: float,
+    audio: AudioSpec,
+) -> list[str]:
+    """Add narration (and optional ducked music) to the video (A.1.7).
+
+    Used only when at least one voice is given; without voices ``mux_cmd`` runs unchanged.
+    """
+    if not voices:
+        raise ValueError("voice_mux_cmd needs at least one voice")
+    inputs: list[str] = ["-i", str(video)]
+    for voice in voices:
+        inputs += ["-i", str(voice.path)]
+    if music is not None:
+        inputs += ["-stream_loop", "-1", "-i", str(music)]
+    graph = _voice_graph(voices, total, volume, audio, music is not None)
+    return [
+        str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y",
+        *inputs, "-filter_complex", graph,
+        "-map", "0:v", "-map", "[a]",
+        "-c:v", "copy", "-c:a", "aac", "-b:a", AUDIO_BITRATE, "-ar", str(AUDIO_RATE), "-ac", "2",
+        "-t", _secs(total), "-movflags", "+faststart", str(out),
+    ]  # fmt: skip
+
+
 def run(cmd: list[str], *, verbose: bool) -> None:
     """Run a command without a shell; raise ``FfmpegFailed`` with the last stderr lines."""
     if verbose:
@@ -295,6 +380,24 @@ def probe(info: FfmpegInfo, path: Path) -> ProbeResult:
         )
     except (ValueError, KeyError, StopIteration, AttributeError, TypeError) as exc:
         raise FfmpegFailed(cmd, f"unexpected ffprobe output: {exc}") from exc
+
+
+def audio_duration(info: FfmpegInfo, path: Path) -> float:
+    """Length in seconds of an audio file, from ffprobe's container duration (A.1.5)."""
+    cmd = [
+        str(info.ffprobe), "-v", "error", "-show_entries", "format=duration",
+        "-of", "csv=p=0", str(path),
+    ]  # fmt: skip
+    try:
+        result = _run_text(cmd)
+    except OSError as exc:
+        raise FfmpegFailed(cmd, f"cannot run {cmd[0]}: {exc}") from exc
+    if result.returncode != 0:
+        raise FfmpegFailed(cmd, "\n".join(result.stderr.splitlines()[-STDERR_TAIL_LINES:]))
+    seconds = _opt_float(result.stdout.strip())
+    if seconds is None:
+        raise FfmpegFailed(cmd, f"no duration in ffprobe output: {result.stdout.strip()!r}")
+    return seconds
 
 
 def has_audio(info: FfmpegInfo, path: Path, runner: Runner | None = None) -> bool:
