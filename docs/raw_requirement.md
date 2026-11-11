@@ -7,7 +7,7 @@
 | Version      | 2.0.3 (amended)                                                       |
 | Status       | Approved for implementation                                           |
 | Owner        | Tri Nguyen                                                            |
-| Last updated | 2026-11-11 (v2.1 narration/audio implemented; see Appendix A.1) |
+| Last updated | 2026-11-11 (v2.1 narration/audio implemented; theme `hook` block added; see Appendix A.1) |
 | Implementer  | Claude Code (working rules in `CLAUDE.md`)                            |
 | Supersedes   | v1.1 (Pillow-only renderer, crackle effect, single static motif)      |
 
@@ -273,6 +273,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `chrome`         | object    | no  | `frame`, `seal {lines, x, y, size}`, `tag {cx, y}`, `waves {y, rows}`, `progress_bar`, `footer`.        |
 | `transition`     | object    | no  | `fade_in`, `fade_out` (s).                                                                             |
 | `video`          | object    | no  | `fps` (30), `crf` (20).                                                                                |
+| `hook`           | object    | no  | `title` (string, required inside the block). A title slide put first in every video rendered with this theme: no scene, no narration, no claim. Absent: no hook slide. |
 
 **Optional palette keys.** The 13 required keys stay required. The following 14 keys are optional; when absent, each falls back to the required key shown.
 
@@ -333,7 +334,8 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
     "footer": { "enabled": false, "text": "" }
   },
   "transition": { "fade_in": 0.3, "fade_out": 0.3 },
-  "video": { "fps": 30, "crf": 20 }
+  "video": { "fps": 30, "crf": 20 },
+  "hook": { "title": "Chuyện Lịch sử Việt Nam không phải ai cũng biết" }
 }
 ```
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import unicodedata
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final
 
@@ -221,6 +221,13 @@ class AudioSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class HookSpec:
+    """The theme's optional ``hook`` block: a title slide put first in every video."""
+
+    title: str
+
+
+@dataclass(frozen=True, slots=True)
 class Theme:
     schema_version: str
     name: str
@@ -234,6 +241,7 @@ class Theme:
     video: VideoSpec
     path: Path
     audio: AudioSpec = field(default_factory=AudioSpec)
+    hook: HookSpec | None = None
 
 
 # --------------------------------------------------------------------------------------
@@ -252,6 +260,7 @@ _THEME_KEYS = (
     "transition",
     "video",
     "audio",
+    "hook",
 )
 
 
@@ -419,6 +428,38 @@ AUDIO_KEYS = (
     "true_peak_db",
 )
 DUCK_KEYS = ("threshold", "ratio", "attack_ms", "release_ms")
+HOOK_SLIDE_ID: Final = "hook"
+
+
+def _parse_hook(ctx: Ctx, data: Mapping[str, Any]) -> HookSpec | None:
+    """The optional ``hook`` block: absent means no hook slide."""
+    if "hook" not in data:
+        return None
+    obj = ctx.section(data, "hook", ("title",))
+    hook = ctx.at("hook")
+    if "title" not in obj:
+        hook.at("title").missing()
+        return HookSpec(title="")
+    return HookSpec(title=hook.str_(obj, "title"))
+
+
+def with_hook(script: Script, theme: Theme) -> Script:
+    """Put the theme's hook slide first. The hook has no scene, narration or claim, so the
+    other slides keep their ids, timing and voices."""
+    if theme.hook is None:
+        return script
+    hook = Slide(
+        tag="",
+        title=theme.hook.title,
+        subtitle="",
+        duration=None,
+        scene=None,
+        motion="none",
+        claim=False,
+        source=(),
+        id=HOOK_SLIDE_ID,
+    )
+    return replace(script, slides=(hook, *script.slides))
 
 
 def _parse_audio(ctx: Ctx, data: Mapping[str, Any]) -> AudioSpec:
@@ -478,6 +519,7 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
         ),
         path=path,
         audio=_parse_audio(ctx, data),
+        hook=_parse_hook(ctx, data),
     )
 
 
@@ -545,4 +587,5 @@ __all__ = [
     "load_theme",
     "read_json_object",
     "slide_duration",
+    "with_hook",
 ]

@@ -14,7 +14,7 @@ from PIL import Image
 
 from history_shorts.cli import main
 from history_shorts.compose import DrawContext, SceneStyle, default_style
-from history_shorts.config import Script, Slide, Theme, load_script
+from history_shorts.config import Script, Slide, Theme, load_script, with_hook
 from history_shorts.output import default_out_path, slides_dir, slugify, stale_slides
 from history_shorts.primitives import FloatImage
 from history_shorts.render import render_slides, scene_expander
@@ -313,7 +313,7 @@ def test_preview_writes_pngs_and_never_spawns_ffmpeg(
     ]
     code, text = run(argv, capsys)
     assert code == 0, text
-    assert pngs(tmp_path / "slides") == [f"{i:02d}.png" for i in range(1, 7)]
+    assert pngs(tmp_path / "slides") == [f"{i:02d}.png" for i in range(1, 8)]  # 6 slides + hook
     assert not out.exists()
 
 
@@ -325,7 +325,7 @@ def test_preview_renders_the_scene(
     out = tmp_path / "v.mp4"
     code, text = run(["render", "--script", str(script), "--preview", "--out", str(out)], capsys)
     assert code == 0, text
-    with Image.open(tmp_path / "slides" / "01.png") as image:
+    with Image.open(tmp_path / "slides" / "02.png") as image:  # 01 is the hook
         moon = np.asarray(image)[450, 770].astype(int)  # the landscape moon's centre
     assert moon.sum() > 3 * 120  # lacquer ground there is nearly black
 
@@ -338,7 +338,7 @@ def test_preview_summary(
     code, text = run(["render", "--script", str(script), "--preview", "--out", str(out)], capsys)
     assert code == 0, text
     lines = text.splitlines()
-    assert any("2 slides" in ln and str(tmp_path / "slides") in ln for ln in lines)
+    assert any("3 slides" in ln and str(tmp_path / "slides") in ln for ln in lines)
     assert any(ln.rstrip().endswith("s") and "in " in ln for ln in lines)
     assert "Sources:" in lines
     assert "[1] Nguồn một" in lines
@@ -394,16 +394,16 @@ def test_stale_pngs_reported_as_warn(
     script = tmp_script(slides=[{"title": "A"}])
     directory = tmp_path / "slides"
     directory.mkdir()
-    (directory / "02.png").write_bytes(b"old")
+    (directory / "03.png").write_bytes(b"old")
     (directory / "05.png").write_bytes(b"old")
     argv = ["render", "--script", str(script), "--preview", "--out", str(tmp_path / "v.mp4")]
     code, text = run(argv, capsys)
     assert code == 0
     warn = [ln for ln in text.splitlines() if ln.startswith("WARN ") and "stale" in ln]
     assert len(warn) == 1
-    assert "02.png" in warn[0]
+    assert "03.png" in warn[0]
     assert "05.png" in warn[0]
-    assert (directory / "02.png").read_bytes() == b"old"
+    assert (directory / "03.png").read_bytes() == b"old"
 
 
 def test_jobs_warns_as_no_effect_with_preview(
@@ -436,7 +436,7 @@ def test_unicode_and_apostrophe_paths(
     script = tmp_script(slides=TWO_SLIDES)
     code, text = run(["render", "--script", str(script), "--preview", "--out", str(target)], capsys)
     assert code == 0, text
-    assert pngs(target.parent / "slides") == ["01.png", "02.png"]
+    assert pngs(target.parent / "slides") == ["01.png", "02.png", "03.png"]
 
 
 def test_cli_render_matches_api_bytes(
@@ -446,7 +446,9 @@ def test_cli_render_matches_api_bytes(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     script_path = tmp_script(slides=TWO_SLIDES)
-    api = render_slides(load(script_path), theme, tmp_path / "a" / "v.mp4", debug_safe_zone=False)
+    api = render_slides(
+        with_hook(load(script_path), theme), theme, tmp_path / "a" / "v.mp4", debug_safe_zone=False
+    )
     code, _ = run(
         [
             "render",

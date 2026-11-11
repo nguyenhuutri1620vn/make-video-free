@@ -501,5 +501,5 @@ def test_cp1252_redirected_stdout_does_not_crash(
     assert main(["render", "--script", script, "--out", str(out), "--preview"]) == 0
     wrapper.flush()
     text = raw.getvalue().decode("utf-8")
-    assert "Sources:" in text and "Rendered 5 slides" in text
+    assert "Sources:" in text and "Rendered 6 slides" in text
     assert (tmp_path / "slides" / "01.png").is_file()

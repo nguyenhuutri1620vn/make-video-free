@@ -17,7 +17,7 @@ from types import ModuleType
 
 from history_shorts import __version__
 from history_shorts.audio import AudioPlan
-from history_shorts.config import Script, Theme, load_script, load_theme
+from history_shorts.config import Script, Theme, load_script, load_theme, with_hook
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
 from history_shorts.video import (
     DEFAULT_MUSIC_VOLUME,
@@ -122,7 +122,9 @@ def _load_and_check(
         issues.extend(exc.issues.items)
     plan: AudioPlan | None = None
     if theme is not None and script is not None:
+        # Checks see the script as the author wrote it, so slide paths in messages match its file.
         issues.extend(checks.check_all(script, theme))
+        script = with_hook(script, theme)
         plan = _plan_audio(args, script, theme, issues)
     return script, theme, issues, plan
 

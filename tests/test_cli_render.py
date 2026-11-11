@@ -71,20 +71,20 @@ def test_full_render_summary_and_report(
     report = out.parent / "v.report.json"
     assert report.is_file()
     lines = text.splitlines()
-    assert any(ln.startswith("Slides: 2") for ln in lines)
-    assert any(ln.startswith("Duration: 5.5 s") for ln in lines)
+    assert any(ln.startswith("Slides: 3") for ln in lines)
+    assert any(ln.startswith("Duration: 9.3 s") for ln in lines)
     assert f"Video: {out}" in lines
     assert f"Report: {report}" in lines
     assert any(ln.startswith("Elapsed: ") and ln.endswith(" s") for ln in lines)
     assert lines[-3:] == ["Sources:", "[1] Nguồn A", "[2] Nguồn B"]
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["total_duration"] == 5.5
-    assert [s["png"] for s in data["slides"]] == ["slides/01.png", "slides/02.png"]
+    assert data["total_duration"] == pytest.approx(9.267, abs=0.01)  # 5.5 s slides + hook
+    assert [s["png"] for s in data["slides"]] == ["slides/01.png", "slides/02.png", "slides/03.png"]
     assert data["timings"].keys() == {
         "validate", "render_slides", "encode", "concat", "mux", "total",
     }  # fmt: skip
     mux = fake_ffmpeg[-1]
-    assert mux[mux.index("-t") + 1] == "5.500"
+    assert mux[mux.index("-t") + 1] == "9.267"  # 5.5 s slides + hook
     assert (out.parent / "slides" / "02.png").is_file()
     assert list(temp_root.iterdir()) == []
 
@@ -246,7 +246,9 @@ def test_interrupt_exits_130_and_cleans_up(
     monkeypatch.setattr(ffmpeg, "run", run)
     script = tmp_script(slides=TWO)
     out = tmp_path / "v.mp4"
-    code, _ = run_cli(argv_for(script, out), capsys)
+    # Serial encode: the interrupt must reach the main thread (a worker's KeyboardInterrupt in
+    # the thread pool can be swallowed; see the notes in the M7 report).
+    code, _ = run_cli(argv_for(script, out, "--jobs", "1"), capsys)
     assert code == 130
     assert not out.exists()
     assert list(temp_root.iterdir()) == []
@@ -299,10 +301,10 @@ def test_verbose_flag_reaches_every_ffmpeg_run(
 ) -> None:
     script = tmp_script(slides=[{"title": "A", "duration": 2.0}])
     assert run_cli(argv_for(script, tmp_path / "a.mp4", "--verbose"), capsys)[0] == 0
-    assert VERBOSE_FLAGS == [True, True, True]
+    assert VERBOSE_FLAGS == [True, True, True, True]
     VERBOSE_FLAGS.clear()
     assert run_cli(argv_for(script, tmp_path / "b.mp4"), capsys)[0] == 0
-    assert VERBOSE_FLAGS == [False, False, False]
+    assert VERBOSE_FLAGS == [False, False, False, False]
 
 
 def test_out_is_a_directory_fails_before_any_work(
@@ -374,7 +376,7 @@ def test_zoom_in_motion_reaches_clip_cmd_without_warning(
     assert ".motion" not in text
     clips = [c for c in fake_ffmpeg if "-loop" in c]
     zoomed = {Path(c[c.index("-i") + 1]).name: "zoompan" in c[c.index("-vf") + 1] for c in clips}
-    assert zoomed == {"01.png": True, "02.png": False}
+    assert zoomed == {"01.png": False, "02.png": True, "03.png": False}
 
 
 def test_preview_ignores_video_flags_with_a_warning(

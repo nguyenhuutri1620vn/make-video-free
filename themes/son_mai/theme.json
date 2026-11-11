@@ -35,5 +35,6 @@
     "footer": { "enabled": false, "text": "" }
   },
   "transition": { "fade_in": 0.3, "fade_out": 0.3 },
-  "video": { "fps": 30, "crf": 20 }
+  "video": { "fps": 30, "crf": 20 },
+  "hook": { "title": "Chuyện Lịch sử Việt Nam không phải ai cũng biết" }
 }

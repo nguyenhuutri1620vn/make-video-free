@@ -15,7 +15,7 @@ import pytest
 from conftest import requires_ffmpeg
 
 from history_shorts.cli import main
-from history_shorts.config import load_script
+from history_shorts.config import load_script, load_theme, with_hook
 from history_shorts.ffmpeg import FfmpegInfo, ProbeResult, find_ffmpeg, probe
 from history_shorts.script_config import slide_duration
 
@@ -29,8 +29,10 @@ def ffprobe(path: Path) -> ProbeResult:
 
 
 def expected_durations(repo_root: Path, name: str) -> list[float]:
+    """Slide durations as render uses them: the theme's hook slide comes first."""
+    theme, _ = load_theme(repo_root / "themes" / "son_mai" / "theme.json")
     script, _ = load_script(repo_root / "examples" / name / "script.json")
-    return [slide_duration(s, 30) for s in script.slides]
+    return [slide_duration(s, 30) for s in with_hook(script, theme).slides]
 
 
 def make_sine(info: FfmpegInfo, path: Path, seconds: int) -> Path:
@@ -69,7 +71,8 @@ def test_render_nu_tuong(tmp_path: Path, repo_root: Path) -> None:  # AC-01, AC-
     report = json.loads((out.parent / "nu tuong.report.json").read_text(encoding="utf-8"))
     assert report["total_duration"] == pytest.approx(p.duration, abs=0.1)
     assert sorted(f.name for f in (out.parent / "slides").iterdir()) == [
-        f"{i:02d}.png" for i in range(1, 6)
+        f"{i:02d}.png"
+        for i in range(1, 7)  # 5 slides + hook
     ]
 
 
@@ -85,7 +88,8 @@ def test_music_matches_length_and_fades(  # AC-13
     argv = ["render", "--script", str(script), "--out", str(out), "--music", str(music)]
     assert main(argv) == 0
     p = ffprobe(out)
-    assert p.duration == pytest.approx(10.0, abs=0.1)
+    hook = expected_durations(repo_root, "nu_tuong")[0]
+    assert p.duration == pytest.approx(10.0 + hook, abs=0.1)
     assert p.audio_codec == "aac"
     assert p.audio_duration is not None
     assert p.audio_duration == pytest.approx(p.duration, abs=0.1)
