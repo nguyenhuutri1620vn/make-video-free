@@ -4,10 +4,10 @@
 |--------------|-----------------------------------------------------------------------|
 | Document     | Raw Requirements Specification                                        |
 | Project      | history-shorts                                                        |
-| Version      | 2.0.2 (amended)                                                       |
+| Version      | 2.0.3 (amended)                                                       |
 | Status       | Approved for implementation                                           |
 | Owner        | Tri Nguyen                                                            |
-| Last updated | 2026-11-10 (typed sources, multiple source indices; see §6.1)         |
+| Last updated | 2026-11-11 (v2.1 narration/audio contract drafted; see Appendix A.1) |
 | Implementer  | Claude Code (working rules in `CLAUDE.md`)                            |
 | Supersedes   | v1.1 (Pillow-only renderer, crackle effect, single static motif)      |
 
@@ -665,6 +665,146 @@ Recorded so later work does not contradict it. Nothing here is implemented in v2
 - Mix the owner's voice files into the video.
 - Duck the music under the voice.
 - Fit each slide's duration to the length of its voice file.
+
+The contract below (A.1.1–A.1.9) fixes how history-shorts and the owner's separate sound project exchange data. It is planned for milestone M7 and drafted 2026-11-11; nothing in it is implemented yet.
+
+#### A.1.1 Boundary
+
+```
+history-shorts                         sound project (owner's, separate repo)
+──────────────                         ──────────────────────────────────────
+script.json ── export-narration ──►  narration/manifest.json + <id>.txt
+                                                 │  VoiceStudio (TTS), run by the owner
+                                                 ▼
+render --audio ◄───────────────────  voice/audio_manifest.json + <id>.wav
+```
+
+- The two sides share **files only**: no imports, no subprocess calls, no network in either direction. history-shorts never starts the sound project or VoiceStudio.
+- history-shorts owns the narration text, slide timing, mixing, and loudness. The sound project only turns each `.txt` into an audio file and writes the audio manifest.
+- Both manifests carry `"kind"` and `"schema_version"`; each side rejects a kind or major version it does not know.
+
+#### A.1.2 Script additions (`schema_version` `"2.1"`)
+
+`"2.0"` scripts stay valid and render exactly as before. `"2.1"` adds two optional Slide fields:
+
+| Field       | Type   | Req | Default        | Notes |
+|-------------|--------|-----|----------------|-------|
+| `id`        | string | no* | `sNN` (1-based, 2 digits) | `^[a-z0-9][a-z0-9_-]{0,31}$`, unique in the script. *Required on every slide when any slide has `narration`, so voice files stay matched when slides are inserted or reordered. |
+| `narration` | string | no  | none           | Spoken text, Vietnamese, 1–600 chars after normalisation. May contain pause markers. No emoji, no other bracket tags. Separate from `subtitle` (on-screen text). |
+
+- **Pause marker:** `[pause Nms]`, N an integer 50–3000, exactly this spelling. Any other `[...]` is a validation error.
+- **Normalisation** (used for the file and the hash): Unicode NFC, CRLF/CR → LF, trailing spaces removed per line, leading/trailing blank lines removed.
+
+#### A.1.3 `export-narration` command
+
+```
+python -m history_shorts export-narration --script PATH --out DIR
+```
+
+- Writes `DIR/<id>.txt` for each slide with `narration` (UTF-8, no BOM, LF, the normalised text plus one final LF) and `DIR/manifest.json`. Slides without narration get no file.
+- Writes only inside `DIR`; overwrites only files it names in the manifest. Re-running on an unchanged script produces byte-identical output.
+
+`manifest.json` (narration manifest):
+
+```json
+{
+  "kind": "history-shorts.narration",
+  "schema_version": "1.0",
+  "script_title": "Nữ tướng thời Hai Bà Trưng",
+  "segments": [
+    { "id": "s01", "file": "s01.txt", "text_sha256": "<hex>", "chars": 142 }
+  ]
+}
+```
+
+`text_sha256` is the SHA-256 of the exact `.txt` file bytes, so the sound project can recompute it from the file alone. Segment order is slide order.
+
+#### A.1.4 Producer rules (the sound project)
+
+- For each narration segment, produce one audio file. Name it `<id>.wav` by convention; the manifest maps the name.
+- Copy each segment's `text_sha256` unchanged from the `.txt` it read. Never recompute it from edited text.
+- Leave loudness and silence trimming to history-shorts; light trimming of leading/trailing silence is allowed.
+- Accepted audio: WAV (PCM 16/24-bit or float) or FLAC; mono or stereo; any sample rate (resampled to 48 kHz on mix). Length 0.3 s to 14.0 s.
+
+`audio_manifest.json`:
+
+```json
+{
+  "kind": "history-shorts.audio",
+  "schema_version": "1.0",
+  "segments": [
+    { "id": "s01", "file": "s01.wav", "text_sha256": "<hex>" }
+  ]
+}
+```
+
+- `file` paths resolve relative to the manifest and must stay inside its directory (no `..`, no absolute paths).
+- Optional per segment: `"gain_db"` (−12 to +12, default 0) for manual level fixes. Unknown keys warn.
+
+#### A.1.5 Validation (`validate` and `render` with `--audio PATH`)
+
+| Situation | Result |
+|-----------|--------|
+| Narrated slide with no segment of the same `id` | Error, names the slide id. |
+| `text_sha256` differs from the current normalised narration | Error "narration changed since recording; re-record: s03, s07". |
+| Audio file missing, outside the manifest dir, unreadable by `ffprobe`, or length outside 0.3–14.0 s | Error with resolved path. |
+| Slide needs more than 15 s (A.1.6) | Error with voice length and limit. |
+| Segment id not in the script, or segment for a slide without narration | Warning; the segment is ignored. |
+| Script has `narration` but `render` runs without `--audio` | Warning; slides use FR-83 timing and no voice. |
+
+Errors exit 3. Measuring audio needs `ffprobe`; when it is missing, exit 4 as in §11.
+
+#### A.1.6 Timing
+
+For a slide with voice, with `v` = measured voice length:
+
+`required = ceil_to_frame(audio.lead_in + v + audio.tail)` (frame = 1/fps)
+
+- `duration` absent → slide duration = `required`.
+- `duration` present and ≥ `required` → `duration` wins; the voice still starts at `lead_in`.
+- `duration` present and < `required` → validation error.
+- Slides without voice keep FR-83.
+
+Voice for a slide starts at slide start + `lead_in`. AC-02's "duration = Σ slides" still holds.
+
+#### A.1.7 Mixing
+
+- **Voice track:** each voice resampled to 48 kHz stereo, `gain_db` applied, placed with `adelay` at its slide offset, joined with `amix` (normalisation off).
+- **Music** (`--music`, FR-85 unchanged otherwise): ducked under the voice with `sidechaincompress` keyed on the voice track.
+- **Master:** voice + ducked music → `loudnorm` single pass to `audio.loudness_lufs` / `audio.true_peak_db`, then AAC 192 kbps 48 kHz stereo as today.
+- No voice, music only → today's command, unchanged.
+- No `--audio` → FFmpeg commands byte-identical to v2.0.
+- All filter graphs are built as `list[str]` arguments (NFR-09).
+
+Optional theme block `audio` (all keys optional; defaults shown):
+
+```json
+"audio": {
+  "lead_in": 0.3, "tail": 0.5, "voice_gain_db": 0.0,
+  "duck": { "threshold": 0.05, "ratio": 8, "attack_ms": 20, "release_ms": 300 },
+  "loudness_lufs": -14.0, "true_peak_db": -1.5
+}
+```
+
+#### A.1.8 CLI, report, errors
+
+- `render` and `validate` gain `--audio PATH` (an `audio_manifest.json`). New sub-command `export-narration` (A.1.3).
+- The render report adds `audio`: manifest path and SHA-256, and per slide `{id, voice_file, voice_seconds, duration}`. The console summary adds a voiced-slide count.
+- New §11 rows: stale narration (exit 3), bad audio file (exit 3), slide too long for its voice (exit 3).
+- Guard test extended: no TTS/ASR packages imported in `history_shorts/` (for example `pyttsx3`, `gtts`, `TTS`, `whisper`, `vosk`).
+
+#### A.1.9 Acceptance (M7)
+
+| ID    | Criterion |
+|-------|-----------|
+| AC-16 | `export-narration` writes one `.txt` per narrated slide and a manifest whose `text_sha256` matches each file's bytes; a second run is byte-identical. |
+| AC-17 | With `--audio`, each voiced slide lasts `ceil_to_frame(lead_in + v + tail)` (± 1 frame) and the video duration equals Σ slides ± 0.1 s. |
+| AC-18 | Editing one slide's `narration` after export makes `validate --audio` exit 3, naming that slide's id. |
+| AC-19 | Without `--audio`, every FFmpeg command equals the v2.0 command for the same input (command tests). |
+| AC-20 | With voice and music, music level drops while voice plays (measured RMS in a voiced window vs a music-only window), and integrated loudness is within ±1 LU of `loudness_lufs`. |
+| AC-21 | Guard: no TTS/ASR imports in `history_shorts/`; no network imports (C-01, C-02). |
+
+M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest loading and validation, timing, mix graph, report fields, an example narrated script with owner-supplied voice files kept out of the repo, README section on the sound-project workflow.
 
 **A.2 Motions.** Pan, pop-up name cards, colour-tone shift, split screen.
 

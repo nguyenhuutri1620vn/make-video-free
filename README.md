@@ -208,3 +208,4 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Eggshell cache (FR-66): one cache per render run, keyed by mask crc32, cell, gap, seed, layer and mask shape.
 - Coverage (NFR-08): `pytest-cov` is an owner-approved dev dependency (2026-11-08, spec C-03); coverage runs as a separate command and is not part of `pytest -q`.
 - Planned for v2.1, not implemented: narration export for the owner's VoiceStudio, extra motions, and extra poses (Appendix A).
+- Narration audio (planned v2.1, M7): history-shorts and the owner's separate sound project exchange files only — `export-narration` writes `<id>.txt` + a narration manifest with `text_sha256`; the sound project returns `audio_manifest.json` + voice files; `render --audio` fits slide timing to the voice, ducks music and normalises loudness. No TTS inside history-shorts (spec Appendix A.1).
