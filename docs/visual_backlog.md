@@ -24,3 +24,5 @@ When the list runs out, append new proposals in the same format, auto-approved.
 | 10 | `fallen_flags` | An empty camp: fallen spears, a torn flag on the ground, a cold campfire. | `bo-di` ("Họ bỏ đi…") | done (6511370) |
 | 11 | `sail_boat` | A large sailing junk with a ribbed sail on sea waves, no crew. | `le-chan` and `tap-2` (Lê Chân, the sea) | done (4d57b97) |
 | 12 | `lone_path` | A narrow path winding into misty mountains, two small footprints marks, no figures. | `khong-tin` | done (660f70d) |
+| 13 | `lanterns` | Floating lotus-shaped lanterns with small flames drifting on the river, a few reflections. | `song-hat` (remembrance on the Hát river) | approved (auto, 2026-11-13) |
+| 14 | `tablet` | A blank memorial tablet (no text) on an altar with an incense bowl and two candles. | `thanh-thien` (a figure known mostly from temple records) | approved (auto, 2026-11-13) |
