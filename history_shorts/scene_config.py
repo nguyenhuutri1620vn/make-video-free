@@ -209,6 +209,15 @@ class MapLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class ScrollLayer:
+    """A half-unrolled scroll with ink marks and a brush (backlog #5): centre and scale."""
+
+    x: float
+    y: float
+    scale: float
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -234,6 +243,7 @@ Layer = (
     | GongLayer
     | TempleLayer
     | MapLayer
+    | ScrollLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -254,6 +264,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "gong": GongLayer,
     "temple": TempleLayer,
     "map": MapLayer,
+    "scroll": ScrollLayer,
 }
 
 
@@ -534,6 +545,10 @@ def _parse_map(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+def _parse_scroll(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return ScrollLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -581,6 +596,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "gong": _parse_gong,
     "temple": _parse_temple,
     "map": _parse_map,
+    "scroll": _parse_scroll,
 }
 
 

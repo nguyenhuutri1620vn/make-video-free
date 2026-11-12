@@ -111,54 +111,27 @@
         "layers": [
           {
             "type": "moon",
-            "x": 300,
-            "y": 470,
-            "r": 110,
+            "x": 830,
+            "y": 430,
+            "r": 90,
             "rings": 1
-          },
-          {
-            "type": "peaks",
-            "y": 1000,
-            "fill": "gradient",
-            "items": [
-              {
-                "x": 220,
-                "height": 380,
-                "width": 140
-              },
-              {
-                "x": 560,
-                "height": 440,
-                "width": 150
-              },
-              {
-                "x": 880,
-                "height": 360,
-                "width": 140
-              }
-            ]
           },
           {
             "type": "clouds",
             "outline": "gold_dk",
             "items": [
               {
-                "x": 700,
-                "y": 700,
-                "scale": 1.0
-              },
-              {
-                "x": 320,
-                "y": 820,
-                "scale": 0.8,
-                "flip": -1
+                "x": 220,
+                "y": 420,
+                "scale": 0.9
               }
             ]
           },
           {
-            "type": "ground",
-            "y": 1090,
-            "height": 60
+            "type": "scroll",
+            "x": 520,
+            "y": 760,
+            "scale": 2.1
           }
         ]
       }

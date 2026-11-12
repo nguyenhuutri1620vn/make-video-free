@@ -21,7 +21,7 @@ from history_shorts.scene import draw_layers
 from history_shorts.scene_config import LAYER_TYPES
 from history_shorts.textures import lacquer_ground
 
-SHEET_SIZE = (1080, 4440)  # header + 8 character rows + 4 layer rows of 360
+SHEET_SIZE = (1080, 4800)  # header + 8 character rows + 5 layer rows of 360
 PATCH = 6  # half-size of the pixel patch sampled at a cell's body centre
 PATCH_MIN_DIFF = 30  # figure pixels differ from the ground by at least this (0..255)
 
@@ -32,7 +32,7 @@ def sheet_image(theme: Theme) -> Image.Image:
     return gallery.render_gallery(theme)
 
 
-def test_cli_writes_a_1080x4440_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_writes_a_1080x4800_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     out = tmp_path / "deep" / "g.png"
     assert main(["gallery", "--out", str(out)]) == 0
     assert out.is_file()
@@ -312,15 +312,16 @@ LAYER_LABELS = [
     "gong",
     "temple",
     "map",
+    "scroll",
 ]
 ART_MIN_DIFF = 40  # 0..255: a cell with art differs from bare ground by at least this somewhere
 ART_MIN_PIXELS = 200
 LABEL_PAD = 4  # px around the label box that must stay bare ground
 
 
-def test_sheet_height_adds_four_layer_rows() -> None:
-    assert gallery.LAYER_ROWS == 4
-    assert gallery.SHEET_H == gallery.HEADER_H + (8 + 4) * gallery.CELL_H == 4440
+def test_sheet_height_adds_five_layer_rows() -> None:
+    assert gallery.LAYER_ROWS == 5
+    assert gallery.SHEET_H == gallery.HEADER_H + (8 + 5) * gallery.CELL_H == 4800
 
 
 def test_layer_cells_label_every_type_once_in_reading_order() -> None:
@@ -337,8 +338,8 @@ def test_layer_cells_label_every_type_once_in_reading_order() -> None:
 def test_layer_cells_sit_below_the_characters_four_to_a_row() -> None:
     cells = gallery.layer_cells()
     first_row_y = gallery.HEADER_H + 8 * gallery.CELL_H
-    assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(16)]
-    assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(16)]
+    assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(17)]
+    assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(17)]
     assert all(c.box.width == gallery.CELL_W and c.box.height == gallery.CELL_H for c in cells)
     assert max(c.box.y1 for c in cells) == gallery.SHEET_H
     assert not any(c.box.intersects(g.box) for c in cells for g in gallery.grid_cells())

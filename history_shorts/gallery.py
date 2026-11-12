@@ -32,6 +32,7 @@ from history_shorts.config import (
     Layer,
     LotusLayer,
     MapLayer,
+    ScrollLayer,
     TempleLayer,
     Theme,
 )
@@ -73,6 +74,7 @@ GALLERY_LOTUS: Final = LotusLayer(x=540, y=1000, scale=3.0)
 GALLERY_DRUM: Final = DrumLayer(x=540, y=880, r=280)
 GALLERY_GONG: Final = GongLayer(x=540, y=880, r=130)
 GALLERY_TEMPLE: Final = TempleLayer(x=540, y=1100, scale=1.3)
+GALLERY_SCROLL: Final = ScrollLayer(x=540, y=900, scale=1.3)
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -95,6 +97,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("gong", "gong", GALLERY_GONG, Box(240, 540, 840, 1340)),
     ("temple", "temple", GALLERY_TEMPLE, Box(240, 660, 840, 1460)),
     ("map", "map", GALLERY_MAP, Box(240, 530, 840, 1330)),
+    ("scroll", "scroll", GALLERY_SCROLL, Box(240, 560, 840, 1360)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 
@@ -241,7 +244,7 @@ def _paste_layer_cells(buffer: FloatImage, theme: Theme) -> None:
 
 
 def render_gallery(theme: Theme) -> Image.Image:
-    """The 1080x4440 contact sheet: layer cells, separators and figures, then the text."""
+    """The 1080x4800 contact sheet: layer cells, separators and figures, then the text."""
     cells = grid_cells()
     ground = lacquer_ground(
         rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=SHEET_W, height=SHEET_H

@@ -9,13 +9,21 @@ from typing import Any
 import numpy as np
 import pytest
 
-from history_shorts.config import DrumLayer, GongLayer, MapLayer, TempleLayer, load_script
+from history_shorts.config import (
+    DrumLayer,
+    GongLayer,
+    MapLayer,
+    ScrollLayer,
+    TempleLayer,
+    load_script,
+)
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.temple import draw_temple
 
 Base = Callable[[], FloatImage]
@@ -135,3 +143,24 @@ def test_map_stays_inside_its_box(ctx: Any, flat_base: Base) -> None:
     ys, xs = _changed(base, draw_map(base.copy(), layer, ctx, 1))
     assert xs.min() >= 200 - 2 and xs.max() <= 800 + 2
     assert ys.min() >= 400 - 2 and ys.max() <= 900 + 2
+
+
+# --- scroll (backlog #5) ------------------------------------------------------------------
+
+
+def test_scroll_parses(tmp_script: ScriptFactory) -> None:
+    layer = _layer(tmp_script, {"type": "scroll", "x": 520, "y": 760, "scale": 2})
+    assert layer == ScrollLayer(520, 760, 2)
+    assert LAYER_DRAWERS[ScrollLayer] is draw_scroll
+
+
+def test_scroll_bounds_and_determinism(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = ScrollLayer(540, 800, 1.0)
+    after = draw_scroll(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    # rod knobs at x -191, roll at x 184, brush handle to x 236 and y 172
+    assert xs.min() >= 540 - 195 and xs.max() <= 540 + 240
+    assert ys.min() >= 800 - 140 and ys.max() <= 800 + 176
+    assert np.array_equal(after, draw_scroll(flat_base(), layer, ctx, 1))
+    assert not np.array_equal(after, draw_scroll(flat_base(), layer, ctx, 2))  # ink marks vary
