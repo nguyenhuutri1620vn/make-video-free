@@ -110,7 +110,7 @@ The prototype code that produced them lives in `docs/reference/prototype/`. It i
 | Chrome           | Elements shared by every slide: ground, frame, seal, tag pill, wave band, progress bar, footer.           |
 | Scene            | An ordered list of layers drawn in the visual region.                                                      |
 | Template         | A named, parameterised scene (`group`, `landscape`) that expands to layers.                               |
-| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`. |
+| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`. |
 | Character        | A parametric stylised figure defined by a role preset plus overrides.                                     |
 | Formation        | A placement rule for characters (`centre_pair`, `line`, `v_shape`).                                       |
 | Gold leaf        | Texture of jittered gold squares with thin seams and rare worn spots showing red underlayer.             |
@@ -377,6 +377,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `elephant`   | `x`, `y` (ground line), `scale`; optional `facing` (1 / -1), `flag` (default true) — war elephant in profile with a saddle cloth, no rider (backlog #6) | flat |
 | `stilt_house` | `x`, `y` (ground line), `scale`; optional `bamboo` (default true) — stilt house with a saddle roof and a bamboo clump (backlog #7) | flat |
 | `banners`    | `y` (front row baseline); optional `rows` (1–5, default 4) — hills planted with flags and spears at rest, rows shrinking into the distance (backlog #8) | flat |
+| `regalia`    | `x`, `y` (floor line), `scale`; optional `screen` (default true) — crown and seal on a cushion and low table, before a four-panel screen (backlog #9) | flat |
 
 **Character**
 

@@ -383,13 +383,41 @@
       "tone": "warm",
       "text_in": "fade",
       "scene": {
-        "template": "group",
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "sun",
+            "x": 540,
+            "y": 520,
+            "r": 220,
+            "rings": 2
           },
           {
-            "role": "leader"
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 380,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 400,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "regalia",
+            "x": 540,
+            "y": 1095,
+            "scale": 2.2
           }
         ]
       }
@@ -793,39 +821,11 @@
       "scene": {
         "layers": [
           {
-            "type": "sun",
-            "x": 540,
-            "y": 760,
-            "r": 260,
+            "type": "moon",
+            "x": 820,
+            "y": 420,
+            "r": 100,
             "rings": 1
-          },
-          {
-            "type": "clouds",
-            "items": [
-              {
-                "x": 270,
-                "y": 330,
-                "scale": 0.8
-              },
-              {
-                "x": 860,
-                "y": 330,
-                "scale": 0.8,
-                "flip": -1
-              }
-            ]
-          },
-          {
-            "type": "hills",
-            "side": "left",
-            "base": 1100,
-            "top": 900
-          },
-          {
-            "type": "hills",
-            "side": "right",
-            "base": 1100,
-            "top": 920
           },
           {
             "type": "ground",
@@ -833,22 +833,17 @@
             "height": 52
           },
           {
-            "type": "characters",
-            "baseline": 1100,
-            "items": [
-              {
-                "role": "leader",
-                "x": 440,
-                "height": 520,
-                "facing": -1
-              },
-              {
-                "role": "leader",
-                "x": 640,
-                "height": 520,
-                "facing": 1
-              }
-            ]
+            "type": "regalia",
+            "x": 500,
+            "y": 1095,
+            "scale": 1.9,
+            "screen": false
+          },
+          {
+            "type": "lotus",
+            "x": 860,
+            "y": 1080,
+            "scale": 1.6
           }
         ]
       }

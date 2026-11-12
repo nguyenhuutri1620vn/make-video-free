@@ -15,6 +15,7 @@ from history_shorts.config import (
     ElephantLayer,
     GongLayer,
     MapLayer,
+    RegaliaLayer,
     ScrollLayer,
     StiltHouseLayer,
     TempleLayer,
@@ -28,6 +29,7 @@ from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.stilt_house import draw_stilt_house
 from history_shorts.scene.temple import draw_temple
@@ -235,3 +237,23 @@ def test_banners_rows_stack_upwards(ctx: Any, flat_base: Base) -> None:
     assert top_four < top_one  # back rows sit higher
     assert _changed(base, four)[0].max() <= 1080 + 90 + 1  # hill depth below the baseline
     assert np.array_equal(four, draw_banners(flat_base(), BannersLayer(1080, 4), ctx, 1))
+
+
+# --- regalia (backlog #9) -----------------------------------------------------------------
+
+
+def test_regalia_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "regalia", "x": 540, "y": 1095, "scale": 2, "screen": False}
+    assert _layer(tmp_script, raw) == RegaliaLayer(540, 1095, 2, False)
+    assert LAYER_DRAWERS[RegaliaLayer] is draw_regalia
+
+
+def test_regalia_screen_is_optional_and_bounded(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    full = draw_regalia(base.copy(), RegaliaLayer(540, 1100, 1.0), ctx, 1)
+    bare = draw_regalia(base.copy(), RegaliaLayer(540, 1100, 1.0, False), ctx, 1)
+    ys, xs = _changed(base, full)
+    # table legs are 8-unit strokes whose ends sit on the floor; screen top at -306
+    assert ys.max() <= 1100 + 4 and ys.min() >= 1100 - 308
+    assert xs.min() >= 540 - 160 and xs.max() <= 540 + 160  # 4 panels of 78
+    assert _changed(base, bare)[0].min() > 1100 - 160  # without the screen only the table set

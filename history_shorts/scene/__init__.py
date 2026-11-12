@@ -19,6 +19,7 @@ from . import (
     gong,
     lotus,
     people,
+    regalia,
     scroll,
     sky,
     stilt_house,
@@ -46,6 +47,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         elephant.DRAWERS,
         stilt_house.DRAWERS,
         banners.DRAWERS,
+        regalia.DRAWERS,
     )
 )
 
