@@ -14,7 +14,7 @@ When the list runs out, append new proposals in the same format, auto-approved.
 |---|-------|------|------------------------------|--------|
 | 1 | `drum` | Bronze-drum face: 12-ray star in the centre, concentric gold-leaf bands with zigzag and circle-tangent motifs, a ring of flying Lạc birds. | `mau-he` (ringed disc + birds), `vua-nu` background | done (b457a8b) |
 | 2 | `gong` | Hanging gong on a carved wooden frame with a mallet, gold leaf boss, eggshell frame posts. | `cong-ba` ("lệnh ông không bằng cồng bà") | done (880d1e6) |
-| 3 | `temple` | Temple gate (tam quan): three curved roofs with upturned eaves, vermilion pillars, steps, two incense burners with soft smoke curls. | `den-tho`, `chua-quen` | approved |
+| 3 | `temple` | Temple gate (tam quan): three curved roofs with upturned eaves, vermilion pillars, steps, two incense burners with soft smoke curls. | `den-tho`, `chua-quen` | done (1fc54e5) |
 | 4 | `map` | Stylised, original map of the Red River delta: gold coastline, river lines, red dots (list of x, y), optional arrow from the north. Not traced from any real map. | `me-linh`, `65-thanh` (many dots), `ma-vien` (arrow) | approved |
 | 5 | `scroll` | Half-unrolled paper scroll with plain ink lines (no readable text) and a brush. | `nu-gioi` | approved |
 | 6 | `elephant` | War elephant in profile with a saddle cloth and a flag, no rider. | `tuong-nu` or `cta` | approved |
