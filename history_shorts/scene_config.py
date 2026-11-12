@@ -172,6 +172,18 @@ class LotusLayer:
     scale: float
 
 
+@dataclass(frozen=True, slots=True)
+class DrumLayer:
+    """A bronze-drum face (backlog #1): centre, radius, birds in the ring, gold-leaf overrides."""
+
+    x: float
+    y: float
+    r: float
+    birds: int = 8
+    tile: int | None = None
+    worn: float | None = None
+
+
 Layer = (
     SunLayer
     | CloudsLayer
@@ -184,6 +196,7 @@ Layer = (
     | BoatLayer
     | BirdsLayer
     | LotusLayer
+    | DrumLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -200,6 +213,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "boat": BoatLayer,
     "birds": BirdsLayer,
     "lotus": LotusLayer,
+    "drum": DrumLayer,
 }
 
 
@@ -450,6 +464,21 @@ def _parse_lotus(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return LotusLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
 
+DRUM_BIRDS: tuple[int, int] = (0, 16)
+
+
+def _parse_drum(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    gold = _texture_overrides(ctx, obj, _GOLD)
+    return DrumLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        r=ctx.num(obj, "r", positive=True),
+        birds=ctx.int_(obj, "birds", default=8, lo=DRUM_BIRDS[0], hi=DRUM_BIRDS[1]),
+        tile=gold["tile"],
+        worn=gold["worn"],
+    )
+
+
 _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "sun": _parse_sun("sun"),
     "moon": _parse_sun("moon"),
@@ -463,6 +492,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "boat": parse_boat,
     "birds": _parse_birds,
     "lotus": _parse_lotus,
+    "drum": _parse_drum,
 }
 
 

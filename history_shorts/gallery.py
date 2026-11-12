@@ -25,7 +25,7 @@ from history_shorts.characters.figure import Placement, draw_figure
 from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
-from history_shorts.config import CharacterSpec, Layer, LotusLayer, Theme
+from history_shorts.config import CharacterSpec, DrumLayer, Layer, LotusLayer, Theme
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import Box, FloatImage
 from history_shorts.scene import draw_layers
@@ -60,6 +60,8 @@ CHARACTER_ROWS: Final = len(ROLES) * len(FACINGS)
 
 # A reference lotus (no template places one): the flower on its leaf at 3x, mid-canvas.
 GALLERY_LOTUS: Final = LotusLayer(x=540, y=1000, scale=3.0)
+# A reference drum face (backlog #1), centred like the lotus.
+GALLERY_DRUM: Final = DrumLayer(x=540, y=880, r=280)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
 # is placed so the art sits in the upper three quarters and the label stays on bare ground.
@@ -77,6 +79,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("boat", "boat", tpl.LANDSCAPE_BOATS[0], Box(140, 780, 440, 1180)),
     ("birds", "birds", tpl.LANDSCAPE_BIRDS, Box(215, 297, 455, 617)),
     ("lotus", "lotus", GALLERY_LOTUS, Box(360, 758, 720, 1238)),
+    ("drum", "drum", GALLERY_DRUM, Box(240, 580, 840, 1380)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 
@@ -223,7 +226,7 @@ def _paste_layer_cells(buffer: FloatImage, theme: Theme) -> None:
 
 
 def render_gallery(theme: Theme) -> Image.Image:
-    """The 1080x4080 contact sheet: layer cells, separators and figures, then the text."""
+    """The 1080x4440 contact sheet: layer cells, separators and figures, then the text."""
     cells = grid_cells()
     ground = lacquer_ground(
         rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=SHEET_W, height=SHEET_H

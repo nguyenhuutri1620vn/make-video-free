@@ -122,11 +122,17 @@ Optional slide fields in a `"2.1"` script (spec Appendix A.2):
 
 `examples/vuong_trieu_nu/script.json` uses every visual effect and one music cut. Its suggested sound cues (add the files, then the `sfx` entries): a drum hit at `vua-nu` 0.0 s, a short "tách" at `65-thanh` 0.0 s, a low drum at `ma-vien` 0.0 s.
 
+### Scene objects without people
+
+Extra layer types from `docs/visual_backlog.md`, usable in any `{"layers": [...]}` scene:
+
+- `drum`: `{"type": "drum", "x": 540, "y": 720, "r": 400, "birds": 8}`: a bronze-drum face (original drawing) with a star, ring bands and flying birds.
+
 ### Sources workflow
 
 Every example lists `sources` and marks each factual slide with `"claim": true` and a `source` index. `validate` warns about a missing `sources` list and about a claim without a `source`; `render` prints a numbered `Sources:` block, ready to paste into a caption (a typed source reads `[2] (journal) ...`), and stores the same list in the report. Folk-record claims are worded as such ("theo thần tích", "theo truyền thuyết"). Never invent a fact, date, name or quote: where a citation is still needed, write a placeholder such as `[CẦN NGUỒN] ...` in `sources` and the owner supplies the document.
 
-`gallery` renders a 1080x4080 contact sheet. The top block is every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. Below it, three rows of 270x360 cells show each scene layer type with the reference template's parameters (sun, moon, clouds, mountains, peaks gradient, peaks eggshell, hills left, river, ground, boat, birds, lotus); each is the layer drawn at full canvas scale, with a fixed 3:4 crop scaled into its cell (`gallery.LAYER_SPECS`). `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest.
+`gallery` renders a 1080x4440 contact sheet. The top block is every role x facing x prop (4 props across, 8 role x facing rows down, each cell labelled `role · facing · prop`) so the characters can be reviewed at a glance. Below it, four rows of 270x360 cells show each scene layer type with the reference template's parameters (sun, moon, clouds, mountains, peaks gradient, peaks eggshell, hills left, river, ground, boat, birds, lotus, drum); each is the layer drawn at full canvas scale, with a fixed 3:4 crop scaled into its cell (`gallery.LAYER_SPECS`). `--out` defaults to `output/gallery.png` relative to the current directory; parent directories are created and the PNG is written atomically. Figures use their role's default crest.
 
 ## Tests and snapshots
 
