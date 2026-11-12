@@ -17,6 +17,7 @@ from history_shorts.config import (
     GongLayer,
     MapLayer,
     RegaliaLayer,
+    SailBoatLayer,
     ScrollLayer,
     StiltHouseLayer,
     TempleLayer,
@@ -32,6 +33,7 @@ from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.regalia import draw_regalia
+from history_shorts.scene.sail_boat import draw_sail_boat
 from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.stilt_house import draw_stilt_house
 from history_shorts.scene.temple import draw_temple
@@ -280,3 +282,24 @@ def test_fallen_flags_lie_low(ctx: Any, flat_base: Base) -> None:
     assert np.array_equal(
         after, draw_fallen_flags(flat_base(), FallenFlagsLayer(540, 1100, 1.0), ctx, 1)
     )
+
+
+# --- sail boat (backlog #11) --------------------------------------------------------------
+
+
+def test_sail_boat_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "sail_boat", "x": 540, "y": 1060, "scale": 1.5, "facing": -1}
+    assert _layer(tmp_script, raw) == SailBoatLayer(540, 1060, 1.5, -1)
+    assert LAYER_DRAWERS[SailBoatLayer] is draw_sail_boat
+
+
+def test_sail_boat_bounds_and_mirror(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    right = draw_sail_boat(base.copy(), SailBoatLayer(540, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, right)
+    # mast top at -330, waves reach +18; bow tip at +176 and stern waves at -206
+    assert ys.min() >= 1100 - 335 and ys.max() <= 1100 + 22
+    assert xs.min() >= 540 - 210 and xs.max() <= 540 + 182
+    left = draw_sail_boat(base.copy(), SailBoatLayer(540, 1100, 1.0, -1), ctx, 1)
+    lxs = _changed(base, left)[1]
+    assert lxs.max() <= 540 + 210 and lxs.min() >= 540 - 182  # mirrored about x = 540

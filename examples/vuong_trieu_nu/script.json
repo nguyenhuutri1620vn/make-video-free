@@ -505,22 +505,67 @@
       "transition": "slideleft",
       "text_in": "fade",
       "scene": {
-        "template": "landscape",
-        "boats": [
+        "layers": [
           {
-            "x": 540,
-            "y": 1090,
-            "scale": 2.0,
-            "crew": [
+            "type": "moon",
+            "x": 800,
+            "y": 440,
+            "r": 110,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
               {
-                "role": "general",
-                "facing": 1
+                "x": 260,
+                "y": 430,
+                "scale": 1.4
               },
               {
-                "role": "boat_crew",
-                "facing": -1
+                "x": 330,
+                "y": 470,
+                "scale": 1.0
               }
             ]
+          },
+          {
+            "type": "peaks",
+            "y": 920,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 140,
+                "height": 300,
+                "width": 120
+              },
+              {
+                "x": 330,
+                "height": 230,
+                "width": 110
+              },
+              {
+                "x": 900,
+                "height": 280,
+                "width": 120
+              },
+              {
+                "x": 1040,
+                "height": 220,
+                "width": 100
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 920,
+            "height": 300
+          },
+          {
+            "type": "sail_boat",
+            "x": 540,
+            "y": 1060,
+            "scale": 1.5,
+            "facing": 1
           }
         ]
       }
@@ -1070,23 +1115,64 @@
       "transition": "slideup",
       "text_in": "fade",
       "scene": {
-        "template": "landscape",
-        "moon": false,
-        "boats": [
+        "layers": [
           {
-            "x": 540,
-            "y": 1090,
-            "scale": 2.2,
-            "crew": [
+            "type": "sun",
+            "x": 360,
+            "y": 560,
+            "r": 200,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
               {
-                "role": "general",
-                "facing": 1
-              },
-              {
-                "role": "boat_crew",
-                "facing": -1
+                "x": 820,
+                "y": 420,
+                "scale": 0.9,
+                "flip": -1
               }
             ]
+          },
+          {
+            "type": "peaks",
+            "y": 920,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 140,
+                "height": 300,
+                "width": 120
+              },
+              {
+                "x": 330,
+                "height": 230,
+                "width": 110
+              },
+              {
+                "x": 900,
+                "height": 280,
+                "width": 120
+              },
+              {
+                "x": 1040,
+                "height": 220,
+                "width": 100
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 920,
+            "height": 300
+          },
+          {
+            "type": "sail_boat",
+            "x": 600,
+            "y": 1070,
+            "scale": 1.6,
+            "facing": -1
           }
         ]
       }

@@ -266,6 +266,16 @@ class FallenFlagsLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class SailBoatLayer:
+    """A sailing boat without crew (backlog #11): x, waterline y, scale, facing."""
+
+    x: float
+    y: float
+    scale: float
+    facing: int = 1
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -297,6 +307,7 @@ Layer = (
     | BannersLayer
     | RegaliaLayer
     | FallenFlagsLayer
+    | SailBoatLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -323,6 +334,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "banners": BannersLayer,
     "regalia": RegaliaLayer,
     "fallen_flags": FallenFlagsLayer,
+    "sail_boat": SailBoatLayer,
 }
 
 
@@ -647,6 +659,15 @@ def _parse_fallen_flags(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return FallenFlagsLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
 
+def _parse_sail_boat(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return SailBoatLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        facing=_sign(ctx, obj, "facing", 1) or 1,
+    )
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -700,6 +721,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "banners": _parse_banners,
     "regalia": _parse_regalia,
     "fallen_flags": _parse_fallen_flags,
+    "sail_boat": _parse_sail_boat,
 }
 
 
