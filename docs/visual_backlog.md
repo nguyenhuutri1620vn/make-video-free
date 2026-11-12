@@ -17,5 +17,5 @@ When the list runs out, append new proposals in the same format, auto-approved.
 | 3 | `temple` | Temple gate (tam quan): three curved roofs with upturned eaves, vermilion pillars, steps, two incense burners with soft smoke curls. | `den-tho`, `chua-quen` | done (1fc54e5) |
 | 4 | `map` | Stylised, original map of the Red River delta: gold coastline, river lines, red dots (list of x, y), optional arrow from the north. Not traced from any real map. | `me-linh`, `65-thanh` (many dots), `ma-vien` (arrow) | done (2307b8b) |
 | 5 | `scroll` | Half-unrolled paper scroll with plain ink lines (no readable text) and a brush. | `nu-gioi` | done (b4d9296) |
-| 6 | `elephant` | War elephant in profile with a saddle cloth and a flag, no rider. | `tuong-nu` or `cta` | approved |
+| 6 | `elephant` | War elephant in profile with a saddle cloth and a flag, no rider. | `tuong-nu` and `cta` | done (f30c5db) |
 | 7 | `stilt_house` | Nhà sàn village by the river, bamboo clump. | `nam-40` | approved |
