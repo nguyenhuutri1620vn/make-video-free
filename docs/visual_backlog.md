@@ -25,4 +25,6 @@ When the list runs out, append new proposals in the same format, auto-approved.
 | 11 | `sail_boat` | A large sailing junk with a ribbed sail on sea waves, no crew. | `le-chan` and `tap-2` (Lê Chân, the sea) | done (4d57b97) |
 | 12 | `lone_path` | A narrow path winding into misty mountains, two small footprints marks, no figures. | `khong-tin` | done (660f70d) |
 | 13 | `lanterns` | Floating lotus-shaped lanterns with small flames drifting on the river, a few reflections. | `song-hat` (remembrance on the Hát river) | done (5755bde) |
-| 14 | `tablet` | A blank memorial tablet (no text) on an altar with an incense bowl and two candles. | `thanh-thien` (a figure known mostly from temple records) | approved (auto, 2026-11-13) |
+| 14 | `tablet` | A blank memorial tablet (no text) on an altar with an incense bowl and two candles. | `thanh-thien` (a figure known mostly from temple records) | done (5a77168) |
+| 15 | `horse` | A bronze horse statue on a stone plinth, gold-leaf surface, no rider; for "Trống đồng → Ngựa đồng" next to the drum. | `hai_ba_trung` slide `loss` (text only today) | approved (auto, 2026-11-13) |
+| 16 | reuse | No new layer: give `hai_ba_trung` slide `war` the map with the northern arrow, and swap its repeated scenes for the new layers. | `hai_ba_trung` | approved (auto, 2026-11-13) |
