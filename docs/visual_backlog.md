@@ -20,7 +20,7 @@ When the list runs out, append new proposals in the same format, auto-approved.
 | 6 | `elephant` | War elephant in profile with a saddle cloth and a flag, no rider. | `tuong-nu` and `cta` | done (f30c5db) |
 | 7 | `stilt_house` | Nhà sàn village by the river, bamboo clump. | `nam-40` | done (ca9cfba) |
 | 8 | `banners` | A hillside planted with many war flags and spears at rest, rows shrinking into the distance (no people). | `con-nhieu` ("+ còn rất nhiều") | done (25291cf) |
-| 9 | `regalia` | A royal crown and a square seal on a cushion before a folding screen, lacquer red and gold. | `trung-vuong`, `ba-nam` | approved (auto, 2026-11-13) |
+| 9 | `regalia` | A royal crown and a square seal on a cushion before a folding screen, lacquer red and gold. | `trung-vuong`, `ba-nam` | done (36a1de4) |
 | 10 | `fallen_flags` | An empty camp: fallen spears, a torn flag on the ground, a cold campfire. | `bo-di` ("Họ bỏ đi…") | approved (auto, 2026-11-13) |
 | 11 | `sail_boat` | A large sailing junk with a ribbed sail on sea waves, no crew. | `le-chan` and `tap-2` (Lê Chân, the sea) | approved (auto, 2026-11-13) |
 | 12 | `lone_path` | A narrow path winding into misty mountains, two small footprints marks, no figures. | `khong-tin` | approved (auto, 2026-11-13) |
