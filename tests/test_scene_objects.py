@@ -9,10 +9,11 @@ from typing import Any
 import numpy as np
 import pytest
 
-from history_shorts.config import DrumLayer, GongLayer, TempleLayer, load_script
+from history_shorts.config import DrumLayer, GongLayer, MapLayer, TempleLayer, load_script
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
+from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.temple import draw_temple
@@ -101,3 +102,36 @@ def test_temple_incense_is_optional(ctx: Any, flat_base: Base) -> None:
     with_smoke = draw_temple(flat_base(), TempleLayer(540, 1100, 1.0), ctx, 1)
     without = draw_temple(flat_base(), TempleLayer(540, 1100, 1.0, incense=False), ctx, 1)
     assert not np.array_equal(with_smoke, without)
+
+
+# --- map (backlog #4) ---------------------------------------------------------------------
+
+
+def test_map_parses_dots_scatter_and_arrow(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "map", "x": 100, "y": 300, "w": 800, "h": 700}
+    layer = _layer(tmp_script, {**raw, "dots": [[0.3, 0.4]], "scatter": 10, "arrow": True})
+    assert layer == MapLayer(100, 300, 800, 700, ((0.3, 0.4),), 10, True)
+    assert LAYER_DRAWERS[MapLayer] is draw_map
+
+
+@pytest.mark.parametrize("dot", [[1.2, 0.5], [0.5], "x"])
+def test_map_rejects_bad_dots(tmp_script: ScriptFactory, dot: Any) -> None:
+    raw = {"type": "map", "x": 100, "y": 300, "w": 800, "h": 700, "dots": [dot]}
+    with pytest.raises(ValidationFailed):
+        _layer(tmp_script, raw)
+
+
+def test_scatter_points_are_on_land_spaced_and_deterministic() -> None:
+    a = scatter_points(np.random.default_rng(7), 65, ((0.34, 0.36),))
+    assert a == scatter_points(np.random.default_rng(7), 65, ((0.34, 0.36),))
+    assert len(a) >= 50
+    assert not any(_in_sea(u, v) for u, v in a)
+    assert all((u - 0.34) ** 2 + (v - 0.36) ** 2 >= 0.05**2 for u, v in a)
+
+
+def test_map_stays_inside_its_box(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = MapLayer(200, 400, 600, 500, ((0.5, 0.5),), 20, True)
+    ys, xs = _changed(base, draw_map(base.copy(), layer, ctx, 1))
+    assert xs.min() >= 200 - 2 and xs.max() <= 800 + 2
+    assert ys.min() >= 400 - 2 and ys.max() <= 900 + 2

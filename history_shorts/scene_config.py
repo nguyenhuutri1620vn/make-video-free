@@ -16,7 +16,7 @@ from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, fields
 from typing import Any, Literal, TypeVar, cast
 
-from history_shorts.validation import Ctx, is_int
+from history_shorts.validation import Ctx, is_int, is_number
 
 CANVAS_WIDTH = 1080
 CANVAS_HEIGHT = 1920
@@ -195,6 +195,20 @@ class GongLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class MapLayer:
+    """A delta map panel (backlog #4): its box in px, dots in map units (0-1), scattered dots,
+    and an arrow from the north."""
+
+    x: float
+    y: float
+    w: float
+    h: float
+    dots: tuple[tuple[float, float], ...] = ()
+    scatter: int = 0
+    arrow: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -219,6 +233,7 @@ Layer = (
     | DrumLayer
     | GongLayer
     | TempleLayer
+    | MapLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -238,6 +253,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "drum": DrumLayer,
     "gong": GongLayer,
     "temple": TempleLayer,
+    "map": MapLayer,
 }
 
 
@@ -491,6 +507,33 @@ def _parse_lotus(ctx: Ctx, obj: dict[str, Any]) -> Layer:
 DRUM_BIRDS: tuple[int, int] = (0, 16)
 
 
+MAP_SCATTER_MAX = 80
+
+
+def _map_dot(ctx: Ctx, raw: object) -> tuple[float, float] | None:
+    if not isinstance(raw, list) or len(raw) != 2 or not all(is_number(v) for v in raw):
+        ctx.error("must be [u, v], two numbers")
+        return None
+    u, v = float(raw[0]), float(raw[1])
+    if not (0 <= u <= 1 and 0 <= v <= 1):
+        ctx.error("must be inside the map, 0–1")
+        return None
+    return u, v
+
+
+def _parse_map(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    dots = [_map_dot(c, raw) for c, raw in ctx.at("dots").items(obj.get("dots", []))]
+    return MapLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        w=ctx.num(obj, "w", positive=True, hi=CANVAS_WIDTH),
+        h=ctx.num(obj, "h", positive=True, hi=CANVAS_HEIGHT),
+        dots=tuple(d for d in dots if d is not None),
+        scatter=ctx.int_(obj, "scatter", default=0, lo=0, hi=MAP_SCATTER_MAX),
+        arrow=ctx.bool_(obj, "arrow", default=False),
+    )
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -537,6 +580,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "drum": _parse_drum,
     "gong": _parse_gong,
     "temple": _parse_temple,
+    "map": _parse_map,
 }
 
 

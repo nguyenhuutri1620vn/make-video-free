@@ -231,22 +231,18 @@
       "narration": "Năm 40, hai chị em Trưng Trắc, Trưng Nhị dựng cờ ở Mê Linh. Thái thú nhà Hán bỏ chạy.",
       "transition": "fade",
       "scene": {
-        "template": "landscape",
-        "moon": false,
-        "boats": [
+        "layers": [
           {
-            "x": 540,
-            "y": 1080,
-            "scale": 1.6,
-            "crew": [
-              {
-                "role": "leader",
-                "facing": 1
-              },
-              {
-                "role": "boat_crew",
-                "facing": -1
-              }
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.34,
+                0.36
+              ]
             ]
           }
         ]
@@ -265,90 +261,18 @@
       "scene": {
         "layers": [
           {
-            "type": "sun",
-            "x": 540,
-            "y": 560,
-            "r": 240,
-            "rings": 2
-          },
-          {
-            "type": "clouds",
-            "items": [
-              {
-                "x": 270,
-                "y": 330,
-                "scale": 0.8
-              },
-              {
-                "x": 860,
-                "y": 330,
-                "scale": 0.8,
-                "flip": -1
-              }
-            ]
-          },
-          {
-            "type": "mountains",
-            "y": 900,
-            "amp": 1.0
-          },
-          {
-            "type": "hills",
-            "side": "left",
-            "base": 1100,
-            "top": 900
-          },
-          {
-            "type": "hills",
-            "side": "right",
-            "base": 1100,
-            "top": 920
-          },
-          {
-            "type": "ground",
-            "y": 1092,
-            "height": 52
-          },
-          {
-            "type": "characters",
-            "baseline": 1100,
-            "items": [
-              {
-                "role": "general",
-                "x": 180,
-                "baseline": 1080,
-                "height": 380,
-                "facing": -1
-              },
-              {
-                "role": "general",
-                "x": 900,
-                "baseline": 1080,
-                "height": 380,
-                "facing": 1
-              },
-              {
-                "role": "general_alt",
-                "x": 330,
-                "baseline": 1090,
-                "height": 450,
-                "facing": -1
-              },
-              {
-                "role": "general_alt",
-                "x": 750,
-                "baseline": 1090,
-                "height": 450,
-                "facing": 1
-              },
-              {
-                "role": "leader",
-                "x": 540,
-                "baseline": 1100,
-                "height": 560,
-                "facing": 1
-              }
-            ]
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.34,
+                0.36
+              ]
+            ],
+            "scatter": 65
           }
         ]
       }
@@ -639,66 +563,13 @@
       "scene": {
         "layers": [
           {
-            "type": "peaks",
-            "y": 900,
-            "fill": "gradient",
-            "items": [
-              {
-                "x": 200,
-                "height": 300,
-                "width": 120
-              },
-              {
-                "x": 540,
-                "height": 360,
-                "width": 130
-              },
-              {
-                "x": 880,
-                "height": 300,
-                "width": 120
-              }
-            ]
-          },
-          {
-            "type": "river",
-            "y": 900,
-            "height": 290
-          },
-          {
-            "type": "boat",
-            "x": 250,
-            "y": 960,
-            "scale": 1.4,
-            "crew": []
-          },
-          {
-            "type": "boat",
-            "x": 560,
-            "y": 990,
-            "scale": 1.6,
-            "crew": []
-          },
-          {
-            "type": "boat",
-            "x": 850,
-            "y": 960,
-            "scale": 1.4,
-            "crew": []
-          },
-          {
-            "type": "boat",
-            "x": 360,
-            "y": 1070,
-            "scale": 2.0,
-            "crew": []
-          },
-          {
-            "type": "boat",
-            "x": 760,
-            "y": 1090,
-            "scale": 2.2,
-            "crew": []
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "scatter": 24,
+            "arrow": true
           }
         ]
       }

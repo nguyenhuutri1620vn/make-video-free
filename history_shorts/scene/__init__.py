@@ -9,7 +9,7 @@ from history_shorts.compose import GROUND_LAYER, DrawContext
 from history_shorts.config import Layer
 from history_shorts.primitives import FloatImage
 
-from . import boat, clouds, drum, gong, lotus, people, sky, temple, terrain
+from . import boat, clouds, delta_map, drum, gong, lotus, people, sky, temple, terrain
 from .registry import LayerDrawer, merge
 
 __all__ = ["LAYER_DRAWERS", "LayerDrawer", "draw_layers"]
@@ -26,6 +26,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         drum.DRAWERS,
         gong.DRAWERS,
         temple.DRAWERS,
+        delta_map.DRAWERS,
     )
 )
 

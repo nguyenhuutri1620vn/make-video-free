@@ -31,6 +31,7 @@ from history_shorts.config import (
     GongLayer,
     Layer,
     LotusLayer,
+    MapLayer,
     TempleLayer,
     Theme,
 )
@@ -72,6 +73,7 @@ GALLERY_LOTUS: Final = LotusLayer(x=540, y=1000, scale=3.0)
 GALLERY_DRUM: Final = DrumLayer(x=540, y=880, r=280)
 GALLERY_GONG: Final = GongLayer(x=540, y=880, r=130)
 GALLERY_TEMPLE: Final = TempleLayer(x=540, y=1100, scale=1.3)
+GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
 # is placed so the art sits in the upper three quarters and the label stays on bare ground.
@@ -92,6 +94,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("drum", "drum", GALLERY_DRUM, Box(240, 580, 840, 1380)),
     ("gong", "gong", GALLERY_GONG, Box(240, 540, 840, 1340)),
     ("temple", "temple", GALLERY_TEMPLE, Box(240, 660, 840, 1460)),
+    ("map", "map", GALLERY_MAP, Box(240, 530, 840, 1330)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 
