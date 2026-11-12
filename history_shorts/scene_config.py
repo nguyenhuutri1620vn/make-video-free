@@ -276,6 +276,15 @@ class SailBoatLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class LonePathLayer:
+    """A path winding into the mist (backlog #12): near-end y, depth to the far end, mist."""
+
+    y: float
+    depth: float = 360.0
+    mist: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -308,6 +317,7 @@ Layer = (
     | RegaliaLayer
     | FallenFlagsLayer
     | SailBoatLayer
+    | LonePathLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -335,6 +345,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "regalia": RegaliaLayer,
     "fallen_flags": FallenFlagsLayer,
     "sail_boat": SailBoatLayer,
+    "lone_path": LonePathLayer,
 }
 
 
@@ -668,6 +679,14 @@ def _parse_sail_boat(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+def _parse_lone_path(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return LonePathLayer(
+        y=_y(ctx, obj),
+        depth=ctx.num(obj, "depth", default=360.0, positive=True, hi=CANVAS_HEIGHT),
+        mist=ctx.bool_(obj, "mist", default=True),
+    )
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -722,6 +741,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "regalia": _parse_regalia,
     "fallen_flags": _parse_fallen_flags,
     "sail_boat": _parse_sail_boat,
+    "lone_path": _parse_lone_path,
 }
 
 

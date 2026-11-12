@@ -818,49 +818,48 @@
       "scene": {
         "layers": [
           {
-            "type": "mountains",
-            "y": 950,
-            "amp": 1.4
+            "type": "moon",
+            "x": 540,
+            "y": 520,
+            "r": 90,
+            "rings": 1
           },
           {
             "type": "peaks",
-            "y": 1000,
+            "y": 800,
             "fill": "gradient",
             "items": [
               {
-                "x": 180,
-                "height": 420,
+                "x": 300,
+                "height": 380,
                 "width": 150
               },
               {
-                "x": 900,
-                "height": 460,
+                "x": 780,
+                "height": 420,
                 "width": 160
-              }
-            ]
-          },
-          {
-            "type": "ground",
-            "y": 1092,
-            "height": 52
-          },
-          {
-            "type": "characters",
-            "baseline": 1100,
-            "items": [
-              {
-                "role": "leader",
-                "x": 500,
-                "height": 300,
-                "facing": -1
               },
               {
-                "role": "leader",
-                "x": 580,
+                "x": 120,
                 "height": 300,
-                "facing": 1
+                "width": 130
+              },
+              {
+                "x": 960,
+                "height": 320,
+                "width": 130
               }
             ]
+          },
+          {
+            "type": "mountains",
+            "y": 860,
+            "amp": 0.8
+          },
+          {
+            "type": "lone_path",
+            "y": 1145,
+            "depth": 340
           }
         ]
       }

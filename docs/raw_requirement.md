@@ -110,7 +110,7 @@ The prototype code that produced them lives in `docs/reference/prototype/`. It i
 | Chrome           | Elements shared by every slide: ground, frame, seal, tag pill, wave band, progress bar, footer.           |
 | Scene            | An ordered list of layers drawn in the visual region.                                                      |
 | Template         | A named, parameterised scene (`group`, `landscape`) that expands to layers.                               |
-| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`. |
+| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`, `lone_path`. |
 | Character        | A parametric stylised figure defined by a role preset plus overrides.                                     |
 | Formation        | A placement rule for characters (`centre_pair`, `line`, `v_shape`).                                       |
 | Gold leaf        | Texture of jittered gold squares with thin seams and rare worn spots showing red underlayer.             |
@@ -380,6 +380,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `regalia`    | `x`, `y` (floor line), `scale`; optional `screen` (default true) — crown and seal on a cushion and low table, before a four-panel screen (backlog #9) | flat |
 | `fallen_flags` | `x`, `y` (ground line), `scale` — an abandoned camp: empty tent, spears lying at rest, a torn flag on a leaning pole, a cold fire (backlog #10) | flat |
 | `sail_boat`  | `x`, `y` (waterline), `scale`; optional `facing` (1 / -1) — sailing boat with two ribbed sails and a bow eye, no crew (backlog #11) | flat |
+| `lone_path`  | `y` (near end); optional `depth` (default 360), `mist` (default true) — a path narrowing into misty distance, grass tufts at its edges (backlog #12) | flat |
 
 **Character**
 

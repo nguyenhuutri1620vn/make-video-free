@@ -15,6 +15,7 @@ from history_shorts.config import (
     ElephantLayer,
     FallenFlagsLayer,
     GongLayer,
+    LonePathLayer,
     MapLayer,
     RegaliaLayer,
     SailBoatLayer,
@@ -32,6 +33,7 @@ from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.lone_path import draw_lone_path
 from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.sail_boat import draw_sail_boat
 from history_shorts.scene.scroll import draw_scroll
@@ -303,3 +305,24 @@ def test_sail_boat_bounds_and_mirror(ctx: Any, flat_base: Base) -> None:
     left = draw_sail_boat(base.copy(), SailBoatLayer(540, 1100, 1.0, -1), ctx, 1)
     lxs = _changed(base, left)[1]
     assert lxs.max() <= 540 + 210 and lxs.min() >= 540 - 182  # mirrored about x = 540
+
+
+# --- lone path (backlog #12) --------------------------------------------------------------
+
+
+def test_lone_path_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "lone_path", "y": 1145, "depth": 340, "mist": False}
+    assert _layer(tmp_script, raw) == LonePathLayer(1145, 340, False)
+    assert LAYER_DRAWERS[LonePathLayer] is draw_lone_path
+
+
+def test_lone_path_narrows_into_the_distance(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_lone_path(base.copy(), LonePathLayer(1140, 340, False), ctx, 1)
+    changed = np.any(after != base, axis=-1)
+    near = np.count_nonzero(changed[1130])
+    far = np.count_nonzero(changed[1140 - 300])
+    assert near > 250 and far < near / 3
+    assert np.nonzero(changed)[0].max() <= 1140 + 2
+    misty = draw_lone_path(base.copy(), LonePathLayer(1140, 340), ctx, 1)
+    assert not np.array_equal(after, misty)
