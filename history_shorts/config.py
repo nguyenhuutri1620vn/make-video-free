@@ -52,6 +52,7 @@ from history_shorts.scene_config import (
     ScrollLayer,
     StiltHouseLayer,
     SunLayer,
+    TabletLayer,
     TemplateScene,
     TempleLayer,
 )
@@ -619,6 +620,7 @@ __all__ = [
     "LonePathLayer",
     "LanternItem",
     "LanternsLayer",
+    "TabletLayer",
     "MountainsLayer",
     "Palette",
     "PeakItem",

@@ -604,43 +604,26 @@
       "scene": {
         "layers": [
           {
-            "type": "moon",
-            "x": 760,
-            "y": 480,
-            "r": 120,
-            "rings": 1
+            "type": "sun",
+            "x": 540,
+            "y": 600,
+            "r": 250,
+            "rings": 2
           },
           {
-            "type": "peaks",
-            "y": 960,
-            "fill": "gradient",
+            "type": "clouds",
+            "outline": "gold",
             "items": [
               {
-                "x": 160,
-                "height": 360,
-                "width": 130
+                "x": 200,
+                "y": 380,
+                "scale": 0.8
               },
               {
-                "x": 900,
-                "height": 400,
-                "width": 140
-              }
-            ]
-          },
-          {
-            "type": "peaks",
-            "y": 1000,
-            "fill": "eggshell",
-            "items": [
-              {
-                "x": 80,
-                "height": 200,
-                "width": 140
-              },
-              {
-                "x": 1000,
-                "height": 220,
-                "width": 150
+                "x": 880,
+                "y": 400,
+                "scale": 0.8,
+                "flip": -1
               }
             ]
           },
@@ -650,18 +633,10 @@
             "height": 52
           },
           {
-            "type": "characters",
-            "baseline": 1100,
-            "items": [
-              {
-                "role": "general",
-                "prop": "flag",
-                "x": 540,
-                "baseline": 1100,
-                "height": 600,
-                "facing": 1
-              }
-            ]
+            "type": "tablet",
+            "x": 540,
+            "y": 1095,
+            "scale": 1.75
           }
         ]
       }

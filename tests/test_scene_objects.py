@@ -23,6 +23,7 @@ from history_shorts.config import (
     SailBoatLayer,
     ScrollLayer,
     StiltHouseLayer,
+    TabletLayer,
     TempleLayer,
     load_script,
 )
@@ -41,6 +42,7 @@ from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.sail_boat import draw_sail_boat
 from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.stilt_house import draw_stilt_house
+from history_shorts.scene.tablet import draw_tablet
 from history_shorts.scene.temple import draw_temple
 
 Base = Callable[[], FloatImage]
@@ -348,3 +350,22 @@ def test_lanterns_float_and_reflect(ctx: Any, flat_base: Base) -> None:
     assert ys.min() >= 1000 - 62 and ys.max() <= 1000 + 52
     assert xs.min() >= 540 - 32 and xs.max() <= 540 + 32
     assert ys.max() > 1000 + 20  # the reflection is there
+
+
+# --- tablet (backlog #14) -----------------------------------------------------------------
+
+
+def test_tablet_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "tablet", "x": 540, "y": 1095, "scale": 1.75}
+    assert _layer(tmp_script, raw) == TabletLayer(540, 1095, 1.75)
+    assert LAYER_DRAWERS[TabletLayer] is draw_tablet
+
+
+def test_tablet_stands_on_the_floor(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_tablet(base.copy(), TabletLayer(540, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, after)
+    # crown at -348, smoke curls to about -286; altar top is 280 wide
+    assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 352
+    assert xs.min() >= 540 - 142 and xs.max() <= 540 + 142
+    assert np.array_equal(after, draw_tablet(flat_base(), TabletLayer(540, 1100, 1.0), ctx, 1))

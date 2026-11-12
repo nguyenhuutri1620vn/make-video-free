@@ -27,6 +27,7 @@ from . import (
     scroll,
     sky,
     stilt_house,
+    tablet,
     temple,
     terrain,
 )
@@ -56,6 +57,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         sail_boat.DRAWERS,
         lone_path.DRAWERS,
         lanterns.DRAWERS,
+        tablet.DRAWERS,
     )
 )
 

@@ -299,6 +299,15 @@ class LanternsLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class TabletLayer:
+    """A blank memorial tablet on an altar (backlog #14): x, floor y, scale."""
+
+    x: float
+    y: float
+    scale: float
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -333,6 +342,7 @@ Layer = (
     | SailBoatLayer
     | LonePathLayer
     | LanternsLayer
+    | TabletLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -362,6 +372,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "sail_boat": SailBoatLayer,
     "lone_path": LonePathLayer,
     "lanterns": LanternsLayer,
+    "tablet": TabletLayer,
 }
 
 
@@ -711,6 +722,10 @@ def _parse_lone_path(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+def _parse_tablet(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return TabletLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -767,6 +782,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "sail_boat": _parse_sail_boat,
     "lone_path": _parse_lone_path,
     "lanterns": _parse_lanterns,
+    "tablet": _parse_tablet,
 }
 
 
