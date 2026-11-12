@@ -12,6 +12,7 @@ from history_shorts.primitives import FloatImage
 from . import (
     banners,
     boat,
+    citadel,
     clouds,
     delta_map,
     drum,
@@ -60,6 +61,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         lanterns.DRAWERS,
         tablet.DRAWERS,
         horse.DRAWERS,
+        citadel.DRAWERS,
     )
 )
 

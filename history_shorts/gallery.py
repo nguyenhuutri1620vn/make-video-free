@@ -28,6 +28,7 @@ from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import (
     BannersLayer,
     CharacterSpec,
+    CitadelLayer,
     DrumLayer,
     ElephantLayer,
     FallenFlagsLayer,
@@ -98,6 +99,7 @@ GALLERY_LANTERNS: Final = LanternsLayer(
 )
 GALLERY_TABLET: Final = TabletLayer(x=540, y=1180, scale=1.5)
 GALLERY_HORSE: Final = HorseLayer(x=530, y=1160, scale=1.6)
+GALLERY_CITADEL: Final = CitadelLayer(x=540, y=980, scale=0.85)
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -131,6 +133,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("lanterns", "lanterns", GALLERY_LANTERNS, Box(240, 600, 840, 1400)),
     ("tablet", "tablet", GALLERY_TABLET, Box(240, 580, 840, 1380)),
     ("horse", "horse", GALLERY_HORSE, Box(240, 600, 840, 1400)),
+    ("citadel", "citadel", GALLERY_CITADEL, Box(240, 580, 840, 1380)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 

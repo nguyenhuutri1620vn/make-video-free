@@ -323,6 +323,7 @@ LAYER_LABELS = [
     "lanterns",
     "tablet",
     "horse",
+    "citadel",
 ]
 ART_MIN_DIFF = 40  # 0..255: a cell with art differs from bare ground by at least this somewhere
 ART_MIN_PIXELS = 200
@@ -348,8 +349,8 @@ def test_layer_cells_label_every_type_once_in_reading_order() -> None:
 def test_layer_cells_sit_below_the_characters_four_to_a_row() -> None:
     cells = gallery.layer_cells()
     first_row_y = gallery.HEADER_H + 8 * gallery.CELL_H
-    assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(27)]
-    assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(27)]
+    assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(28)]
+    assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(28)]
     assert all(c.box.width == gallery.CELL_W and c.box.height == gallery.CELL_H for c in cells)
     assert max(c.box.y1 for c in cells) == gallery.SHEET_H
     assert not any(c.box.intersects(g.box) for c in cells for g in gallery.grid_cells())

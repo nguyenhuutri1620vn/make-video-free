@@ -11,6 +11,7 @@ import pytest
 
 from history_shorts.config import (
     BannersLayer,
+    CitadelLayer,
     DrumLayer,
     ElephantLayer,
     FallenFlagsLayer,
@@ -32,6 +33,7 @@ from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.banners import draw_banners
+from history_shorts.scene.citadel import draw_citadel
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
@@ -391,3 +393,22 @@ def test_horse_stands_on_its_plinth(ctx: Any, flat_base: Base) -> None:
     assert xs.min() >= 540 - 132 and xs.max() <= 540 + 138
     mirrored = draw_horse(base.copy(), HorseLayer(540, 1100, 1.0, -1), ctx, 1)
     assert _changed(base, mirrored)[1].min() < xs.min()  # the muzzle now passes the left edge
+
+
+# --- citadel (backlog #17) ----------------------------------------------------------------
+
+
+def test_citadel_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "citadel", "x": 540, "y": 860, "scale": 1.3}
+    assert _layer(tmp_script, raw) == CitadelLayer(540, 860, 1.3)
+    assert LAYER_DRAWERS[CitadelLayer] is draw_citadel
+
+
+def test_citadel_fits_its_moat(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_citadel(base.copy(), CitadelLayer(540, 900, 1.0), ctx, 1)
+    ys, xs = _changed(base, after)
+    # moat 340 x 129; the outer wall face hangs 20 below its 114 ring, so 134 below the centre
+    assert xs.min() >= 540 - 342 and xs.max() <= 540 + 342
+    assert ys.min() >= 900 - 131 and ys.max() <= 900 + 136
+    assert np.array_equal(after, draw_citadel(flat_base(), CitadelLayer(540, 900, 1.0), ctx, 1))
