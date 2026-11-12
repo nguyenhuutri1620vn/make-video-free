@@ -30,4 +30,4 @@ When the list runs out, append new proposals in the same format, auto-approved.
 | 16 | reuse | No new layer: give `hai_ba_trung` slide `war` the map with the northern arrow, and swap its repeated scenes for the new layers. | `hai_ba_trung` | done (2b3ec0c) |
 | 17 | `citadel` | A spiral earthen citadel seen from above-front: three concentric ramparts with a moat and a gate, gold ridge lines (spec Appendix B "thành quách"). | library item for era packs; gallery | done (c3c549b) |
 | 18 | `bamboo_village` | A bamboo hedge ring around a few thatched roofs and a banyan tree at the village gate (spec Appendix B "làng tre"). | library item for era packs; gallery | done (6644cda) |
-| 19 | effects | No new layer: give `hai_ba_trung` the M8 effects it lacks (motions, transitions, cold tone for the fall, text fade-in) and re-render both example videos. | `hai_ba_trung` | approved (auto, 2026-11-13) |
+| 19 | effects | No new layer: give `hai_ba_trung` the M8 effects it lacks (motions, transitions, cold tone for the fall, text fade-in) and re-render both example videos. | `hai_ba_trung` | done (1d2421b) |
