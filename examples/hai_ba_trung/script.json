@@ -1,0 +1,108 @@
+{
+  "schema_version": "2.1",
+  "title": "Hai Bà Trưng: 3 năm độc lập và cái giá của việc mất nước",
+  "sources": [
+    "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương [CẦN KIỂM TRA SỐ TRANG VÀ BẢN DỊCH]",
+    "Phạm Việp, Hậu Hán thư, quyển 86, Nam man truyện [CẦN KIỂM CHỨNG: việc thu trống đồng để đúc ngựa đồng và số quân, số thuyền]"
+  ],
+  "slides": [
+    {
+      "id": "hook",
+      "tag": "HOOK",
+      "title": "3 năm → 900 năm",
+      "subtitle": "Vì sao?",
+      "narration": "Hai người phụ nữ giữ nước được 3 năm. Mất họ… người Việt phải đợi gần 900 năm.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "context",
+      "tag": "BỐI CẢNH",
+      "title": "Năm 40 · Mê Linh",
+      "subtitle": "Trưng Trắc và Trưng Nhị dựng cờ khởi nghĩa",
+      "narration": "Năm 40, Trưng Trắc và Trưng Nhị, con gái một Lạc tướng, dựng cờ khởi nghĩa, đuổi thái thú Tô Định chạy về nước.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "landscape"
+      }
+    },
+    {
+      "id": "peak",
+      "tag": "ĐỈNH CAO",
+      "title": "65 thành\nTrưng Vương",
+      "subtitle": "Bỏ thuế nặng, bỏ luật hà khắc",
+      "narration": "65 thành trì theo về. Trưng Trắc lên ngôi, bỏ thuế nặng, bỏ luật hà khắc. Tương truyền, nhiều tướng lĩnh dưới trướng hai bà cũng là phụ nữ.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "group"
+      }
+    },
+    {
+      "id": "war",
+      "tag": "BIẾN CỐ",
+      "title": "2 vạn quân\n2.000 thuyền xe",
+      "subtitle": "Nhà Hán cử Mã Viện sang đánh",
+      "narration": "Nhưng nhà Hán không chấp nhận. Năm 42, họ cử danh tướng Mã Viện, mang theo 2 vạn quân và 2 nghìn thuyền xe.",
+      "claim": true,
+      "source": 1
+    },
+    {
+      "id": "fall",
+      "tag": "SỤP ĐỔ",
+      "title": "Năm 43 · Sông Hát",
+      "subtitle": "Thua ở Lãng Bạc, lui về Cấm Khê",
+      "narration": "Thua ở Lãng Bạc, lui về Cấm Khê, rồi thế cùng. Năm 43, hai bà gieo mình xuống sông Hát, không để rơi vào tay giặc.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "landscape",
+        "boats": []
+      }
+    },
+    {
+      "id": "loss",
+      "tag": "NGƯỜI VIỆT MẤT GÌ",
+      "title": "Trống đồng →\nNgựa đồng",
+      "subtitle": "Một nền văn hóa thành chiến lợi phẩm",
+      "narration": "Mã Viện đặt cả vùng đất dưới sự cai trị trực tiếp. Theo Hậu Hán Thư, ông thu trống đồng của người Lạc Việt, nấu chảy để đúc ngựa đồng. Biểu tượng của cả một nền văn hóa bị biến thành chiến lợi phẩm.",
+      "claim": true,
+      "source": 1
+    },
+    {
+      "id": "legacy",
+      "tag": "NHỮNG GÌ CÒN LẠI",
+      "title": "Có thứ không\nnấu chảy được",
+      "subtitle": "Đền thờ hai bà ở Hát Môn",
+      "narration": "Nhưng có thứ không nấu chảy được. Tương truyền, chỉ vài năm sau, dân đã lập đền thờ hai bà. Suốt gần 900 năm Bắc thuộc, câu chuyện ấy được truyền từ đời này sang đời khác, cho đến khi Ngô Quyền giành lại độc lập năm 939.",
+      "claim": true,
+      "source": 0,
+      "scene": {
+        "template": "landscape",
+        "boats": []
+      }
+    },
+    {
+      "id": "outro",
+      "tag": "PHẦN 2",
+      "title": "Những nữ tướng\ncủa Hai Bà",
+      "subtitle": "Họ là ai?",
+      "narration": "3 năm độc lập… đủ để nhắc người Việt suốt 900 năm rằng: mình từng làm được. Phần sau: những nữ tướng của hai bà là ai?",
+      "scene": {
+        "template": "group"
+      }
+    }
+  ]
+}
