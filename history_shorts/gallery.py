@@ -26,6 +26,7 @@ from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import (
+    BannersLayer,
     CharacterSpec,
     DrumLayer,
     ElephantLayer,
@@ -79,6 +80,7 @@ GALLERY_TEMPLE: Final = TempleLayer(x=540, y=1100, scale=1.3)
 GALLERY_SCROLL: Final = ScrollLayer(x=540, y=900, scale=1.3)
 GALLERY_ELEPHANT: Final = ElephantLayer(x=520, y=1150, scale=1.6)
 GALLERY_STILT_HOUSE: Final = StiltHouseLayer(x=600, y=1150, scale=1.4)
+GALLERY_BANNERS: Final = BannersLayer(y=1180, rows=3)
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -104,6 +106,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("scroll", "scroll", GALLERY_SCROLL, Box(240, 560, 840, 1360)),
     ("elephant", "elephant", GALLERY_ELEPHANT, Box(240, 600, 840, 1400)),
     ("stilt house", "stilt_house", GALLERY_STILT_HOUSE, Box(240, 560, 840, 1360)),
+    ("banners", "banners", GALLERY_BANNERS, Box(240, 560, 840, 1360)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 

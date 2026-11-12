@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from history_shorts.config import (
+    BannersLayer,
     DrumLayer,
     ElephantLayer,
     GongLayer,
@@ -22,6 +23,7 @@ from history_shorts.config import (
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
+from history_shorts.scene.banners import draw_banners
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
@@ -213,3 +215,23 @@ def test_stilt_house_bounds_and_bamboo(ctx: Any, flat_base: Base) -> None:
     with_bamboo = draw_stilt_house(base.copy(), StiltHouseLayer(600, 1100, 1.0), ctx, 1)
     ys, xs = _changed(base, with_bamboo)
     assert xs.min() < 600 - 200 and ys.min() >= 1100 - 380  # bamboo to the left, up to -360
+
+
+# --- banners (backlog #8) -----------------------------------------------------------------
+
+
+def test_banners_parse(tmp_script: ScriptFactory) -> None:
+    assert _layer(tmp_script, {"type": "banners", "y": 1080}) == BannersLayer(1080)
+    assert LAYER_DRAWERS[BannersLayer] is draw_banners
+    with pytest.raises(ValidationFailed):
+        _layer(tmp_script, {"type": "banners", "y": 1080, "rows": 9})
+
+
+def test_banners_rows_stack_upwards(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    one = draw_banners(base.copy(), BannersLayer(1080, 1), ctx, 1)
+    four = draw_banners(base.copy(), BannersLayer(1080, 4), ctx, 1)
+    top_one, top_four = _changed(base, one)[0].min(), _changed(base, four)[0].min()
+    assert top_four < top_one  # back rows sit higher
+    assert _changed(base, four)[0].max() <= 1080 + 90 + 1  # hill depth below the baseline
+    assert np.array_equal(four, draw_banners(flat_base(), BannersLayer(1080, 4), ctx, 1))

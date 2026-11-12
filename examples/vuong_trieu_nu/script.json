@@ -600,25 +600,35 @@
       "motion": "zoom_out",
       "transition": "circleopen",
       "scene": {
-        "template": "group",
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 230,
+            "rings": 2
           },
           {
-            "role": "leader"
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
           },
           {
-            "role": "general_alt"
-          },
-          {
-            "role": "general_alt"
-          },
-          {
-            "role": "general"
-          },
-          {
-            "role": "general"
+            "type": "banners",
+            "y": 1080,
+            "rows": 4
           }
         ]
       }

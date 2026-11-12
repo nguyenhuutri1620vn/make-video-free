@@ -10,6 +10,7 @@ from history_shorts.config import Layer
 from history_shorts.primitives import FloatImage
 
 from . import (
+    banners,
     boat,
     clouds,
     delta_map,
@@ -44,6 +45,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         scroll.DRAWERS,
         elephant.DRAWERS,
         stilt_house.DRAWERS,
+        banners.DRAWERS,
     )
 )
 

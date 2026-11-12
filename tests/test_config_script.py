@@ -542,6 +542,7 @@ def test_layer_types_registry() -> None:
         "scroll",
         "elephant",
         "stilt_house",
+        "banners",
     ]
     assert LAYER_TYPES["sun"] is SunLayer and LAYER_TYPES["moon"] is SunLayer
     assert LAYER_TYPES["boat"] is BoatLayer
@@ -554,7 +555,7 @@ def test_unknown_layer_type_lists_allowed(tmp_script: ScriptFactory) -> None:
     assert error.endswith(
         "allowed: sun, moon, clouds, mountains, peaks, hills, river, ground, "
         "characters, boat, birds, lotus, drum, gong, temple, map, scroll, elephant, "
-        "stilt_house"
+        "stilt_house, banners"
     )
 
 
