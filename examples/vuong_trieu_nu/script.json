@@ -1,0 +1,1068 @@
+{
+  "schema_version": "2.1",
+  "title": "Vương triều của những người phụ nữ",
+  "sources": [
+    "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
+    {
+      "text": "Bùi Đức Mậu, Lại Thị Thanh Bình (2025). \"Tục thờ nữ tướng Lê Chân của cư dân thành phố Hải Phòng\". Tạp chí Thông tin Khoa học xã hội, số 2(506), tr. 51–58. ISSN 0866-8647. https://vjol.info.vn/ssir/article/view/129011",
+      "type": "journal"
+    },
+    {
+      "text": "Báo Dân Việt, \"Một nữ đại tướng huyền thoại của dân tộc Việt Nam, tên tục là Vũ Thị Thục...\"",
+      "type": "news"
+    },
+    {
+      "text": "Báo Phú Thọ, \"Nữ đại tướng huyền thoại của dân tộc Việt\"",
+      "type": "news"
+    },
+    "[CẦN BỔ SUNG NGUỒN: Ban Chiêu và sách Nữ giới, niên đại so với khởi nghĩa Hai Bà Trưng]",
+    "[CẦN BỔ SUNG NGUỒN: nữ tướng Thánh Thiên]",
+    "[CẦN BỔ SUNG NGUỒN: dấu vết mẫu hệ trong xã hội Việt cổ]"
+  ],
+  "slides": [
+    {
+      "id": "vua-nu",
+      "title": "VUA: NỮ",
+      "narration": "Vua là phụ nữ.",
+      "motion": "zoom_in",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 260,
+            "rings": 1
+          },
+          {
+            "type": "ground",
+            "y": 1100,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "x": 540,
+                "baseline": 1108,
+                "height": 820,
+                "prop": "none"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tuong-nu",
+      "title": "TƯỚNG: NỮ",
+      "motion": "zoom_in",
+      "narration": "Tướng… cũng là phụ nữ.",
+      "text_in": "fade",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general"
+          },
+          {
+            "role": "general"
+          }
+        ]
+      }
+    },
+    {
+      "id": "nam-40",
+      "title": "Việt Nam · năm 40",
+      "narration": "Nghe như phim, nhưng là chuyện thật ở Việt Nam.",
+      "motion": "zoom_out",
+      "transition": "dissolve",
+      "scene": {
+        "template": "landscape"
+      }
+    },
+    {
+      "id": "nu-gioi",
+      "title": "Sách “Nữ giới”",
+      "subtitle": "Nhà Hán dạy phụ nữ nhẫn nhịn, phục tùng",
+      "claim": true,
+      "source": 4,
+      "narration": "Không lâu sau, bên nhà Hán, bà Ban Chiêu viết hẳn một cuốn sách dạy phụ nữ phải nhẫn nhịn, phục tùng.",
+      "motion": "pan_left",
+      "transition": "fadeblack",
+      "tone": "gray",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 300,
+            "y": 470,
+            "r": 110,
+            "rings": 1
+          },
+          {
+            "type": "peaks",
+            "y": 1000,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 220,
+                "height": 380,
+                "width": 140
+              },
+              {
+                "x": 560,
+                "height": 440,
+                "width": 150
+              },
+              {
+                "x": 880,
+                "height": 360,
+                "width": 140
+              }
+            ]
+          },
+          {
+            "type": "clouds",
+            "outline": "gold_dk",
+            "items": [
+              {
+                "x": 700,
+                "y": 700,
+                "scale": 1.0
+              },
+              {
+                "x": 320,
+                "y": 820,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1090,
+            "height": 60
+          }
+        ]
+      }
+    },
+    {
+      "id": "cong-ba",
+      "title": "Lệnh ông\nkhông bằng cồng bà",
+      "narration": "Còn ông bà mình thì có câu: lệnh ông… không bằng cồng bà.",
+      "motion": "zoom_in",
+      "transition": "wipeleft",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 760,
+            "y": 520,
+            "r": 170,
+            "rings": 2
+          },
+          {
+            "type": "mountains",
+            "y": 930,
+            "amp": 1.2
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "prop": "flag",
+                "x": 470,
+                "baseline": 1100,
+                "height": 620,
+                "facing": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "me-linh",
+      "title": "Năm 40 · Mê Linh",
+      "subtitle": "Trưng Trắc, Trưng Nhị dựng cờ",
+      "motion": "zoom_in",
+      "claim": true,
+      "source": 0,
+      "narration": "Năm 40, hai chị em Trưng Trắc, Trưng Nhị dựng cờ ở Mê Linh. Thái thú nhà Hán bỏ chạy.",
+      "transition": "fade",
+      "scene": {
+        "template": "landscape",
+        "moon": false,
+        "boats": [
+          {
+            "x": 540,
+            "y": 1080,
+            "scale": 1.6,
+            "crew": [
+              {
+                "role": "leader",
+                "facing": 1
+              },
+              {
+                "role": "boat_crew",
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "65-thanh",
+      "title": "65 thành",
+      "subtitle": "theo về Hai Bà",
+      "claim": true,
+      "source": 0,
+      "narration": "65 thành theo về.",
+      "motion": "zoom_in",
+      "transition": "dissolve",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 240,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "items": [
+              {
+                "x": 270,
+                "y": 330,
+                "scale": 0.8
+              },
+              {
+                "x": 860,
+                "y": 330,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "mountains",
+            "y": 900,
+            "amp": 1.0
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "general",
+                "x": 180,
+                "baseline": 1080,
+                "height": 380,
+                "facing": -1
+              },
+              {
+                "role": "general",
+                "x": 900,
+                "baseline": 1080,
+                "height": 380,
+                "facing": 1
+              },
+              {
+                "role": "general_alt",
+                "x": 330,
+                "baseline": 1090,
+                "height": 450,
+                "facing": -1
+              },
+              {
+                "role": "general_alt",
+                "x": 750,
+                "baseline": 1090,
+                "height": 450,
+                "facing": 1
+              },
+              {
+                "role": "leader",
+                "x": 540,
+                "baseline": 1100,
+                "height": 560,
+                "facing": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "trung-vuong",
+      "title": "TRƯNG VƯƠNG",
+      "motion": "pan_up",
+      "claim": true,
+      "source": 0,
+      "narration": "Và Trưng Trắc… lên làm vua.",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "it-ai",
+      "title": "Nhưng ít ai để ý…",
+      "narration": "Nhưng điều ít ai để ý là: đứng quanh hai bà là cả một hàng nữ tướng.",
+      "motion": "pan_right",
+      "transition": "fadeblack",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 880,
+            "amp": 1.0
+          },
+          {
+            "type": "clouds",
+            "items": [
+              {
+                "x": 270,
+                "y": 330,
+                "scale": 0.8
+              },
+              {
+                "x": 860,
+                "y": 330,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "formation": "line",
+            "items": [
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "le-chan",
+      "title": "LÊ CHÂN",
+      "subtitle": "Trấn giữ miền biển",
+      "claim": true,
+      "source": 1,
+      "narration": "Lê Chân, theo thần tích là người giữ vùng biển mà sau này thành Hải Phòng.",
+      "motion": "zoom_in",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "template": "landscape",
+        "boats": [
+          {
+            "x": 540,
+            "y": 1090,
+            "scale": 2.0,
+            "crew": [
+              {
+                "role": "general",
+                "facing": 1
+              },
+              {
+                "role": "boat_crew",
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "bat-nan",
+      "title": "BÁT NÀN",
+      "subtitle": "Vũ Thị Thục",
+      "claim": true,
+      "source": [
+        2,
+        3
+      ],
+      "narration": "Bát Nàn, theo thần tích tên thật là Vũ Thị Thục.",
+      "motion": "zoom_in",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "general_alt"
+          }
+        ]
+      }
+    },
+    {
+      "id": "thanh-thien",
+      "title": "THÁNH THIÊN",
+      "claim": true,
+      "source": 5,
+      "narration": "Thánh Thiên.",
+      "motion": "zoom_in",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 760,
+            "y": 480,
+            "r": 120,
+            "rings": 1
+          },
+          {
+            "type": "peaks",
+            "y": 960,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 160,
+                "height": 360,
+                "width": 130
+              },
+              {
+                "x": 900,
+                "height": 400,
+                "width": 140
+              }
+            ]
+          },
+          {
+            "type": "peaks",
+            "y": 1000,
+            "fill": "eggshell",
+            "items": [
+              {
+                "x": 80,
+                "height": 200,
+                "width": 140
+              },
+              {
+                "x": 1000,
+                "height": 220,
+                "width": 150
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "general",
+                "prop": "flag",
+                "x": 540,
+                "baseline": 1100,
+                "height": 600,
+                "facing": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "con-nhieu",
+      "title": "+ còn rất nhiều",
+      "narration": "Và còn nhiều, nhiều người nữa.",
+      "motion": "zoom_out",
+      "transition": "circleopen",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general"
+          },
+          {
+            "role": "general"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mau-he",
+      "title": "Dấu vết mẫu hệ",
+      "subtitle": "Vì sao nhiều nữ tướng đến vậy?",
+      "claim": true,
+      "source": 6,
+      "narration": "Vì sao lại nhiều đến vậy? Vì xã hội Việt cổ còn giữ nhiều dấu vết mẫu hệ. Phụ nữ có tiếng nói thật sự.",
+      "motion": "zoom_in",
+      "transition": "dissolve",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 720,
+            "r": 270,
+            "rings": 2
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 300,
+                "y": 400,
+                "scale": 4.0
+              },
+              {
+                "x": 780,
+                "y": 400,
+                "scale": 4.0
+              },
+              {
+                "x": 170,
+                "y": 720,
+                "scale": 3.5
+              },
+              {
+                "x": 910,
+                "y": 720,
+                "scale": 3.5
+              },
+              {
+                "x": 300,
+                "y": 1040,
+                "scale": 3.0
+              },
+              {
+                "x": 780,
+                "y": 1040,
+                "scale": 3.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ma-vien",
+      "title": "MÃ VIỆN · năm 42",
+      "claim": true,
+      "source": 0,
+      "narration": "Năm 42, nhà Hán cử Mã Viện sang.",
+      "motion": "pan_down",
+      "transition": "fadeblack",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "peaks",
+            "y": 900,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 200,
+                "height": 300,
+                "width": 120
+              },
+              {
+                "x": 540,
+                "height": 360,
+                "width": 130
+              },
+              {
+                "x": 880,
+                "height": 300,
+                "width": 120
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 900,
+            "height": 290
+          },
+          {
+            "type": "boat",
+            "x": 250,
+            "y": 960,
+            "scale": 1.4,
+            "crew": []
+          },
+          {
+            "type": "boat",
+            "x": 560,
+            "y": 990,
+            "scale": 1.6,
+            "crew": []
+          },
+          {
+            "type": "boat",
+            "x": 850,
+            "y": 960,
+            "scale": 1.4,
+            "crew": []
+          },
+          {
+            "type": "boat",
+            "x": 360,
+            "y": 1070,
+            "scale": 2.0,
+            "crew": []
+          },
+          {
+            "type": "boat",
+            "x": 760,
+            "y": 1090,
+            "scale": 2.2,
+            "crew": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "bo-di",
+      "title": "Họ bỏ đi…",
+      "claim": true,
+      "source": 0,
+      "narration": "Và đây là chi tiết khiến mình lặng người: sử cũ chép rằng nhiều người từng theo hai bà đã bỏ đi…",
+      "motion": "zoom_out",
+      "transition": "fadeblack",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "template": "group",
+        "sun": false,
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "khong-tin",
+      "title": "vì không tin\nphụ nữ thắng được.",
+      "claim": true,
+      "source": 0,
+      "narration": "…chỉ vì không tin phụ nữ đánh thắng được.",
+      "motion": "zoom_in",
+      "tone": "cold",
+      "text_in": "fade",
+      "music_cut": {
+        "at": 0.0,
+        "duration": 1.0
+      },
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 950,
+            "amp": 1.4
+          },
+          {
+            "type": "peaks",
+            "y": 1000,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 180,
+                "height": 420,
+                "width": 150
+              },
+              {
+                "x": 900,
+                "height": 460,
+                "width": 160
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "x": 500,
+                "height": 300,
+                "facing": -1
+              },
+              {
+                "role": "leader",
+                "x": 580,
+                "height": 300,
+                "facing": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "song-hat",
+      "title": "Năm 43",
+      "subtitle": "Sông Hát",
+      "claim": true,
+      "source": 0,
+      "narration": "Tương truyền, năm 43, hai bà gieo mình xuống sông Hát.",
+      "motion": "zoom_out",
+      "transition": "fade",
+      "tone": "cold",
+      "scene": {
+        "template": "landscape",
+        "boats": []
+      }
+    },
+    {
+      "id": "ba-nam",
+      "title": "Vương triều ba năm",
+      "claim": true,
+      "source": 0,
+      "narration": "Vương triều ấy chỉ tồn tại ba năm.",
+      "motion": "zoom_in",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 760,
+            "r": 260,
+            "rings": 1
+          },
+          {
+            "type": "clouds",
+            "items": [
+              {
+                "x": 270,
+                "y": 330,
+                "scale": 0.8
+              },
+              {
+                "x": 860,
+                "y": 330,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "x": 440,
+                "height": 520,
+                "facing": -1
+              },
+              {
+                "role": "leader",
+                "x": 640,
+                "height": 520,
+                "facing": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "den-tho",
+      "title": "Gần 2.000 năm sau",
+      "subtitle": "Đền thờ các nữ tướng khắp miền Bắc",
+      "narration": "Nhưng gần hai nghìn năm sau, đi khắp miền Bắc, bạn vẫn gặp những ngôi đền thờ các nữ tướng của hai bà.",
+      "motion": "pan_right",
+      "transition": "dissolve",
+      "tone": "warm",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 200,
+            "rings": 1
+          },
+          {
+            "type": "peaks",
+            "y": 900,
+            "fill": "eggshell",
+            "items": [
+              {
+                "x": 120,
+                "height": 220,
+                "width": 150
+              },
+              {
+                "x": 960,
+                "height": 240,
+                "width": 150
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 900,
+            "height": 290
+          },
+          {
+            "type": "lotus",
+            "x": 280,
+            "y": 1050,
+            "scale": 2.4
+          },
+          {
+            "type": "lotus",
+            "x": 790,
+            "y": 1070,
+            "scale": 2.6
+          },
+          {
+            "type": "lotus",
+            "x": 540,
+            "y": 970,
+            "scale": 1.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "chua-quen",
+      "title": "…nhưng chưa\nbao giờ quên họ.",
+      "narration": "Người ta từng không tin họ… nhưng chưa bao giờ quên họ.",
+      "motion": "zoom_in",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 540,
+            "y": 560,
+            "r": 180,
+            "rings": 2
+          },
+          {
+            "type": "river",
+            "y": 880,
+            "height": 290
+          },
+          {
+            "type": "lotus",
+            "x": 540,
+            "y": 1060,
+            "scale": 4.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "cta",
+      "title": "Bạn kể được tên\nbao nhiêu nữ tướng?",
+      "subtitle": "Để lại comment nhé",
+      "narration": "Bạn kể được tên bao nhiêu nữ tướng? Để lại comment nhé.",
+      "motion": "zoom_out",
+      "transition": "fade",
+      "text_in": "fade",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general"
+          },
+          {
+            "role": "general"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tap-2",
+      "title": "TẬP 2: LÊ CHÂN",
+      "claim": true,
+      "source": 1,
+      "narration": "Tập sau, mình kể về Lê Chân, người mà theo thần tích đã khai phá vùng đất nay là Hải Phòng.",
+      "motion": "zoom_in",
+      "transition": "slideup",
+      "text_in": "fade",
+      "scene": {
+        "template": "landscape",
+        "moon": false,
+        "boats": [
+          {
+            "x": 540,
+            "y": 1090,
+            "scale": 2.2,
+            "crew": [
+              {
+                "role": "general",
+                "facing": 1
+              },
+              {
+                "role": "boat_crew",
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -19,6 +19,7 @@ from history_shorts import __version__
 from history_shorts.audio import AudioPlan
 from history_shorts.config import Script, Theme, load_script, load_theme
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
+from history_shorts.ffmpeg import TextLayer
 from history_shorts.video import (
     DEFAULT_MUSIC_VOLUME,
     MAX_MUSIC_VOLUME,
@@ -124,7 +125,29 @@ def _load_and_check(
     if theme is not None and script is not None:
         issues.extend(checks.check_all(script, theme))
         plan = _plan_audio(args, script, theme, issues)
+        issues.extend(_check_cues(script, theme, plan))
     return script, theme, issues, plan
+
+
+def _durations(script: Script, theme: Theme, plan: AudioPlan | None) -> list[float]:
+    """Final slide lengths: voice-fitted with ``--audio`` (A.1.6), FR-83 otherwise."""
+    from history_shorts.script_config import slide_duration
+
+    if plan is not None:
+        return list(plan.durations)
+    return [slide_duration(s, theme.video.fps) for s in script.slides]
+
+
+def _check_cues(script: Script, theme: Theme, plan: AudioPlan | None) -> list[Issue]:
+    """Sound-effect and music-cut timing, and an audio stream in every effect file (A.2.1)."""
+    from history_shorts import cues
+    from history_shorts import ffmpeg as ff
+
+    has_audio = None
+    if any(slide.sfx for slide in script.slides):
+        info = ff.find_ffmpeg()  # probing the effects needs ffprobe: exit 4 when missing
+        has_audio = lambda path: ff.has_audio(info, path)  # noqa: E731
+    return cues.cue_problems(script, _durations(script, theme, plan), has_audio)
 
 
 def _plan_audio(
@@ -229,6 +252,20 @@ def _print_summary(
     _print_sources(script)
 
 
+def _text_layers(script: Script, theme: Theme, out: Path) -> tuple[TextLayer | None, ...]:
+    """The fading text layer of each ``text_in`` slide (A.2.1); the PNG holds the background."""
+    from history_shorts.output import layer_paths, slide_path, slides_dir
+
+    directory = slides_dir(out)
+    spec = theme.text_in
+    return tuple(
+        TextLayer(layer_paths(slide_path(directory, i + 1))[1], spec.delay, spec.duration)
+        if slide.text_in != "none"
+        else None
+        for i, slide in enumerate(script.slides)
+    )
+
+
 def _encode_video(
     args: argparse.Namespace,
     script: Script,
@@ -241,9 +278,9 @@ def _encode_video(
 ) -> int:
     """Everything after validation for a full render; see the order in the module docs."""
     from history_shorts import audio as au
+    from history_shorts import cues
     from history_shorts import ffmpeg as ff
     from history_shorts import report as rp
-    from history_shorts.script_config import slide_duration
 
     music: Path | None = args.music
     if music is not None and not music.is_file():
@@ -258,11 +295,9 @@ def _encode_video(
     if music is not None and not ff.has_audio(info, music):
         print(f"ERROR --music: no audio stream in {music}")
         return ValidationFailed.exit_code
-    durations = (
-        list(plan.durations)
-        if plan is not None
-        else [slide_duration(s, theme.video.fps) for s in script.slides]
-    )
+    durations = _durations(script, theme, plan)
+    if music is None and (warning := cues.music_cut_without_music(script)) is not None:
+        print(f"WARN {warning.format()}")
     opts = RenderOptions(
         out=out,
         music=music,
@@ -273,6 +308,10 @@ def _encode_video(
         motions=tuple(slide.motion for slide in script.slides),
         voices=au.voice_inputs(plan, durations, theme.audio) if plan is not None else (),
         audio=theme.audio,
+        transitions=tuple(slide.transition for slide in script.slides),
+        text_layers=_text_layers(script, theme, out),
+        sfx=cues.sfx_inputs(script, durations),
+        cuts=cues.music_cuts(script, durations),
     )
     phase = time.perf_counter()
     paths = _render_pngs(args, script, theme, out)

@@ -43,7 +43,22 @@ MIN_TOTAL_SECONDS = 15.0
 MAX_TOTAL_SECONDS = 90.0
 DEFAULT_FPS = 30
 
-MOTION_NAMES: tuple[str, ...] = ("none", "zoom_in")
+MOTION_NAMES: tuple[str, ...] = (
+    "none", "zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down",
+)  # fmt: skip
+V20_MOTIONS: tuple[str, ...] = ("none", "zoom_in")
+
+# Spec A.2: slide transitions, tones, text fade-in, sound effects and music cuts (2.1 only).
+TRANSITION_NAMES: tuple[str, ...] = (
+    "cut", "fade", "fadeblack", "dissolve", "slideleft", "slideright", "slideup",
+    "wipeleft", "wiperight", "circleopen",
+)  # fmt: skip
+TONE_NAMES: tuple[str, ...] = ("none", "warm", "cold", "gray")
+TEXT_IN_NAMES: tuple[str, ...] = ("none", "fade")
+MAX_SFX = 4
+SFX_GAIN_DB = (-24.0, 12.0)
+MUSIC_CUT_SECONDS = (0.1, 5.0)
+A2_KEYS: tuple[str, ...] = ("transition", "tone", "text_in", "sfx", "music_cut")
 
 # Optional kind of a citation in ``sources`` (spec 6.1), shown in the sources block.
 SOURCE_TYPES: tuple[str, ...] = ("book", "journal", "news", "web", "other")
@@ -69,7 +84,10 @@ _SLIDE_KEYS = (
     "source",
     "id",
     "narration",
+    *A2_KEYS,
 )
+_SFX_KEYS = ("file", "at", "gain_db")
+_MUSIC_CUT_KEYS = ("at", "duration")
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +98,26 @@ class Source:
     type: str | None = None
 
 
+Motion = Literal["none", "zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
+
+
+@dataclass(frozen=True, slots=True)
+class SfxCue:
+    """A sound effect: the owner's file, its start after the slide start, and its gain."""
+
+    path: Path
+    at: float
+    gain_db: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class MusicCut:
+    """Music is silent from slide start + ``at`` for ``duration`` seconds (spec A.2.1)."""
+
+    at: float
+    duration: float
+
+
 @dataclass(frozen=True, slots=True)
 class Slide:
     tag: str
@@ -87,11 +125,16 @@ class Slide:
     subtitle: str
     duration: float | None
     scene: LayerScene | TemplateScene | None
-    motion: Literal["none", "zoom_in"]
+    motion: Motion
     claim: bool
     source: tuple[int, ...]
     id: str = ""  # "sNN" unless the script gives one (2.1); set by the parser
     narration: str | None = None  # normalised spoken text (2.1), None when absent
+    transition: str = "cut"  # how this slide enters from the previous one (A.2)
+    tone: str = "none"
+    text_in: str = "none"
+    sfx: tuple[SfxCue, ...] = ()
+    music_cut: MusicCut | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +282,53 @@ def _narration(ctx: Ctx, obj: Mapping[str, Any]) -> str | None:
     return text
 
 
+def _parse_sfx_cue(ctx: Ctx, raw: object, base: Path) -> SfxCue | None:
+    obj = ctx.mapping(raw, _SFX_KEYS)
+    if not obj:
+        return None
+    errors = len(ctx.issues.errors)
+    name = ctx.str_(obj, "file")
+    at = ctx.num(obj, "at", default=0.0, lo=0, hi=MAX_SLIDE_SECONDS)
+    gain = ctx.num(obj, "gain_db", default=0.0, lo=SFX_GAIN_DB[0], hi=SFX_GAIN_DB[1])
+    path = (base / name).resolve() if name else base
+    if name and not path.is_file():
+        ctx.at("file").error(f"file not found: {path}")
+    return SfxCue(path, at, gain) if len(ctx.issues.errors) == errors else None
+
+
+def _parse_sfx(ctx: Ctx, obj: Mapping[str, Any], base: Path) -> tuple[SfxCue, ...]:
+    """``sfx``: up to ``MAX_SFX`` cues; files resolve relative to the script (spec A.2.1)."""
+    if "sfx" not in obj:
+        return ()
+    pairs = ctx.at("sfx").items(obj["sfx"])
+    if len(pairs) > MAX_SFX:
+        ctx.at("sfx").error(f"must contain at most {MAX_SFX} cues")
+    cues = (_parse_sfx_cue(child, raw, base) for child, raw in pairs)
+    return tuple(cue for cue in cues if cue is not None)
+
+
+def _parse_music_cut(ctx: Ctx, obj: Mapping[str, Any]) -> MusicCut | None:
+    if "music_cut" not in obj:
+        return None
+    mc = ctx.at("music_cut")
+    raw = mc.mapping(obj["music_cut"], _MUSIC_CUT_KEYS)
+    lo, hi = MUSIC_CUT_SECONDS
+    return MusicCut(
+        at=mc.num(raw, "at", default=0.0, lo=0, hi=MAX_SLIDE_SECONDS),
+        duration=mc.num(raw, "duration", default=1.0, lo=lo, hi=hi),
+    )
+
+
+def _motion(ctx: Ctx, obj: Mapping[str, Any], narrated: bool) -> Motion:
+    """2.0 scripts keep the v2.0 motions and message; 2.1 adds the A.2 motions."""
+    value = obj.get("motion")
+    if not narrated and value in MOTION_NAMES and value not in V20_MOTIONS:
+        ctx.at("motion").error(f'"{value}" requires schema_version "{NARRATED_SCHEMA_VERSION}"')
+        return "none"
+    allowed = MOTION_NAMES if narrated else V20_MOTIONS
+    return cast("Motion", ctx.choice(obj, "motion", allowed, default="none"))
+
+
 def _slide_id(ctx: Ctx, obj: Mapping[str, Any]) -> str:
     """The explicit ``id`` (2.1) or ``""`` when absent; the parser fills in ``sNN`` later."""
     if "id" not in obj:
@@ -250,14 +340,14 @@ def _slide_id(ctx: Ctx, obj: Mapping[str, Any]) -> str:
 
 
 def _parse_slide(
-    ctx: Ctx, raw: object, sources: tuple[Source, ...] | None, narrated: bool
+    ctx: Ctx, raw: object, sources: tuple[Source, ...] | None, narrated: bool, base: Path
 ) -> Slide | None:
     if not isinstance(raw, dict):
         ctx.error("must be an object")
         return None
     obj = ctx.mapping(raw, _SLIDE_KEYS)
     if not narrated:
-        for key in ("id", "narration"):
+        for key in ("id", "narration", *A2_KEYS):
             if key in obj:
                 ctx.at(key).error(f'requires schema_version "{NARRATED_SCHEMA_VERSION}"')
     claim = ctx.bool_(obj, "claim", default=False)
@@ -275,13 +365,16 @@ def _parse_slide(
         subtitle=_text(ctx, obj, "subtitle", max_chars=MAX_SUBTITLE_CHARS),
         duration=duration,
         scene=parse_scene(ctx.at("scene"), obj["scene"]) if "scene" in obj else None,
-        motion=cast(
-            "Literal['none', 'zoom_in']", ctx.choice(obj, "motion", MOTION_NAMES, default="none")
-        ),
+        motion=_motion(ctx, obj, narrated),
         claim=claim,
         source=source,
         id=_slide_id(ctx, obj),
         narration=_narration(ctx, obj),
+        transition=ctx.choice(obj, "transition", TRANSITION_NAMES, default="cut"),
+        tone=ctx.choice(obj, "tone", TONE_NAMES, default="none"),
+        text_in=ctx.choice(obj, "text_in", TEXT_IN_NAMES, default="none"),
+        sfx=_parse_sfx(ctx, obj, base),
+        music_cut=_parse_music_cut(ctx, obj),
     )
 
 
@@ -299,7 +392,11 @@ def _check_slide_ids(pairs: list[tuple[Ctx, Slide | None]]) -> None:
 
 
 def _parse_slides(
-    ctx: Ctx, obj: Mapping[str, Any], sources: tuple[Source, ...] | None, narrated: bool
+    ctx: Ctx,
+    obj: Mapping[str, Any],
+    sources: tuple[Source, ...] | None,
+    narrated: bool,
+    base: Path,
 ) -> tuple[Slide, ...]:
     slides_ctx = ctx.at("slides")
     if "slides" not in obj:
@@ -308,8 +405,10 @@ def _parse_slides(
     pairs = slides_ctx.items(obj["slides"])
     if isinstance(obj["slides"], list) and not MIN_SLIDES <= len(pairs) <= MAX_SLIDES:
         slides_ctx.error(f"must contain {MIN_SLIDES}–{MAX_SLIDES} slides")
-    parsed = [(child, _parse_slide(child, raw, sources, narrated)) for child, raw in pairs]
+    parsed = [(child, _parse_slide(child, raw, sources, narrated, base)) for child, raw in pairs]
     _check_slide_ids(parsed)
+    if parsed and parsed[0][1] is not None and parsed[0][1].transition != "cut":
+        parsed[0][0].at("transition").warning("the first slide has no previous slide (ignored)")
     return tuple(
         replace(slide, id=slide.id or f"s{index:02d}")
         for index, (_, slide) in enumerate(parsed, start=1)
@@ -337,7 +436,8 @@ def _parse_script(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Script:
         )
     title = _text(ctx, data, "title", required=True)
     sources = _parse_sources(ctx, data)
-    slides = _parse_slides(ctx, data, sources, narrated=version == NARRATED_SCHEMA_VERSION)
+    narrated = version == NARRATED_SCHEMA_VERSION
+    slides = _parse_slides(ctx, data, sources, narrated, path.parent)
     if not ctx.issues.errors:
         _check_total_duration(ctx, slides)
     return Script(version, title, sources or (), slides, path)

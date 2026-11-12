@@ -94,6 +94,7 @@ def test_steps_order_is_fr21() -> None:
         "waves",
         "finish",
         "frame",
+        "tone",
         "seal",
         "tag",
         "title",

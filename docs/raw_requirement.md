@@ -149,7 +149,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | ID    | Requirement                                                                                                                                  | Pri |
 |-------|----------------------------------------------------------------------------------------------------------------------------------------------|-----|
 | FR-20 | Each slide is composed in a float32 RGB numpy buffer of 1080×1920 and written as an 8-bit PNG.                                               | M   |
-| FR-21 | Fixed layer order: lacquer ground → scene layers (in listed order) → wave band → sheen + grain → frame → seal → tag pill → title → subtitle → progress bar → footer. | M |
+| FR-21 | Fixed layer order: lacquer ground → scene layers (in listed order) → wave band → sheen + grain → frame → tone (A.2, no-op without `tone`) → seal → tag pill → title → subtitle → progress bar → footer. | M |
 | FR-22 | Vector shapes are drawn with Cairo on transparent ARGB32 surfaces and composited into the buffer using premultiplied alpha.                 | M   |
 | FR-23 | Textured regions are produced by drawing a Cairo mask and filling it with a numpy texture (§5.6).                                            | M   |
 | FR-24 | Text is rendered with Pillow after all graphics, so no texture or effect touches it.                                                         | M   |
@@ -809,7 +809,45 @@ Optional theme block `audio` (all keys optional; defaults shown):
 
 M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest loading and validation, timing, mix graph, report fields, an example narrated script with owner-supplied voice files kept out of the repo, README section on the sound-project workflow.
 
-**A.2 Motions.** Pan, pop-up name cards, colour-tone shift, split screen.
+**A.2 Motions, transitions and sound cues.** Milestone M8, owner-approved 2026-11-12 (transitions, camera motions, tone, text fade-in, sound effects, music cuts). Split screen and pop-up name cards stay planned. All new fields are optional, need `schema_version` `"2.1"`, and a script that uses none of them produces FFmpeg commands byte-identical to before (AC-19 still holds).
+
+#### A.2.1 Slide fields
+
+| Field        | Type   | Default | Notes |
+|--------------|--------|---------|-------|
+| `motion`     | enum   | `none`  | Adds `zoom_out` (106 % → 100 %), `pan_left`, `pan_right`, `pan_up`, `pan_down` (view held at 110 % and moved edge to edge over the slide). |
+| `transition` | enum   | `cut`   | How this slide enters from the previous one: `cut` (theme fades, as v2.0), `fade`, `fadeblack`, `dissolve`, `slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight`, `circleopen`. Ignored with a warning on the first slide. |
+| `tone`       | enum   | `none`  | Colour grade of ground, scene and chrome (not text): `warm`, `cold`, `gray`. Values from the theme `tones` block. |
+| `text_in`    | enum   | `none`  | `fade`: title and subtitle stay still on a separate layer and fade in after `text_in.delay` over `text_in.duration`, while the scene keeps its motion. |
+| `sfx`        | array  | `[]`    | Up to 4 cues `{ "file": path, "at": s, "gain_db": dB }`. `file` resolves relative to the script, must exist and contain audio; `at` ≥ 0 and before the slide ends; `gain_db` −24…+12, default 0. The owner supplies every file; history-shorts never downloads or generates sound. |
+| `music_cut`  | object | none    | `{ "at": s, "duration": s }`: music is silent from slide start + `at` for `duration` (0.1–5 s), with 50 ms ramps. Warning when rendered without `--music`. |
+
+#### A.2.2 Theme additions (all optional; defaults shown)
+
+```json
+"transition": { "fade_in": 0.3, "fade_out": 0.3, "duration": 0.5 },
+"text_in": { "delay": 0.3, "duration": 0.5 },
+"tones": {
+  "warm": { "saturation": 1.1, "brightness": 1.05, "tint": [255, 190, 120], "strength": 0.10 },
+  "cold": { "saturation": 0.55, "brightness": 0.85, "tint": [90, 120, 150], "strength": 0.25 },
+  "gray": { "saturation": 0.0, "brightness": 0.9, "tint": [128, 128, 128], "strength": 0.0 }
+}
+```
+
+#### A.2.3 Timing and assembly
+
+- A transition into slide k+1 overlaps the end of slide k: clip k is encoded `transition.duration` longer and the clips are joined with FFmpeg `xfade` at offset = start of slide k+1. Slide starts, voice offsets and the total (Σ slides, AC-02) do not change. The overlap is clamped to half of the shorter neighbouring slide. Theme fades are dropped at a boundary that has a transition.
+- With any transition the join re-encodes (libx264, theme `crf`); without one it stays the stream-copy concat.
+- Sound effects start at slide start + `at`, are mixed after ducking (they do not duck the music) and go through the same `loudnorm` as voices.
+
+#### A.2.4 Acceptance (M8)
+
+| ID    | Criterion |
+|-------|-----------|
+| AC-22 | Every new `motion`, `transition` and `text_in` value renders; video duration equals Σ slides ± 0.1 s with transitions. |
+| AC-23 | A `tone` slide differs from the same slide without tone only outside the text boxes. |
+| AC-24 | An `sfx` cue is audible at its offset (RMS in a 0.2 s window after `at` exceeds the window before); a `music_cut` window is silent in a music-only render. |
+| AC-25 | A script without A.2 fields produces the same FFmpeg commands as before (command tests). |
 
 **A.3 Poses.** Kneeling and riding an elephant (see FR-50).
 

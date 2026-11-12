@@ -15,7 +15,7 @@ from numpy.random import Generator
 from scipy.ndimage import binary_dilation, gaussian_filter
 from scipy.spatial import cKDTree
 
-from .config import Palette, SheenSpec
+from .config import Palette, SheenSpec, ToneSpec
 from .layout import CANVAS_H, CANVAS_W
 from .primitives import FloatImage, FloatMask
 
@@ -187,4 +187,18 @@ def finish(
     glow = (np.clip(1 - d, 0, 1) ** 2 * sheen.strength)[..., None] * _colour(palette, "sheen")
     out = img + glow
     out *= (1 + grain * noise(h, w, FINISH_GRAIN_SIGMA, rng))[..., None]
+    return np.asarray(np.clip(out, 0, 1), dtype=np.float32)
+
+
+LUMA: tuple[float, float, float] = (0.299, 0.587, 0.114)  # Rec. 601 weights for saturation
+
+
+def tone_grade(img: FloatImage, tone: ToneSpec) -> FloatImage:
+    """Colour grade for a slide ``tone`` (spec A.2.1): scale saturation around the luma, scale
+    brightness, then mix in the tint colour by ``strength``."""
+    luma = (img @ np.asarray(LUMA, dtype=np.float32))[..., None]
+    out = luma + (img - luma) * tone.saturation
+    out = out * tone.brightness
+    tint = np.asarray(tone.tint, dtype=np.float32) / 255.0
+    out = out * (1 - tone.strength) + tint * luma * 2 * tone.strength
     return np.asarray(np.clip(out, 0, 1), dtype=np.float32)

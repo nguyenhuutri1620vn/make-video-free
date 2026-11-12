@@ -19,7 +19,7 @@ from .config import Palette, Script, SheenSpec, Theme
 from .layout import CANVAS_H, CANVAS_W, REGIONS, SAFE_ZONE
 from .primitives import Box, FloatImage, FloatMask
 from .text import TextPlan, draw_text, plan_text
-from .textures import finish, lacquer_ground
+from .textures import finish, lacquer_ground, tone_grade
 
 GROUND_LAYER: Final = 0  # scene layer k uses k + 1
 FINISH_LAYER: Final = 999
@@ -32,6 +32,7 @@ SLIDE_STEPS: Final = (
     "waves",
     "finish",
     "frame",
+    "tone",
     "seal",
     "tag",
     "title",
@@ -284,6 +285,12 @@ def _step_frame(ctx: SlideContext, state: SlideState) -> None:
         _overlay(state, lambda cv: chrome.draw_frame(cv, ctx.theme.palette))
 
 
+def _step_tone(ctx: SlideContext, state: SlideState) -> None:
+    name = ctx.script.slides[ctx.slide_index].tone
+    if name != "none":
+        state.set_array(tone_grade(state.array(), ctx.theme.tones[name]))
+
+
 def _step_seal(ctx: SlideContext, state: SlideState) -> None:
     chrome.draw_seal(state.image(), ctx.theme)
 
@@ -308,6 +315,7 @@ STEP_FUNCTIONS: Mapping[str, StepFunction] = {
     "waves": _step_waves,
     "finish": _step_finish,
     "frame": _step_frame,
+    "tone": _step_tone,
     "seal": _step_seal,
     "tag": _step_tag,
     "title": _step_title,
@@ -337,3 +345,18 @@ def render_slide(ctx: SlideContext) -> Image.Image:
     if ctx.debug_safe_zone:
         _draw_debug_safe_zone(ctx, state)
     return state.image()
+
+
+TEXT_STEPS: Final = ("title", "subtitle")
+
+
+def render_layers(ctx: SlideContext) -> tuple[Image.Image, Image.Image]:
+    """The slide without its title and subtitle (RGB) and those texts alone (RGBA), for
+    ``text_in`` slides whose text fades in over the moving scene (spec A.2.1)."""
+    state = SlideState(np.zeros((CANVAS_H, CANVAS_W, 3), dtype=np.float32))
+    for name in SLIDE_STEPS:
+        if name not in TEXT_STEPS:
+            STEP_FUNCTIONS[name](ctx, state)
+    text = Image.new("RGBA", (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
+    draw_text(text, plan_text(ctx.script.slides[ctx.slide_index], ctx.theme), ctx.theme)
+    return state.image(), text

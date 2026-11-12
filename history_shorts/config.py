@@ -12,6 +12,7 @@ import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Final
 
 from PIL import ImageFont
@@ -190,6 +191,35 @@ class Chrome:
 class Transition:
     fade_in: float
     fade_out: float
+    duration: float = 0.5  # overlap of a slide ``transition`` (spec A.2.3)
+
+
+@dataclass(frozen=True, slots=True)
+class TextInSpec:
+    """Title/subtitle fade-in for ``text_in: fade`` slides (spec A.2.2)."""
+
+    delay: float = 0.3
+    duration: float = 0.5
+
+
+@dataclass(frozen=True, slots=True)
+class ToneSpec:
+    """One colour grade: saturation and brightness factors, then a tint mixed in (A.2.2)."""
+
+    saturation: float
+    brightness: float
+    tint: RGB
+    strength: float
+
+
+DEFAULT_TONES: Final[Mapping[str, ToneSpec]] = MappingProxyType(
+    {
+        "warm": ToneSpec(1.1, 1.05, (255, 190, 120), 0.10),
+        "cold": ToneSpec(0.55, 0.85, (90, 120, 150), 0.25),
+        "gray": ToneSpec(0.0, 0.9, (128, 128, 128), 0.0),
+    }
+)
+TONE_NAMES: Final = tuple(DEFAULT_TONES)
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,6 +264,8 @@ class Theme:
     video: VideoSpec
     path: Path
     audio: AudioSpec = field(default_factory=AudioSpec)
+    text_in: TextInSpec = field(default_factory=TextInSpec)
+    tones: Mapping[str, ToneSpec] = field(default_factory=lambda: DEFAULT_TONES)
 
 
 # --------------------------------------------------------------------------------------
@@ -252,6 +284,8 @@ _THEME_KEYS = (
     "transition",
     "video",
     "audio",
+    "text_in",
+    "tones",
 )
 
 
@@ -447,6 +481,39 @@ def _parse_audio(ctx: Ctx, data: Mapping[str, Any]) -> AudioSpec:
     )
 
 
+TONE_KEYS = ("saturation", "brightness", "tint", "strength")
+
+
+def _parse_text_in(ctx: Ctx, data: Mapping[str, Any]) -> TextInSpec:
+    obj = ctx.section(data, "text_in", ("delay", "duration"))
+    ti, defaults = ctx.at("text_in"), TextInSpec()
+    return TextInSpec(
+        delay=ti.num(obj, "delay", default=defaults.delay, lo=0, hi=5),
+        duration=ti.num(obj, "duration", default=defaults.duration, lo=0.05, hi=5),
+    )
+
+
+def _parse_tone(ctx: Ctx, obj: Mapping[str, Any], default: ToneSpec) -> ToneSpec:
+    tint = _read_rgb(ctx.at("tint"), obj["tint"]) if "tint" in obj else None
+    return ToneSpec(
+        saturation=ctx.num(obj, "saturation", default=default.saturation, lo=0, hi=2),
+        brightness=ctx.num(obj, "brightness", default=default.brightness, lo=0.2, hi=2),
+        tint=tint or default.tint,
+        strength=ctx.num(obj, "strength", default=default.strength, lo=0, hi=1),
+    )
+
+
+def _parse_tones(ctx: Ctx, data: Mapping[str, Any]) -> Mapping[str, ToneSpec]:
+    """The optional ``tones`` block: per-name overrides of ``DEFAULT_TONES`` (spec A.2.2)."""
+    obj = ctx.section(data, "tones", TONE_NAMES)
+    tones = dict(DEFAULT_TONES)
+    for name in TONE_NAMES:
+        tc = ctx.at("tones").at(name)
+        if name in obj:
+            tones[name] = _parse_tone(tc, tc.mapping(obj[name], TONE_KEYS), DEFAULT_TONES[name])
+    return MappingProxyType(tones)
+
+
 def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
     for key in data:
         if key not in _THEME_KEYS:
@@ -456,7 +523,7 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
         ctx.at("schema_version").error(
             f'unsupported schema_version "{version}" (expected "{SCHEMA_VERSION}")'
         )
-    transition = ctx.section(data, "transition", ("fade_in", "fade_out"))
+    transition = ctx.section(data, "transition", ("fade_in", "fade_out", "duration"))
     video = ctx.section(data, "video", ("fps", "crf"))
     tr, vd = ctx.at("transition"), ctx.at("video")
     return Theme(
@@ -471,6 +538,7 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
         transition=Transition(
             fade_in=tr.num(transition, "fade_in", default=0.3, lo=0),
             fade_out=tr.num(transition, "fade_out", default=0.3, lo=0),
+            duration=tr.num(transition, "duration", default=0.5, lo=0.1, hi=2),
         ),
         video=VideoSpec(
             fps=vd.int_(video, "fps", default=30, lo=1),
@@ -478,6 +546,8 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
         ),
         path=path,
         audio=_parse_audio(ctx, data),
+        text_in=_parse_text_in(ctx, data),
+        tones=_parse_tones(ctx, data),
     )
 
 
@@ -535,7 +605,9 @@ __all__ = [
     "TagSpec",
     "TemplateScene",
     "Textures",
+    "TextInSpec",
     "Theme",
+    "ToneSpec",
     "Transition",
     "TypeScale",
     "ValidationFailed",

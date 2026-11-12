@@ -20,6 +20,7 @@ from typing import Final
 from history_shorts import ffmpeg
 from history_shorts.config import AudioSpec, Theme
 from history_shorts.ffmpeg import FfmpegInfo
+from history_shorts.output import layer_paths
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +44,34 @@ class RenderOptions:
     motions: tuple[str, ...] = ()  # per slide; missing entries mean "none" (FR-84)
     voices: tuple[ffmpeg.VoiceInput, ...] = ()  # narration clips (v2.1); none means no voice
     audio: AudioSpec = AudioSpec()  # voice mix and loudness settings, used with ``voices``
+    transitions: tuple[str, ...] = ()  # per slide, how it enters; missing means "cut" (A.2)
+    text_layers: tuple[ffmpeg.TextLayer | None, ...] = ()  # per slide ``text_in`` layer (A.2)
+    sfx: tuple[ffmpeg.VoiceInput, ...] = ()  # sound effects on the timeline (A.2)
+    cuts: tuple[tuple[float, float], ...] = ()  # music silent between these times (A.2)
 
 
 def default_jobs() -> int:
     """Parallel clip encodes when ``--jobs`` is not given: one fewer than the CPU count (FR-87)."""
     return max(1, (os.cpu_count() or 2) - 1)
+
+
+def _per_slide(values: tuple[str, ...], count: int, default: str) -> list[str]:
+    return [values[i] if i < len(values) else default for i in range(count)]
+
+
+def overlaps(
+    durations: list[float], transitions: list[str], length: float, fps: int
+) -> list[float]:
+    """Seconds clip k runs past the start of slide k + 1 (A.2.3): 0 before a cut, else the
+    theme length clamped to half of the shorter neighbour, in whole frames (at least one)."""
+    result: list[float] = []
+    for k in range(len(durations) - 1):
+        if transitions[k + 1] == "cut":
+            result.append(0.0)
+            continue
+        seconds = min(length, durations[k] / 2, durations[k + 1] / 2)
+        result.append(max(round(seconds * fps), 1) / fps)
+    return result
 
 
 def partial_path(out: Path) -> Path:
@@ -71,25 +95,8 @@ def _encode_clips(
     is being deleted. Child FFmpeg processes are not killed: each finishes its single clip,
     which takes a few seconds. The first failure in slide order is raised.
     """
-    fade = theme.transition
-    jobs = list(zip(slides, durations, strict=True))
-    clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(jobs) + 1)]
-    threads = max(1, (os.cpu_count() or 2) // opts.jobs) if opts.jobs > 1 else None
-    cmds = [
-        ffmpeg.clip_cmd(
-            info,
-            png,
-            clip,
-            seconds,
-            theme.video.fps,
-            theme.video.crf,
-            fade.fade_in,
-            fade.fade_out,
-            motion=opts.motions[index] if index < len(opts.motions) else "none",
-            threads=threads,
-        )
-        for index, ((png, seconds), clip) in enumerate(zip(jobs, clips, strict=True))
-    ]
+    clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(slides) + 1)]
+    cmds = _clip_cmds(info, slides, durations, theme, opts, clips)
     if opts.jobs <= 1:
         for cmd in cmds:
             ffmpeg.run(cmd, verbose=opts.verbose)
@@ -103,6 +110,68 @@ def _encode_clips(
             pool.shutdown(wait=True, cancel_futures=True)
     _raise_first_failure(futures)
     return clips
+
+
+def _clip_cmds(
+    info: FfmpegInfo,
+    slides: list[Path],
+    durations: list[float],
+    theme: Theme,
+    opts: RenderOptions,
+    clips: list[Path],
+) -> list[list[str]]:
+    """One clip command per slide. A clip before a transition runs on by the overlap, and
+    theme fades are dropped on both sides of a transition (A.2.3)."""
+    fade, count = theme.transition, len(slides)
+    transitions = _per_slide(opts.transitions, count, "cut")
+    extra = [*overlaps(durations, transitions, fade.duration, theme.video.fps), 0.0]
+    motions = _per_slide(opts.motions, count, "none")
+    threads = max(1, (os.cpu_count() or 2) // opts.jobs) if opts.jobs > 1 else None
+    cmds: list[list[str]] = []
+    for k in range(count):
+        enters = k > 0 and transitions[k] != "cut"
+        leaves = k + 1 < count and transitions[k + 1] != "cut"
+        text = opts.text_layers[k] if k < len(opts.text_layers) else None
+        cmds.append(
+            ffmpeg.clip_cmd(
+                info,
+                layer_paths(slides[k])[0] if text is not None else slides[k],
+                clips[k],
+                durations[k] + extra[k],
+                theme.video.fps,
+                theme.video.crf,
+                0.0 if enters else fade.fade_in,
+                0.0 if leaves else fade.fade_out,
+                motion=motions[k],
+                threads=threads,
+                text=text,
+            )
+        )
+    return cmds
+
+
+def _join(
+    info: FfmpegInfo,
+    clips: list[Path],
+    durations: list[float],
+    theme: Theme,
+    opts: RenderOptions,
+    work: Path,
+) -> Path:
+    """Concat the clips by stream copy, or with ``xfade`` when any slide has a transition."""
+    joined = work / "video.mp4"
+    transitions = _per_slide(opts.transitions, len(clips), "cut")
+    if all(name == "cut" for name in transitions[1:]):
+        list_file = work / "list.txt"
+        list_file.write_text(ffmpeg.concat_list_text(clips), encoding="utf-8")
+        ffmpeg.run(ffmpeg.concat_cmd(info, list_file, joined), verbose=opts.verbose)
+        return joined
+    fps = theme.video.fps
+    starts = [sum(durations[:k]) for k in range(len(durations))]
+    gaps = overlaps(durations, transitions, theme.transition.duration, fps)
+    cmd = ffmpeg.xfade_cmd(info, clips, starts, transitions, gaps, joined, fps, theme.video.crf)
+    ffmpeg.run(cmd, verbose=opts.verbose)
+    return joined
 
 
 def _raise_first_failure(futures: list[Future[None]]) -> None:
@@ -125,22 +194,15 @@ def _run_steps(
     timings["encode"] = time.perf_counter() - started
 
     started = time.perf_counter()
-    list_file, joined = work / "list.txt", work / "video.mp4"
-    list_file.write_text(ffmpeg.concat_list_text(clips), encoding="utf-8")
-    ffmpeg.run(ffmpeg.concat_cmd(info, list_file, joined), verbose=opts.verbose)
+    joined = _join(info, clips, durations, theme, opts, work)
     timings["concat"] = time.perf_counter() - started
 
     started = time.perf_counter()
     total = round(sum(durations), TOTAL_DECIMALS)
-    if opts.voices:
-        mux = ffmpeg.voice_mux_cmd(
-            info, joined, partial_path(opts.out), total, list(opts.voices),
-            opts.music, opts.music_volume, opts.audio,
-        )  # fmt: skip
-    else:
-        mux = ffmpeg.mux_cmd(
-            info, joined, partial_path(opts.out), total, opts.music, opts.music_volume
-        )
+    plan = ffmpeg.MixPlan(opts.voices, opts.sfx, opts.cuts)
+    mux = ffmpeg.mix_cmd(
+        info, joined, partial_path(opts.out), total, plan, opts.music, opts.music_volume, opts.audio
+    )
     ffmpeg.run(mux, verbose=opts.verbose)
     timings["mux"] = time.perf_counter() - started
 

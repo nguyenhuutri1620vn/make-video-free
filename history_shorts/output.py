@@ -50,6 +50,11 @@ def slide_path(directory: Path, number: int) -> Path:
     return directory / f"{number:02d}.png"
 
 
+def layer_paths(png: Path) -> tuple[Path, Path]:
+    """Background and text-layer PNGs written beside a ``text_in`` slide's ``NN.png``."""
+    return png.with_name(f"{png.stem}_bg.png"), png.with_name(f"{png.stem}_text.png")
+
+
 def stale_slides(directory: Path, slide_count: int) -> list[Path]:
     """Existing ``NN.png`` files numbered beyond ``slide_count``, sorted by name."""
     if not directory.is_dir():

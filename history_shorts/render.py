@@ -18,10 +18,11 @@ from history_shorts.compose import (
     SceneStyle,
     SlideContext,
     default_style,
+    render_layers,
     render_slide,
 )
 from history_shorts.config import Script, Slide, Theme
-from history_shorts.output import slide_path, slides_dir
+from history_shorts.output import layer_paths, slide_path, slides_dir
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import draw_layers
 from history_shorts.scene.templates import expand as expand_scene
@@ -84,6 +85,11 @@ def render_slides(
         ctx = SlideContext(script, theme, index, style, draw_scene, debug_safe_zone, cache)
         target = slide_path(directory, index + 1)
         write_png(render_slide(ctx), target)
+        if slide.text_in != "none":
+            background, text = render_layers(ctx)
+            bg_path, text_path = layer_paths(target)
+            write_png(background, bg_path)
+            write_png(text, text_path)
         written.append(target)
         log.debug(
             "slide %d rendered in %.2f s: %s", index + 1, time.perf_counter() - started, target

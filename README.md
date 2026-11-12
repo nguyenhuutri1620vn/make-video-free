@@ -109,6 +109,19 @@ Mix: each voice is delayed to its slide, the voices are summed, the music (if an
 
 The report adds an `audio` block (manifest path and SHA-256, and per slide `id`, `voice_file`, `voice_seconds`, `duration`). The console summary adds the voiced-slide count.
 
+### Motions, transitions and sound cues (v2.1, M8)
+
+Optional slide fields in a `"2.1"` script (spec Appendix A.2):
+
+- `motion`: `zoom_in`, `zoom_out`, `pan_left`, `pan_right`, `pan_up`, `pan_down`.
+- `transition`: how the slide enters: `fade`, `fadeblack`, `dissolve`, `slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight`, `circleopen` (default `cut`). The overlap is the theme's `transition.duration` (0.5 s); total length is unchanged.
+- `tone`: `warm`, `cold`, `gray`, graded from the theme's `tones` block; text keeps its colours.
+- `text_in`: `fade`: title and subtitle fade in on a still layer while the scene moves.
+- `sfx`: up to 4 `{ "file": "sfx/drum.wav", "at": 0.0, "gain_db": 0 }` per slide; files are yours, relative to the script.
+- `music_cut`: `{ "at": 0.0, "duration": 1.0 }` silences `--music` for that window.
+
+`examples/vuong_trieu_nu/script.json` uses every visual effect and one music cut. Its suggested sound cues (add the files, then the `sfx` entries): a drum hit at `vua-nu` 0.0 s, a short "tách" at `65-thanh` 0.0 s, a low drum at `ma-vien` 0.0 s.
+
 ### Sources workflow
 
 Every example lists `sources` and marks each factual slide with `"claim": true` and a `source` index. `validate` warns about a missing `sources` list and about a claim without a `source`; `render` prints a numbered `Sources:` block, ready to paste into a caption (a typed source reads `[2] (journal) ...`), and stores the same list in the report. Folk-record claims are worded as such ("theo thần tích", "theo truyền thuyết"). Never invent a fact, date, name or quote: where a citation is still needed, write a placeholder such as `[CẦN NGUỒN] ...` in `sources` and the owner supplies the document.
@@ -234,4 +247,6 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Narration audio (v2.1, M7): history-shorts and the owner's separate sound project exchange files only. `export-narration` writes `<id>.txt` and a manifest with `text_sha256`; the sound project returns `audio_manifest.json` and voice files; `render --audio` fits slide timing to the voice, ducks music and normalises loudness. No TTS inside history-shorts (spec Appendix A.1, C-01, C-02).
 - Narration timing: a voiced slide is `ceil_to_frame(lead_in + voice + tail)` long; an explicit `duration` wins only when it is at least that long (spec A.1.6).
 - Narration ducking uses FFmpeg `sidechaincompress` with the theme's `audio.duck` values; loudness is one `loudnorm` pass to `audio.loudness_lufs` / `audio.true_peak_db` (spec A.1.7).
+- Motions and cues (v2.1, M8, owner-approved 2026-11-12): transitions overlap the previous clip (clip k is encoded longer and joined with `xfade` at slide k+1's start), so slide starts, voice offsets and the total stay the same; the join re-encodes only when a transition is used. `tone` is a compose step after the frame (FR-21), so text, seal and tag keep their colours. `text_in` slides also write `NN_bg.png` and `NN_text.png`; their text no longer zooms with the scene. Sound effects are owner-supplied files mixed after ducking; a `music_cut` mutes music with 50 ms ramps. Pan motions hold the view at 110 %. A 2.0 script keeps the v2.0 motion list and error text (spec Appendix A.2).
 - Example `hai_ba_trung` (2026-11-11): scenes use only the approved templates. `context` uses `landscape`; `fall` and `legacy` use `landscape` with `boats: []` (river only); `hook` uses `group` with the two leaders; `peak` and `outro` use the full `group`. `war` and `loss` have no fitting template yet and render chrome and text only. Long titles carry an explicit `\n` so no line ends on a lone word.
+- Example `vuong_trieu_nu` (2026-11-12): the owner's 60 s storyboard adapted to what v2.0/v2.1 can draw. Photos, the Đông Hồ painting, Ban Chiêu and Han figures, maps, counters, split screen and word-by-word text are dropped (C-06; split screen not built). Pans, tones, transitions and text fade-in come from M8. Each shot is one slide without a fixed `duration`, so timing follows the voice (A.1.6) or FR-83 until the voice exists; every slide has its own scene: `group`/`landscape` variants or explicit `layers` (close-up queen, row of generals, empty Han boats, ringed gold disc with birds as a bronze-drum nod, lotus pond), so no slide is text only.
