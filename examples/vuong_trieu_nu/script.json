@@ -718,14 +718,41 @@
       "tone": "cold",
       "text_in": "fade",
       "scene": {
-        "template": "group",
-        "sun": false,
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "moon",
+            "x": 760,
+            "y": 470,
+            "r": 100,
+            "rings": 1
           },
           {
-            "role": "leader"
+            "type": "mountains",
+            "y": 930,
+            "amp": 1.2
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "fallen_flags",
+            "x": 560,
+            "y": 1095,
+            "scale": 2.2
           }
         ]
       }

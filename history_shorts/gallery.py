@@ -30,6 +30,7 @@ from history_shorts.config import (
     CharacterSpec,
     DrumLayer,
     ElephantLayer,
+    FallenFlagsLayer,
     GongLayer,
     Layer,
     LotusLayer,
@@ -83,6 +84,7 @@ GALLERY_ELEPHANT: Final = ElephantLayer(x=520, y=1150, scale=1.6)
 GALLERY_STILT_HOUSE: Final = StiltHouseLayer(x=600, y=1150, scale=1.4)
 GALLERY_BANNERS: Final = BannersLayer(y=1180, rows=3)
 GALLERY_REGALIA: Final = RegaliaLayer(x=540, y=1160, scale=1.6)
+GALLERY_FALLEN_FLAGS: Final = FallenFlagsLayer(x=540, y=1150, scale=1.3)
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -110,6 +112,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("stilt house", "stilt_house", GALLERY_STILT_HOUSE, Box(240, 560, 840, 1360)),
     ("banners", "banners", GALLERY_BANNERS, Box(240, 560, 840, 1360)),
     ("regalia", "regalia", GALLERY_REGALIA, Box(240, 600, 840, 1400)),
+    ("fallen flags", "fallen_flags", GALLERY_FALLEN_FLAGS, Box(240, 620, 840, 1420)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 

@@ -13,6 +13,7 @@ from history_shorts.config import (
     BannersLayer,
     DrumLayer,
     ElephantLayer,
+    FallenFlagsLayer,
     GongLayer,
     MapLayer,
     RegaliaLayer,
@@ -28,6 +29,7 @@ from history_shorts.scene.banners import draw_banners
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
+from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.scroll import draw_scroll
@@ -257,3 +259,24 @@ def test_regalia_screen_is_optional_and_bounded(ctx: Any, flat_base: Base) -> No
     assert ys.max() <= 1100 + 4 and ys.min() >= 1100 - 308
     assert xs.min() >= 540 - 160 and xs.max() <= 540 + 160  # 4 panels of 78
     assert _changed(base, bare)[0].min() > 1100 - 160  # without the screen only the table set
+
+
+# --- fallen flags (backlog #10) -----------------------------------------------------------
+
+
+def test_fallen_flags_parse(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "fallen_flags", "x": 560, "y": 1095, "scale": 2}
+    assert _layer(tmp_script, raw) == FallenFlagsLayer(560, 1095, 2)
+    assert LAYER_DRAWERS[FallenFlagsLayer] is draw_fallen_flags
+
+
+def test_fallen_flags_lie_low(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_fallen_flags(base.copy(), FallenFlagsLayer(540, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, after)
+    # tent poles reach -84 and its right foot +234; the leaning flag pole -150; spears from -205
+    assert ys.max() <= 1100 + 16 and ys.min() >= 1100 - 160
+    assert xs.min() >= 540 - 210 and xs.max() <= 540 + 240
+    assert np.array_equal(
+        after, draw_fallen_flags(flat_base(), FallenFlagsLayer(540, 1100, 1.0), ctx, 1)
+    )

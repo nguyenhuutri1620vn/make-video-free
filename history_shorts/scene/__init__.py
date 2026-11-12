@@ -16,6 +16,7 @@ from . import (
     delta_map,
     drum,
     elephant,
+    fallen_flags,
     gong,
     lotus,
     people,
@@ -48,6 +49,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         stilt_house.DRAWERS,
         banners.DRAWERS,
         regalia.DRAWERS,
+        fallen_flags.DRAWERS,
     )
 )
 

@@ -257,6 +257,15 @@ class RegaliaLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class FallenFlagsLayer:
+    """An abandoned camp (backlog #10): x, ground y, scale."""
+
+    x: float
+    y: float
+    scale: float
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -287,6 +296,7 @@ Layer = (
     | StiltHouseLayer
     | BannersLayer
     | RegaliaLayer
+    | FallenFlagsLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -312,6 +322,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "stilt_house": StiltHouseLayer,
     "banners": BannersLayer,
     "regalia": RegaliaLayer,
+    "fallen_flags": FallenFlagsLayer,
 }
 
 
@@ -632,6 +643,10 @@ def _parse_regalia(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+def _parse_fallen_flags(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return FallenFlagsLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -684,6 +699,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "stilt_house": _parse_stilt_house,
     "banners": _parse_banners,
     "regalia": _parse_regalia,
+    "fallen_flags": _parse_fallen_flags,
 }
 
 
