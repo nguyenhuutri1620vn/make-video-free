@@ -9,11 +9,12 @@ from typing import Any
 import numpy as np
 import pytest
 
-from history_shorts.config import DrumLayer, load_script
+from history_shorts.config import DrumLayer, GongLayer, load_script
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.drum import draw_drum
+from history_shorts.scene.gong import draw_gong
 
 Base = Callable[[], FloatImage]
 ScriptFactory = Callable[..., Path]
@@ -56,3 +57,22 @@ def test_drum_is_deterministic_and_counts_birds(ctx: Any, flat_base: Base) -> No
     a = draw_drum(flat_base(), layer, ctx, 1)
     assert np.array_equal(a, draw_drum(flat_base(), layer, ctx, 1))
     assert not np.array_equal(a, draw_drum(flat_base(), DrumLayer(540, 800, 200, 4), ctx, 1))
+
+
+# --- gong (backlog #2) --------------------------------------------------------------------
+
+
+def test_gong_parses(tmp_script: ScriptFactory) -> None:
+    layer = _layer(tmp_script, {"type": "gong", "x": 540, "y": 730, "r": 160})
+    assert layer == GongLayer(540, 730, 160)
+    assert LAYER_DRAWERS[GongLayer] is draw_gong
+
+
+def test_gong_frame_bounds(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_gong(base.copy(), GongLayer(540, 800, 100), ctx, 1)
+    ys, xs = _changed(base, after)
+    # beam curls reach x = +-187 and y = -260; feet reach y = +224 (gong units = px here)
+    assert xs.min() >= 540 - 195 and xs.max() <= 540 + 200
+    assert ys.min() >= 800 - 265 and ys.max() <= 800 + 228
+    assert np.array_equal(after, draw_gong(flat_base(), GongLayer(540, 800, 100), ctx, 1))

@@ -174,11 +174,21 @@
       "scene": {
         "layers": [
           {
-            "type": "sun",
-            "x": 760,
-            "y": 520,
-            "r": 170,
-            "rings": 2
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 150,
+                "y": 520,
+                "scale": 0.8
+              },
+              {
+                "x": 930,
+                "y": 560,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
           },
           {
             "type": "mountains",
@@ -203,18 +213,10 @@
             "height": 52
           },
           {
-            "type": "characters",
-            "baseline": 1100,
-            "items": [
-              {
-                "role": "leader",
-                "prop": "flag",
-                "x": 470,
-                "baseline": 1100,
-                "height": 620,
-                "facing": 1
-              }
-            ]
+            "type": "gong",
+            "x": 540,
+            "y": 730,
+            "r": 160
           }
         ]
       }

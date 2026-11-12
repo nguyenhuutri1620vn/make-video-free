@@ -184,6 +184,16 @@ class DrumLayer:
     worn: float | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class GongLayer:
+    """A gong in a wooden frame with its mallet (backlog #2): face centre and radius."""
+
+    x: float
+    y: float
+    r: float
+    tile: int | None = None
+
+
 Layer = (
     SunLayer
     | CloudsLayer
@@ -197,6 +207,7 @@ Layer = (
     | BirdsLayer
     | LotusLayer
     | DrumLayer
+    | GongLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -214,6 +225,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "birds": BirdsLayer,
     "lotus": LotusLayer,
     "drum": DrumLayer,
+    "gong": GongLayer,
 }
 
 
@@ -467,6 +479,15 @@ def _parse_lotus(ctx: Ctx, obj: dict[str, Any]) -> Layer:
 DRUM_BIRDS: tuple[int, int] = (0, 16)
 
 
+def _parse_gong(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return GongLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        r=ctx.num(obj, "r", positive=True),
+        tile=ctx.int_(obj, "tile", lo=1) if "tile" in obj else None,
+    )
+
+
 def _parse_drum(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     gold = _texture_overrides(ctx, obj, _GOLD)
     return DrumLayer(
@@ -493,6 +514,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "birds": _parse_birds,
     "lotus": _parse_lotus,
     "drum": _parse_drum,
+    "gong": _parse_gong,
 }
 
 
