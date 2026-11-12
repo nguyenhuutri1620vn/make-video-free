@@ -15,6 +15,7 @@ from history_shorts.config import (
     GongLayer,
     MapLayer,
     ScrollLayer,
+    StiltHouseLayer,
     TempleLayer,
     load_script,
 )
@@ -26,6 +27,7 @@ from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.scroll import draw_scroll
+from history_shorts.scene.stilt_house import draw_stilt_house
 from history_shorts.scene.temple import draw_temple
 
 Base = Callable[[], FloatImage]
@@ -191,3 +193,23 @@ def test_elephant_mirrors_by_scale(ctx: Any, flat_base: Base) -> None:
     changed_l = np.any(left != flat_base(), axis=-1)
     # mirrored about x = 540: column c on the right is column 1080 - c on the left (+-1 px)
     assert abs(int(changed_r.sum()) - int(changed_l.sum())) < changed_r.sum() * 0.02
+
+
+# --- stilt house (backlog #7) -------------------------------------------------------------
+
+
+def test_stilt_house_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "stilt_house", "x": 560, "y": 1095, "scale": 1.5, "bamboo": False}
+    assert _layer(tmp_script, raw) == StiltHouseLayer(560, 1095, 1.5, False)
+    assert LAYER_DRAWERS[StiltHouseLayer] is draw_stilt_house
+
+
+def test_stilt_house_bounds_and_bamboo(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    house = draw_stilt_house(base.copy(), StiltHouseLayer(600, 1100, 1.0, False), ctx, 1)
+    ys, xs = _changed(base, house)
+    assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 275  # ridge tips at -270
+    assert xs.min() >= 600 - 155 and xs.max() <= 600 + 155  # eaves at +-150
+    with_bamboo = draw_stilt_house(base.copy(), StiltHouseLayer(600, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, with_bamboo)
+    assert xs.min() < 600 - 200 and ys.min() >= 1100 - 380  # bamboo to the left, up to -360

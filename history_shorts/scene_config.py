@@ -229,6 +229,16 @@ class ElephantLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class StiltHouseLayer:
+    """A stilt house with a saddle roof (backlog #7): x, ground y, scale, bamboo clump."""
+
+    x: float
+    y: float
+    scale: float
+    bamboo: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -256,6 +266,7 @@ Layer = (
     | MapLayer
     | ScrollLayer
     | ElephantLayer
+    | StiltHouseLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -278,6 +289,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "map": MapLayer,
     "scroll": ScrollLayer,
     "elephant": ElephantLayer,
+    "stilt_house": StiltHouseLayer,
 }
 
 
@@ -572,6 +584,15 @@ def _parse_elephant(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+def _parse_stilt_house(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return StiltHouseLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        bamboo=ctx.bool_(obj, "bamboo", default=True),
+    )
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -621,6 +642,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "map": _parse_map,
     "scroll": _parse_scroll,
     "elephant": _parse_elephant,
+    "stilt_house": _parse_stilt_house,
 }
 
 

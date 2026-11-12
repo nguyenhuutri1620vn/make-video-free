@@ -122,7 +122,100 @@
       "motion": "zoom_out",
       "transition": "dissolve",
       "scene": {
-        "template": "landscape"
+        "layers": [
+          {
+            "type": "moon",
+            "x": 770,
+            "y": 450,
+            "r": 125,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 300,
+                "y": 400,
+                "scale": 1.6
+              },
+              {
+                "x": 360,
+                "y": 440,
+                "scale": 1.2
+              },
+              {
+                "x": 250,
+                "y": 470,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "type": "peaks",
+            "y": 900,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 470,
+                "height": 380,
+                "width": 120
+              },
+              {
+                "x": 860,
+                "height": 360,
+                "width": 130
+              },
+              {
+                "x": 120,
+                "height": 330,
+                "width": 120
+              },
+              {
+                "x": 660,
+                "height": 290,
+                "width": 115
+              },
+              {
+                "x": 300,
+                "height": 250,
+                "width": 105
+              },
+              {
+                "x": 1030,
+                "height": 260,
+                "width": 100
+              }
+            ]
+          },
+          {
+            "type": "clouds",
+            "outline": "gold_dk",
+            "items": [
+              {
+                "x": 640,
+                "y": 650,
+                "scale": 0.9,
+                "flip": -1
+              },
+              {
+                "x": 960,
+                "y": 760,
+                "scale": 0.8
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 940,
+            "height": 290
+          },
+          {
+            "type": "stilt_house",
+            "x": 560,
+            "y": 1095,
+            "scale": 1.45
+          }
+        ]
       }
     },
     {
