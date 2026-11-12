@@ -25,7 +25,15 @@ from history_shorts.characters.figure import Placement, draw_figure
 from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
-from history_shorts.config import CharacterSpec, DrumLayer, GongLayer, Layer, LotusLayer, Theme
+from history_shorts.config import (
+    CharacterSpec,
+    DrumLayer,
+    GongLayer,
+    Layer,
+    LotusLayer,
+    TempleLayer,
+    Theme,
+)
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import Box, FloatImage
 from history_shorts.scene import draw_layers
@@ -63,6 +71,7 @@ GALLERY_LOTUS: Final = LotusLayer(x=540, y=1000, scale=3.0)
 # A reference drum face (backlog #1), centred like the lotus.
 GALLERY_DRUM: Final = DrumLayer(x=540, y=880, r=280)
 GALLERY_GONG: Final = GongLayer(x=540, y=880, r=130)
+GALLERY_TEMPLE: Final = TempleLayer(x=540, y=1100, scale=1.3)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
 # is placed so the art sits in the upper three quarters and the label stays on bare ground.
@@ -82,6 +91,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("lotus", "lotus", GALLERY_LOTUS, Box(360, 758, 720, 1238)),
     ("drum", "drum", GALLERY_DRUM, Box(240, 580, 840, 1380)),
     ("gong", "gong", GALLERY_GONG, Box(240, 540, 840, 1340)),
+    ("temple", "temple", GALLERY_TEMPLE, Box(240, 660, 840, 1460)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 

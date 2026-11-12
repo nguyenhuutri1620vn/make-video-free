@@ -194,6 +194,16 @@ class GongLayer:
     tile: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class TempleLayer:
+    """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
+
+    x: float
+    y: float
+    scale: float
+    incense: bool = True
+
+
 Layer = (
     SunLayer
     | CloudsLayer
@@ -208,6 +218,7 @@ Layer = (
     | LotusLayer
     | DrumLayer
     | GongLayer
+    | TempleLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -226,6 +237,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "lotus": LotusLayer,
     "drum": DrumLayer,
     "gong": GongLayer,
+    "temple": TempleLayer,
 }
 
 
@@ -479,6 +491,15 @@ def _parse_lotus(ctx: Ctx, obj: dict[str, Any]) -> Layer:
 DRUM_BIRDS: tuple[int, int] = (0, 16)
 
 
+def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return TempleLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        incense=ctx.bool_(obj, "incense", default=True),
+    )
+
+
 def _parse_gong(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return GongLayer(
         x=_x(ctx, obj),
@@ -515,6 +536,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "lotus": _parse_lotus,
     "drum": _parse_drum,
     "gong": _parse_gong,
+    "temple": _parse_temple,
 }
 
 

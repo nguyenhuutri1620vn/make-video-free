@@ -42,6 +42,7 @@ from history_shorts.scene_config import (
     RiverLayer,
     SunLayer,
     TemplateScene,
+    TempleLayer,
 )
 from history_shorts.script_config import Script, Slide, Source, load_script, slide_duration
 from history_shorts.validation import Ctx, is_int, read_json_object
@@ -595,6 +596,7 @@ __all__ = [
     "LotusLayer",
     "DrumLayer",
     "GongLayer",
+    "TempleLayer",
     "MountainsLayer",
     "Palette",
     "PeakItem",

@@ -9,12 +9,13 @@ from typing import Any
 import numpy as np
 import pytest
 
-from history_shorts.config import DrumLayer, GongLayer, load_script
+from history_shorts.config import DrumLayer, GongLayer, TempleLayer, load_script
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.temple import draw_temple
 
 Base = Callable[[], FloatImage]
 ScriptFactory = Callable[..., Path]
@@ -76,3 +77,27 @@ def test_gong_frame_bounds(ctx: Any, flat_base: Base) -> None:
     assert xs.min() >= 540 - 195 and xs.max() <= 540 + 200
     assert ys.min() >= 800 - 265 and ys.max() <= 800 + 228
     assert np.array_equal(after, draw_gong(flat_base(), GongLayer(540, 800, 100), ctx, 1))
+
+
+# --- temple (backlog #3) ------------------------------------------------------------------
+
+
+def test_temple_parses(tmp_script: ScriptFactory) -> None:
+    layer = _layer(tmp_script, {"type": "temple", "x": 540, "y": 1100, "scale": 1.5})
+    assert layer == TempleLayer(540, 1100, 1.5)
+    assert LAYER_DRAWERS[TempleLayer] is draw_temple
+
+
+def test_temple_stands_on_its_ground_line(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_temple(base.copy(), TempleLayer(540, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, after)
+    assert ys.max() <= 1100 + 1  # nothing below the ground line
+    # widest part is the bottom step (half width 215) plus its outline
+    assert ys.min() >= 1100 - 280 and xs.min() >= 540 - 225 and xs.max() <= 540 + 225
+
+
+def test_temple_incense_is_optional(ctx: Any, flat_base: Base) -> None:
+    with_smoke = draw_temple(flat_base(), TempleLayer(540, 1100, 1.0), ctx, 1)
+    without = draw_temple(flat_base(), TempleLayer(540, 1100, 1.0, incense=False), ctx, 1)
+    assert not np.array_equal(with_smoke, without)

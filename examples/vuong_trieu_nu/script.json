@@ -890,49 +890,49 @@
           {
             "type": "sun",
             "x": 540,
-            "y": 560,
-            "r": 200,
-            "rings": 1
+            "y": 680,
+            "r": 280,
+            "rings": 2
           },
           {
-            "type": "peaks",
-            "y": 900,
-            "fill": "eggshell",
+            "type": "clouds",
+            "outline": "gold",
             "items": [
               {
-                "x": 120,
-                "height": 220,
-                "width": 150
+                "x": 180,
+                "y": 420,
+                "scale": 0.8
               },
               {
-                "x": 960,
-                "height": 240,
-                "width": 150
+                "x": 900,
+                "y": 440,
+                "scale": 0.8,
+                "flip": -1
               }
             ]
           },
           {
-            "type": "river",
-            "y": 900,
-            "height": 290
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
           },
           {
-            "type": "lotus",
-            "x": 280,
-            "y": 1050,
-            "scale": 2.4
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
           },
           {
-            "type": "lotus",
-            "x": 790,
-            "y": 1070,
-            "scale": 2.6
+            "type": "ground",
+            "y": 1092,
+            "height": 52
           },
           {
-            "type": "lotus",
+            "type": "temple",
             "x": 540,
-            "y": 970,
-            "scale": 1.6
+            "y": 1100,
+            "scale": 1.55
           }
         ]
       }
@@ -949,21 +949,54 @@
         "layers": [
           {
             "type": "moon",
+            "x": 760,
+            "y": 470,
+            "r": 120,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 260,
+                "y": 430,
+                "scale": 1.4
+              },
+              {
+                "x": 330,
+                "y": 470,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 960,
+            "height": 40
+          },
+          {
+            "type": "temple",
             "x": 540,
-            "y": 560,
-            "r": 180,
-            "rings": 2
+            "y": 965,
+            "scale": 1.2,
+            "incense": true
           },
           {
             "type": "river",
-            "y": 880,
-            "height": 290
+            "y": 1000,
+            "height": 200
           },
           {
             "type": "lotus",
-            "x": 540,
-            "y": 1060,
-            "scale": 4.5
+            "x": 300,
+            "y": 1080,
+            "scale": 2.0
+          },
+          {
+            "type": "lotus",
+            "x": 790,
+            "y": 1095,
+            "scale": 2.3
           }
         ]
       }
