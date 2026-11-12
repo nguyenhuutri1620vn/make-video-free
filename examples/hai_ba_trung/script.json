@@ -73,7 +73,30 @@
       "subtitle": "Một nền văn hóa thành chiến lợi phẩm",
       "narration": "Mã Viện đặt cả vùng đất dưới sự cai trị trực tiếp. Theo Hậu Hán Thư, ông thu trống đồng của người Lạc Việt, nấu chảy để đúc ngựa đồng. Biểu tượng của cả một nền văn hóa bị biến thành chiến lợi phẩm.",
       "claim": true,
-      "source": 1
+      "source": 1,
+      "scene": {
+        "layers": [
+          {
+            "type": "drum",
+            "x": 290,
+            "y": 560,
+            "r": 170,
+            "birds": 8
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "horse",
+            "x": 690,
+            "y": 1095,
+            "scale": 1.75,
+            "facing": -1
+          }
+        ]
+      }
     },
     {
       "id": "legacy",

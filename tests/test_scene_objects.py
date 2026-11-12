@@ -15,6 +15,7 @@ from history_shorts.config import (
     ElephantLayer,
     FallenFlagsLayer,
     GongLayer,
+    HorseLayer,
     LanternItem,
     LanternsLayer,
     LonePathLayer,
@@ -36,6 +37,7 @@ from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.horse import draw_horse
 from history_shorts.scene.lanterns import draw_lanterns
 from history_shorts.scene.lone_path import draw_lone_path
 from history_shorts.scene.regalia import draw_regalia
@@ -369,3 +371,23 @@ def test_tablet_stands_on_the_floor(ctx: Any, flat_base: Base) -> None:
     assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 352
     assert xs.min() >= 540 - 142 and xs.max() <= 540 + 142
     assert np.array_equal(after, draw_tablet(flat_base(), TabletLayer(540, 1100, 1.0), ctx, 1))
+
+
+# --- horse (backlog #15) ------------------------------------------------------------------
+
+
+def test_horse_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "horse", "x": 690, "y": 1095, "scale": 1.75, "facing": -1}
+    assert _layer(tmp_script, raw) == HorseLayer(690, 1095, 1.75, -1)
+    assert LAYER_DRAWERS[HorseLayer] is draw_horse
+
+
+def test_horse_stands_on_its_plinth(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_horse(base.copy(), HorseLayer(540, 1100, 1.0), ctx, 1)
+    ys, xs = _changed(base, after)
+    # ear tip at -258, plinth cap 260 wide; the muzzle reaches +134
+    assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 262
+    assert xs.min() >= 540 - 132 and xs.max() <= 540 + 138
+    mirrored = draw_horse(base.copy(), HorseLayer(540, 1100, 1.0, -1), ctx, 1)
+    assert _changed(base, mirrored)[1].min() < xs.min()  # the muzzle now passes the left edge
