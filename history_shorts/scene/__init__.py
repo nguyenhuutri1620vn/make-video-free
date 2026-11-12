@@ -10,6 +10,7 @@ from history_shorts.config import Layer
 from history_shorts.primitives import FloatImage
 
 from . import (
+    bamboo_village,
     banners,
     boat,
     citadel,
@@ -62,6 +63,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         tablet.DRAWERS,
         horse.DRAWERS,
         citadel.DRAWERS,
+        bamboo_village.DRAWERS,
     )
 )
 

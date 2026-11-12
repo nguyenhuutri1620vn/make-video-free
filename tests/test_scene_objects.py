@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from history_shorts.config import (
+    BambooVillageLayer,
     BannersLayer,
     CitadelLayer,
     DrumLayer,
@@ -32,6 +33,7 @@ from history_shorts.config import (
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
+from history_shorts.scene.bamboo_village import draw_bamboo_village
 from history_shorts.scene.banners import draw_banners
 from history_shorts.scene.citadel import draw_citadel
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
@@ -412,3 +414,23 @@ def test_citadel_fits_its_moat(ctx: Any, flat_base: Base) -> None:
     assert xs.min() >= 540 - 342 and xs.max() <= 540 + 342
     assert ys.min() >= 900 - 131 and ys.max() <= 900 + 136
     assert np.array_equal(after, draw_citadel(flat_base(), CitadelLayer(540, 900, 1.0), ctx, 1))
+
+
+# --- bamboo village (backlog #18) ---------------------------------------------------------
+
+
+def test_bamboo_village_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "bamboo_village", "x": 540, "y": 1095, "scale": 1.7}
+    assert _layer(tmp_script, raw) == BambooVillageLayer(540, 1095, 1.7)
+    assert LAYER_DRAWERS[BambooVillageLayer] is draw_bamboo_village
+
+
+def test_bamboo_village_bounds_and_determinism(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = BambooVillageLayer(540, 1100, 1.0)
+    after = draw_bamboo_village(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    # hedge stalks up to 240 tall leaning 24, leaves fanning 30 more; banyan crown reaches -228
+    assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 262
+    assert xs.min() >= 540 - 330 and xs.max() <= 540 + 330
+    assert np.array_equal(after, draw_bamboo_village(flat_base(), layer, ctx, 1))

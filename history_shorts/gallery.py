@@ -26,6 +26,7 @@ from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import (
+    BambooVillageLayer,
     BannersLayer,
     CharacterSpec,
     CitadelLayer,
@@ -100,6 +101,7 @@ GALLERY_LANTERNS: Final = LanternsLayer(
 GALLERY_TABLET: Final = TabletLayer(x=540, y=1180, scale=1.5)
 GALLERY_HORSE: Final = HorseLayer(x=530, y=1160, scale=1.6)
 GALLERY_CITADEL: Final = CitadelLayer(x=540, y=980, scale=0.85)
+GALLERY_BAMBOO_VILLAGE: Final = BambooVillageLayer(x=540, y=1200, scale=1.05)
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -134,6 +136,7 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("tablet", "tablet", GALLERY_TABLET, Box(240, 580, 840, 1380)),
     ("horse", "horse", GALLERY_HORSE, Box(240, 600, 840, 1400)),
     ("citadel", "citadel", GALLERY_CITADEL, Box(240, 580, 840, 1380)),
+    ("bamboo village", "bamboo_village", GALLERY_BAMBOO_VILLAGE, Box(240, 600, 840, 1400)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 
@@ -280,7 +283,7 @@ def _paste_layer_cells(buffer: FloatImage, theme: Theme) -> None:
 
 
 def render_gallery(theme: Theme) -> Image.Image:
-    """The 1080x5520 contact sheet: layer cells, separators and figures, then the text."""
+    """The 1080x5880 contact sheet: layer cells, separators and figures, then the text."""
     cells = grid_cells()
     ground = lacquer_ground(
         rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=SHEET_W, height=SHEET_H

@@ -110,7 +110,7 @@ The prototype code that produced them lives in `docs/reference/prototype/`. It i
 | Chrome           | Elements shared by every slide: ground, frame, seal, tag pill, wave band, progress bar, footer.           |
 | Scene            | An ordered list of layers drawn in the visual region.                                                      |
 | Template         | A named, parameterised scene (`group`, `landscape`) that expands to layers.                               |
-| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`, `lone_path`, `lanterns`, `tablet`, `horse`, `citadel`. |
+| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`, `lone_path`, `lanterns`, `tablet`, `horse`, `citadel`, `bamboo_village`. |
 | Character        | A parametric stylised figure defined by a role preset plus overrides.                                     |
 | Formation        | A placement rule for characters (`centre_pair`, `line`, `v_shape`).                                       |
 | Gold leaf        | Texture of jittered gold squares with thin seams and rare worn spots showing red underlayer.             |
@@ -385,6 +385,7 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `tablet`     | `x`, `y` (floor line), `scale` — blank memorial tablet (no text) on an altar with an incense bowl and two candles (backlog #14) | flat |
 | `horse`      | `x`, `y` (floor line), `scale`; optional `facing` (1 / -1) — bronze horse statue on a stone plinth, gold leaf through a mask, no rider (backlog #15) | gold leaf |
 | `citadel`    | `x`, `y` (centre), `scale` — concentric earthen ramparts with a moat, a front gate and a central hall, seen from above-front (backlog #17, Appendix B "thành quách") | flat |
+| `bamboo_village` | `x`, `y` (ground line), `scale` — a bamboo hedge behind thatched houses, a banyan and a village gate (backlog #18, Appendix B "làng tre") | flat |
 
 **Character**
 

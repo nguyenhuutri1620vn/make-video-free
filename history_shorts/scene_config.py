@@ -327,6 +327,15 @@ class CitadelLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class BambooVillageLayer:
+    """A village behind its bamboo hedge (backlog #18): x, ground y, scale."""
+
+    x: float
+    y: float
+    scale: float
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -364,6 +373,7 @@ Layer = (
     | TabletLayer
     | HorseLayer
     | CitadelLayer
+    | BambooVillageLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -396,6 +406,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "tablet": TabletLayer,
     "horse": HorseLayer,
     "citadel": CitadelLayer,
+    "bamboo_village": BambooVillageLayer,
 }
 
 
@@ -762,6 +773,10 @@ def _parse_citadel(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return CitadelLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
 
+def _parse_bamboo_village(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return BambooVillageLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -821,6 +836,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "tablet": _parse_tablet,
     "horse": _parse_horse,
     "citadel": _parse_citadel,
+    "bamboo_village": _parse_bamboo_village,
 }
 
 
