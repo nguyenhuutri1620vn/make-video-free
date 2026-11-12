@@ -15,6 +15,8 @@ from history_shorts.config import (
     ElephantLayer,
     FallenFlagsLayer,
     GongLayer,
+    LanternItem,
+    LanternsLayer,
     LonePathLayer,
     MapLayer,
     RegaliaLayer,
@@ -33,6 +35,7 @@ from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.gong import draw_gong
+from history_shorts.scene.lanterns import draw_lanterns
 from history_shorts.scene.lone_path import draw_lone_path
 from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.sail_boat import draw_sail_boat
@@ -326,3 +329,22 @@ def test_lone_path_narrows_into_the_distance(ctx: Any, flat_base: Base) -> None:
     assert np.nonzero(changed)[0].max() <= 1140 + 2
     misty = draw_lone_path(base.copy(), LonePathLayer(1140, 340), ctx, 1)
     assert not np.array_equal(after, misty)
+
+
+# --- lanterns (backlog #13) ---------------------------------------------------------------
+
+
+def test_lanterns_parse(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "lanterns", "items": [{"x": 300, "y": 1000, "scale": 1.5}]}
+    assert _layer(tmp_script, raw) == LanternsLayer((LanternItem(300, 1000, 1.5),))
+    assert LAYER_DRAWERS[LanternsLayer] is draw_lanterns
+
+
+def test_lanterns_float_and_reflect(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_lanterns(base.copy(), LanternsLayer((LanternItem(540, 1000, 1.0),)), ctx, 1)
+    ys, xs = _changed(base, after)
+    # glow reaches 60 above the waterline, the reflection 50 below it
+    assert ys.min() >= 1000 - 62 and ys.max() <= 1000 + 52
+    assert xs.min() >= 540 - 32 and xs.max() <= 540 + 32
+    assert ys.max() > 1000 + 20  # the reflection is there

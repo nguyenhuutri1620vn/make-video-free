@@ -285,6 +285,20 @@ class LonePathLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class LanternItem:
+    x: float
+    y: float
+    scale: float
+
+
+@dataclass(frozen=True, slots=True)
+class LanternsLayer:
+    """Floating lotus lanterns (backlog #13); each item's y is its waterline."""
+
+    items: tuple[LanternItem, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -318,6 +332,7 @@ Layer = (
     | FallenFlagsLayer
     | SailBoatLayer
     | LonePathLayer
+    | LanternsLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -346,6 +361,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "fallen_flags": FallenFlagsLayer,
     "sail_boat": SailBoatLayer,
     "lone_path": LonePathLayer,
+    "lanterns": LanternsLayer,
 }
 
 
@@ -592,6 +608,14 @@ def _parse_birds(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return BirdsLayer(items=_items(ctx, obj, BirdItem, _parse_bird_item))
 
 
+def _parse_lantern_item(ctx: Ctx, obj: dict[str, Any]) -> LanternItem:
+    return LanternItem(_x(ctx, obj), _y(ctx, obj), _scale(ctx, obj))
+
+
+def _parse_lanterns(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return LanternsLayer(items=_items(ctx, obj, LanternItem, _parse_lantern_item))
+
+
 def _parse_lotus(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return LotusLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
@@ -742,6 +766,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "fallen_flags": _parse_fallen_flags,
     "sail_boat": _parse_sail_boat,
     "lone_path": _parse_lone_path,
+    "lanterns": _parse_lanterns,
 }
 
 
