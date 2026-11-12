@@ -14,13 +14,54 @@
       "claim": true,
       "source": 0,
       "scene": {
-        "template": "group",
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "sun",
+            "x": 540,
+            "y": 640,
+            "r": 300,
+            "rings": 2
           },
           {
-            "role": "leader"
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "elephant",
+            "x": 520,
+            "y": 1100,
+            "scale": 2.1,
+            "facing": 1
           }
         ]
       }
@@ -33,7 +74,21 @@
       "claim": true,
       "source": 0,
       "scene": {
-        "template": "landscape"
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.34,
+                0.36
+              ]
+            ]
+          }
+        ]
       }
     },
     {
@@ -44,7 +99,43 @@
       "claim": true,
       "source": 0,
       "scene": {
-        "template": "group"
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 520,
+            "r": 220,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 380,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 400,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "regalia",
+            "x": 540,
+            "y": 1095,
+            "scale": 2.2
+          }
+        ]
       }
     },
     {
@@ -53,7 +144,20 @@
       "subtitle": "Nhà Hán cử Mã Viện sang đánh",
       "narration": "Nhưng nhà Hán không chấp nhận. Năm 42, họ cử danh tướng Mã Viện, mang theo 2 vạn quân và 2 nghìn thuyền xe.",
       "claim": true,
-      "source": 1
+      "source": 1,
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "scatter": 24,
+            "arrow": true
+          }
+        ]
+      }
     },
     {
       "id": "fall",
@@ -63,8 +167,129 @@
       "claim": true,
       "source": 0,
       "scene": {
-        "template": "landscape",
-        "boats": []
+        "layers": [
+          {
+            "type": "moon",
+            "x": 770,
+            "y": 450,
+            "r": 125,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 300,
+                "y": 400,
+                "scale": 1.6
+              },
+              {
+                "x": 360,
+                "y": 440,
+                "scale": 1.2
+              },
+              {
+                "x": 250,
+                "y": 470,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "type": "peaks",
+            "y": 900,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 470,
+                "height": 380,
+                "width": 120
+              },
+              {
+                "x": 860,
+                "height": 360,
+                "width": 130
+              },
+              {
+                "x": 120,
+                "height": 330,
+                "width": 120
+              },
+              {
+                "x": 660,
+                "height": 290,
+                "width": 115
+              },
+              {
+                "x": 300,
+                "height": 250,
+                "width": 105
+              },
+              {
+                "x": 1030,
+                "height": 260,
+                "width": 100
+              }
+            ]
+          },
+          {
+            "type": "clouds",
+            "outline": "gold_dk",
+            "items": [
+              {
+                "x": 640,
+                "y": 650,
+                "scale": 0.9,
+                "flip": -1
+              },
+              {
+                "x": 960,
+                "y": 760,
+                "scale": 0.8
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 940,
+            "height": 290
+          },
+          {
+            "type": "lanterns",
+            "items": [
+              {
+                "x": 760,
+                "y": 975,
+                "scale": 0.9
+              },
+              {
+                "x": 330,
+                "y": 990,
+                "scale": 1.0
+              },
+              {
+                "x": 610,
+                "y": 1010,
+                "scale": 1.2
+              },
+              {
+                "x": 880,
+                "y": 1040,
+                "scale": 1.5
+              },
+              {
+                "x": 230,
+                "y": 1060,
+                "scale": 1.7
+              },
+              {
+                "x": 520,
+                "y": 1095,
+                "scale": 2.1
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -106,8 +331,55 @@
       "claim": true,
       "source": 0,
       "scene": {
-        "template": "landscape",
-        "boats": []
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 680,
+            "r": 280,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 180,
+                "y": 420,
+                "scale": 0.8
+              },
+              {
+                "x": 900,
+                "y": 440,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "temple",
+            "x": 540,
+            "y": 1100,
+            "scale": 1.55
+          }
+        ]
       }
     },
     {
