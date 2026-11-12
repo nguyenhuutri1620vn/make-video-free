@@ -11,6 +11,7 @@ import pytest
 
 from history_shorts.config import (
     DrumLayer,
+    ElephantLayer,
     GongLayer,
     MapLayer,
     ScrollLayer,
@@ -22,6 +23,7 @@ from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
+from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.temple import draw_temple
@@ -164,3 +166,28 @@ def test_scroll_bounds_and_determinism(ctx: Any, flat_base: Base) -> None:
     assert ys.min() >= 800 - 140 and ys.max() <= 800 + 176
     assert np.array_equal(after, draw_scroll(flat_base(), layer, ctx, 1))
     assert not np.array_equal(after, draw_scroll(flat_base(), layer, ctx, 2))  # ink marks vary
+
+
+# --- elephant (backlog #6) ----------------------------------------------------------------
+
+
+def test_elephant_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "elephant", "x": 520, "y": 1100, "scale": 2, "facing": -1, "flag": False}
+    assert _layer(tmp_script, raw) == ElephantLayer(520, 1100, 2, -1, False)
+    assert LAYER_DRAWERS[ElephantLayer] is draw_elephant
+
+
+def test_elephant_stands_on_the_ground(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    ys, xs = _changed(base, draw_elephant(base.copy(), ElephantLayer(540, 1100, 1.0), ctx, 1))
+    assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 310  # flag top at -304
+    assert xs.min() >= 540 - 145 and xs.max() <= 540 + 160  # tail tuft, trunk tip
+
+
+def test_elephant_mirrors_by_scale(ctx: Any, flat_base: Base) -> None:
+    right = draw_elephant(flat_base(), ElephantLayer(540, 1100, 1.0, 1), ctx, 1)
+    left = draw_elephant(flat_base(), ElephantLayer(540, 1100, 1.0, -1), ctx, 1)
+    changed_r = np.any(right != flat_base(), axis=-1)
+    changed_l = np.any(left != flat_base(), axis=-1)
+    # mirrored about x = 540: column c on the right is column 1080 - c on the left (+-1 px)
+    assert abs(int(changed_r.sum()) - int(changed_l.sum())) < changed_r.sum() * 0.02

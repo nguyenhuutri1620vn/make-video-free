@@ -63,25 +63,54 @@
       "narration": "Tướng… cũng là phụ nữ.",
       "text_in": "fade",
       "scene": {
-        "template": "group",
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "sun",
+            "x": 540,
+            "y": 640,
+            "r": 300,
+            "rings": 2
           },
           {
-            "role": "leader"
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
           },
           {
-            "role": "general_alt"
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
           },
           {
-            "role": "general_alt"
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
           },
           {
-            "role": "general"
+            "type": "ground",
+            "y": 1092,
+            "height": 52
           },
           {
-            "role": "general"
+            "type": "elephant",
+            "x": 520,
+            "y": 1100,
+            "scale": 2.1,
+            "facing": 1
           }
         ]
       }
@@ -854,25 +883,54 @@
       "transition": "fade",
       "text_in": "fade",
       "scene": {
-        "template": "group",
-        "characters": [
+        "layers": [
           {
-            "role": "leader"
+            "type": "sun",
+            "x": 540,
+            "y": 640,
+            "r": 300,
+            "rings": 2
           },
           {
-            "role": "leader"
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
           },
           {
-            "role": "general_alt"
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
           },
           {
-            "role": "general_alt"
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
           },
           {
-            "role": "general"
+            "type": "ground",
+            "y": 1092,
+            "height": 52
           },
           {
-            "role": "general"
+            "type": "elephant",
+            "x": 520,
+            "y": 1100,
+            "scale": 2.1,
+            "facing": 1
           }
         ]
       }

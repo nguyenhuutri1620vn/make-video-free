@@ -540,6 +540,7 @@ def test_layer_types_registry() -> None:
         "temple",
         "map",
         "scroll",
+        "elephant",
     ]
     assert LAYER_TYPES["sun"] is SunLayer and LAYER_TYPES["moon"] is SunLayer
     assert LAYER_TYPES["boat"] is BoatLayer
@@ -551,7 +552,7 @@ def test_unknown_layer_type_lists_allowed(tmp_script: ScriptFactory) -> None:
     assert error.startswith("script.json › slides[0].scene.layers[0].type: unknown layer type")
     assert error.endswith(
         "allowed: sun, moon, clouds, mountains, peaks, hills, river, ground, "
-        "characters, boat, birds, lotus, drum, gong, temple, map, scroll"
+        "characters, boat, birds, lotus, drum, gong, temple, map, scroll, elephant"
     )
 
 

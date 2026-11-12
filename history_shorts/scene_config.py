@@ -218,6 +218,17 @@ class ScrollLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class ElephantLayer:
+    """A war elephant, no rider (backlog #6): feet x and ground y, scale, facing, flag."""
+
+    x: float
+    y: float
+    scale: float
+    facing: int = 1
+    flag: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class TempleLayer:
     """A temple gate (backlog #3): centre x, ground y, scale, optional incense burners."""
 
@@ -244,6 +255,7 @@ Layer = (
     | TempleLayer
     | MapLayer
     | ScrollLayer
+    | ElephantLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -265,6 +277,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "temple": TempleLayer,
     "map": MapLayer,
     "scroll": ScrollLayer,
+    "elephant": ElephantLayer,
 }
 
 
@@ -549,6 +562,16 @@ def _parse_scroll(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return ScrollLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
 
+def _parse_elephant(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return ElephantLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        facing=_sign(ctx, obj, "facing", 1) or 1,
+        flag=ctx.bool_(obj, "flag", default=True),
+    )
+
+
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TempleLayer(
         x=_x(ctx, obj),
@@ -597,6 +620,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "temple": _parse_temple,
     "map": _parse_map,
     "scroll": _parse_scroll,
+    "elephant": _parse_elephant,
 }
 
 
