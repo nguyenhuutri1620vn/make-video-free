@@ -28,6 +28,10 @@ def _ctx(script: Script, theme: Any, index: int) -> SlideContext:
 
 
 def _check(script: Script, theme: Any, index: int) -> None:
+    # particles exist only in the video, so the still match is checked without them
+    slides = list(script.slides)
+    slides[index] = dataclasses.replace(slides[index], particles="none")
+    script = dataclasses.replace(script, slides=tuple(slides))
     ctx = _ctx(script, theme, index)
     layers, depths = scene_layers(script.slides[index], theme)
     stack = build_stack(ctx, layers, depths)
