@@ -221,6 +221,15 @@ NFR-01 and NFR-03, measured on 2026-11-08 with `/usr/bin/time -l` on an Apple M1
 
 The unique-scene script has 7 layer-scene slides (8 eggshell peaks and 2 hills each, positions and heights varied per slide so no eggshell mask repeats) and 3 `landscape` template slides with distinct seeds; it is the worst case for the eggshell cache. Before the final fix wave the cache stored full-frame textures without a bound and that script peaked at 2.09 GB (NFR-03 not met); the cache now stores bounding-box crops only and keeps at most 32 entries (`compose.EGGSHELL_CACHE_MAX_ENTRIES`), and the output is byte-identical. The time rows were measured before that change and are unchanged by it (same work, byte-identical output); the repeated-slide Peak RSS was 0.76 GB before and is 0.54 GB now.
 
+Living slides (M9), measured 2026-11-13 on the same machine with `examples/hai_ba_trung` (8 slides, 5 living, 30 s), M8 = commit 0d0411d with the same script at 2.1:
+
+| Measurement | M8 | M9 | Peak RSS M8 / M9 |
+|---|---|---|---|
+| `render`, `--jobs 1` | 228 s | 206 s | |
+| `render`, default `--jobs` | 123 s | 162 s | 1.31 GB / 1.78 GB |
+
+AC-31 (≤ 3x) is met. NFR-03 (1.5 GB) is **not** met when a script has living slides: one living clip's FFmpeg graph peaks near 1.9 GB (a dozen full-frame planes at 2x), so a render with living slides encodes at most 2 clips at once (`video.LIVING_MAX_JOBS`). Scripts without living slides are unchanged.
+
 All targets are met with wide margins. The targets name a 4-core laptop; this machine has 8 cores, and the parallel clip encode accounts for part of the 10-slide video time.
 
 ## Acceptance
