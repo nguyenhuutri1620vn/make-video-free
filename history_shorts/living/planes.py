@@ -10,6 +10,7 @@ Planes made of Cairo drawings are recovered by drawing on black and on white (``
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from functools import partial
@@ -51,6 +52,7 @@ from history_shorts.text import draw_text, plan_text
 from history_shorts.textures import grain_field, lacquer_ground, sheen_field, tone_grade
 
 TEXT_FONTS: Final = ("title", "subtitle")
+EDGE_SLACK: Final = 2  # px beyond travel + shake that an edge sprite is extended
 DRIFT_KINDS: Final[Mapping[type, str]] = MappingProxyType(
     {CloudsLayer: "cloud", BirdsLayer: "bird"}
 )
@@ -167,9 +169,10 @@ class _Animator:
 
     def _sprite(self, k: int, depth: Depth, rgba: FloatRGBA, motion: Motion) -> SpritePlane:
         box_h, box_w = rgba.shape[:2]
-        crop, origin = animate_crop(
-            rgba, motion_margin(min(box_h, 600), min(box_w, 600), self.spec)
-        )
+        margin = motion_margin(min(box_h, 600), min(box_w, 600), self.spec)
+        reach = math.ceil(self.spec.travel_px[depth] + self.spec.shake_px + EDGE_SLACK)
+        edge = (reach, math.ceil(reach * CANVAS_H / CANVAS_W))
+        crop, origin = animate_crop(rgba, margin, edge)
         h, w = crop.shape[:2]
         anchored = Motion(motion.kind, (w / 2, h - 1.0), motion.freq, motion.sign, motion.flicker)
         render = partial(_frame_at, crop, anchored, self.spec)

@@ -315,8 +315,10 @@ def _sound_fields(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, float | None, 
         if "duration" not in obj:
             ctx.at("duration").error(f"required for {sound}")
         duration = ctx.num(obj, "duration", default=1.0, lo=BED_SECONDS[0], hi=BED_SECONDS[1])
+    elif sound == "whoosh" and "duration" in obj:
+        duration = ctx.num(obj, "duration", lo=BED_SECONDS[0], hi=BED_SECONDS[1])
     elif "duration" in obj:
-        ctx.at("duration").error(f"only {' and '.join(BED_SOUNDS)} take a duration")
+        ctx.at("duration").error(f"only {', '.join((*BED_SOUNDS, 'whoosh'))} take a duration")
     shake = ctx.bool_(obj, "shake", default=False)
     if shake and sound not in HIT_SOUNDS:
         ctx.at("shake").error(f"only {' and '.join(HIT_SOUNDS)} can shake")

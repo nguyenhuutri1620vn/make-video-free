@@ -90,3 +90,16 @@ def test_shake_visible_then_settles(rendered: Path) -> None:
         )
 
     assert motion(0.55) > 2 * motion(1.6)
+
+
+def test_edge_sprite_has_no_gap_when_panning(rendered: Path) -> None:  # review finding 1
+    """The river sprite spans the canvas width; panning right must not uncover its edge."""
+    preview = np.asarray(Image.open(rendered.parent / "slides" / "01.png").convert("RGB"))
+    frame = _frame(rendered, 3.8)
+    band = (slice(1000, 1140), slice(1040, 1080))  # right edge of the dark river
+
+    def redness(img: np.ndarray) -> float:  # the red mountains behind show up as R - G
+        mean = img[band].reshape(-1, 3).astype(float).mean(axis=0)
+        return float(mean[0] - mean[1])
+
+    assert redness(frame) <= redness(preview) + 15

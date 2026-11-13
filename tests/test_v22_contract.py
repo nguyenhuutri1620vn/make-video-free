@@ -127,3 +127,9 @@ def test_bed_past_slide_end_is_error(tmp_script: ScriptFactory) -> None:  # RF-5
     issues = cues.cue_problems(script, [3.0])
     assert [i.path for i in issues if i.severity == "error"] == ["slides[0].sfx[0].duration"]
     assert cues.sfx_inputs(script, [3.0]) == ()
+
+
+def test_whoosh_accepts_duration(tmp_script: ScriptFactory) -> None:  # review: docs allow it
+    cue = {"sound": "whoosh", "at": 0.5, "duration": 1.0}
+    path = _script(tmp_script, "2.2", {"title": "A", "duration": 3, "sfx": [cue]})
+    assert load_script(path)[0].slides[0].sfx[0].duration == 1.0

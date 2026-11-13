@@ -112,9 +112,23 @@ def alpha_bbox(full: FloatRGBA) -> tuple[int, int, int, int] | None:
     return int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
 
 
-def animate_crop(full: FloatRGBA, margin: int) -> tuple[FloatRGBA, tuple[int, int]]:
-    """The visible part of a full-canvas layer plus ``margin`` px all round (zeros outside the
-    canvas), and its top-left origin (x, y) in canvas pixels (may be negative)."""
+def animate_crop(
+    full: FloatRGBA, margin: int, edge: tuple[int, int] = (0, 0)
+) -> tuple[FloatRGBA, tuple[int, int]]:
+    """The visible part of a full-canvas layer plus ``margin`` px all round, and its top-left
+    origin (x, y) in canvas pixels (may be negative).
+
+    ``edge`` (px, py) first extends the layer beyond the canvas by copying its border pixels,
+    like the still planes, so a layer that touches the canvas edge (a river) stays continuous
+    when the camera moves; elsewhere the margin is transparent."""
+    ex, ey = edge
+    if ex or ey:
+        full = np.pad(full, ((ey, ey), (ex, ex), (0, 0)), mode="edge")
+    crop, (x, y) = _crop(full, margin)
+    return crop, (x - ex, y - ey)
+
+
+def _crop(full: FloatRGBA, margin: int) -> tuple[FloatRGBA, tuple[int, int]]:
     box = alpha_bbox(full)
     if box is None:
         return np.zeros((1, 1, 4), dtype=np.float32), (0, 0)
