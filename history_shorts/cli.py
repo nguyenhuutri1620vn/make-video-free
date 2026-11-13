@@ -144,7 +144,7 @@ def _check_cues(script: Script, theme: Theme, plan: AudioPlan | None) -> list[Is
     from history_shorts import ffmpeg as ff
 
     has_audio = None
-    if any(slide.sfx for slide in script.slides):
+    if any(cue.path is not None for slide in script.slides for cue in slide.sfx):
         info = ff.find_ffmpeg()  # probing the effects needs ffprobe: exit 4 when missing
         has_audio = lambda path: ff.has_audio(info, path)  # noqa: E731
     return cues.cue_problems(script, _durations(script, theme, plan), has_audio)

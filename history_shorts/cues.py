@@ -31,7 +31,10 @@ def cue_problems(
             if cue.at >= seconds:
                 message = f"starts at {cue.at:g} s but the slide lasts {seconds:.3f} s"
                 issues.append(Issue(name, f"{where}.at", message, "error"))
-            if has_audio is not None and not has_audio(cue.path):
+            if cue.duration is not None and cue.at + cue.duration > seconds:
+                message = f"ends at {cue.at + cue.duration:g} s but the slide lasts {seconds:.3f} s"
+                issues.append(Issue(name, f"{where}.duration", message, "error"))
+            if cue.path is not None and has_audio is not None and not has_audio(cue.path):
                 message = f"no audio stream in {cue.path}"
                 issues.append(Issue(name, f"{where}.file", message, "error"))
         cut = slide.music_cut
@@ -51,11 +54,12 @@ def music_cut_without_music(script: Script) -> Issue | None:
 
 
 def sfx_inputs(script: Script, durations: list[float]) -> tuple[VoiceInput, ...]:
-    """Every sound effect with its absolute start in milliseconds and its gain."""
+    """Every file sound effect with its absolute start in milliseconds and its gain."""
     return tuple(
         VoiceInput(cue.path, round((start + cue.at) * 1000), cue.gain_db)
         for slide, start in zip(script.slides, _starts(durations), strict=True)
         for cue in slide.sfx
+        if cue.path is not None
     )
 
 
