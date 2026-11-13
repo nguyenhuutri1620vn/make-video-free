@@ -91,6 +91,18 @@ def _key(plane: PlaneFile) -> tuple[str, tuple[float, float], tuple[int, int]]:
     return plane.depth, plane.velocity, plane.pad
 
 
+def source(index: int, plane: PlaneFile | None = None) -> str:
+    """The stream label of input ``index``: stills are looped in the graph (``still_loop``),
+    sprite sequences are read as they are (``-stream_loop``)."""
+    return f"{index}:v" if plane is not None and plane.kind == "sprite" else f"in{index}"
+
+
+def still_loop(index: int, frames: int, fps: int) -> str:
+    """Repeat a single decoded still ``frames`` times; looping the input instead re-decodes
+    every frame and queues dozens of them (about 180 MB per 1184x2104 input)."""
+    return f"[{index}:v]loop=loop={frames - 1}:size=1:start=0,setpts=N/{fps}/TB[in{index}]"
+
+
 def _stack(indices: Sequence[int], planes: Sequence[PlaneFile], fps: int, duration: float) -> str:
     """Overlay one group's planes on their padded canvas; ends with an open chain."""
     first = planes[indices[0]]
@@ -104,12 +116,12 @@ def _stack(indices: Sequence[int], planes: Sequence[PlaneFile], fps: int, durati
             f"format={PLANE_FORMAT}[{tag}a]"
         )
     else:
-        parts.append(f"[{indices[0]}:v]format={PLANE_FORMAT}[{tag}a]")
+        parts.append(f"[{source(indices[0], first)}]format={PLANE_FORMAT}[{tag}a]")
         rest = rest[1:]
     current = f"{tag}a"
     for n, i in enumerate(rest):
         x, y = planes[i].origin
-        parts.append(f"[{i}:v]format={PLANE_FORMAT}[{tag}i{n}]")
+        parts.append(f"[{source(i, planes[i])}]format={PLANE_FORMAT}[{tag}i{n}]")
         parts.append(f"[{current}][{tag}i{n}]overlay={x}:{y}:format=auto[{tag}o{n}]")
         current = f"{tag}o{n}"
     return ";".join(parts) + f";[{current}]"

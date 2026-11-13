@@ -13,7 +13,7 @@ import shutil
 import tempfile
 import time
 from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
 
@@ -33,6 +33,9 @@ PARTIAL_SUFFIX: Final = ".partial.mp4"
 DEFAULT_MUSIC_VOLUME: Final = 0.6
 MAX_MUSIC_VOLUME: Final = 2.0
 TOTAL_DECIMALS: Final = 3
+# A living clip's FFmpeg graph peaks near 2 GB (many full-frame planes at 2x), so a render
+# with living slides encodes at most this many clips at once.
+LIVING_MAX_JOBS: Final = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +105,8 @@ def _encode_clips(
     which takes a few seconds. The first failure in slide order is raised.
     """
     clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(slides) + 1)]
+    if any(clip is not None for clip in opts.living):
+        opts = replace(opts, jobs=min(opts.jobs, LIVING_MAX_JOBS))
     cmds = _clip_cmds(info, slides, durations, theme, opts, clips)
     if opts.jobs <= 1:
         for cmd in cmds:

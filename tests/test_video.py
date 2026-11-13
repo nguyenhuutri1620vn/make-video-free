@@ -389,3 +389,26 @@ def test_synth_cues_reach_the_mix(
     mux = calls[-1]
     assert any(arg.endswith("sfx_00_00.wav") for arg in mux)
     assert any("adelay=500|500" in arg for arg in mux)
+
+
+def test_living_clips_cap_parallel_jobs(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:  # M9: a living clip's graph peaks near 2 GB
+    from history_shorts import video
+    from history_shorts.living.types import LivingClip
+
+    seen: list[int] = []
+    real = video.ThreadPoolExecutor
+
+    def pool(max_workers: int) -> Any:
+        seen.append(max_workers)
+        return real(max_workers=max_workers)
+
+    monkeypatch.setattr(video, "ThreadPoolExecutor", pool)
+    monkeypatch.setattr(ffmpeg, "run", fake_run([], error=lambda c: RuntimeError()))
+    t = tmp_path
+    clip = LivingClip((), t / "w.png", t / "s.png", t / "c.png", None, ())
+    monkeypatch.setattr(ffmpeg, "living_clip_cmd", lambda *a, **k: ["ffmpeg", str(a[2])])
+    opts = options(tmp_path / "o.mp4", jobs=6, living=(clip, None, None))
+    assemble(INFO, pngs(tmp_path, 3), [2.0, 2.0, 2.0], theme, opts)
+    assert seen == [video.LIVING_MAX_JOBS]

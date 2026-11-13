@@ -21,7 +21,7 @@ from typing import Any
 from .config import AudioSpec, LivingSpec
 from .errors import FfmpegFailed, FfmpegMissing, FfmpegTooOld
 from .layout import CANVAS_H, CANVAS_W
-from .living.motion import group_graph, plane_groups
+from .living.motion import group_graph, plane_groups, still_loop
 from .living.types import SHEEN_PNG_GAIN, LivingClip
 
 logger = logging.getLogger(__name__)
@@ -278,7 +278,7 @@ def clip_cmd(
 
 
 def _still_input(path: Path, fps: int, duration: float) -> list[str]:
-    return ["-loop", "1", "-framerate", str(fps), "-t", _secs(duration), "-i", str(path)]
+    return ["-framerate", str(fps), "-i", str(path)]  # one frame; looped by ``still_loop``
 
 
 def _living_inputs(clip: LivingClip, fps: int, duration: float) -> list[str]:
@@ -286,8 +286,8 @@ def _living_inputs(clip: LivingClip, fps: int, duration: float) -> list[str]:
     for plane in clip.planes:
         if plane.kind == "sprite":
             pattern = plane.path.parent / "%03d.png"
-            args += ["-stream_loop", "-1", "-framerate", str(fps), "-t", _secs(duration)]
-            args += ["-i", str(pattern)]
+            args += ["-stream_loop", "-1", "-t", _secs(duration)]
+            args += ["-framerate", str(fps), "-i", str(pattern)]
         else:
             args += _still_input(plane.path, fps, duration)
     for path in (clip.waves, clip.sheen, clip.chrome):
@@ -308,7 +308,14 @@ def _living_graph(
 ) -> str:
     """Scene planes moved and stacked, then waves, additive sheen, chrome and text (fixed)."""
     groups = plane_groups(clip.planes)
+    frames = max(round(duration * fps), 1)
+    count = len(clip.planes) + 3 + (clip.text is not None)
     parts = [
+        still_loop(i, frames, fps)
+        for i in range(count)
+        if i >= len(clip.planes) or clip.planes[i].kind != "sprite"
+    ]
+    parts += [
         group_graph(group, clip.planes, motion, duration, fps, spec, clip.shakes, f"p{n}")
         for n, group in enumerate(groups)
     ]
@@ -320,11 +327,11 @@ def _living_graph(
     gain = f"{1 / SHEEN_PNG_GAIN:g}"
     parts += [
         f"[{current}]format=gbrp[scene]",
-        f"[{waves}:v]format=gbrap[wv]",
+        f"[in{waves}]format=gbrap[wv]",
         "[scene][wv]overlay=0:0:format=gbrp[sw]",
-        f"[{sheen}:v]format=gbrp,colorchannelmixer=rr={gain}:gg={gain}:bb={gain}[sh]",
+        f"[in{sheen}]format=gbrp,colorchannelmixer=rr={gain}:gg={gain}:bb={gain}[sh]",
         "[sw][sh]blend=all_mode=addition[lit]",
-        f"[{chrome}:v]format=gbrap[ch]",
+        f"[in{chrome}]format=gbrap[ch]",
         "[lit][ch]overlay=0:0:format=gbrp[top]",
     ]
     last = "top"
@@ -334,7 +341,7 @@ def _living_graph(
             if text is not None
             else ""
         )
-        parts.append(f"[{chrome + 1}:v]format=gbrap{fade}[tx]")
+        parts.append(f"[in{chrome + 1}]format=gbrap{fade}[tx]")
         parts.append("[top][tx]overlay=0:0:format=gbrp[txt]")
         last = "txt"
     parts.append(f"[{last}]{fades + ',' if fades else ''}format=yuv420p[v]")
