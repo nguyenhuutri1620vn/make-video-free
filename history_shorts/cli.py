@@ -126,6 +126,9 @@ def _load_and_check(
         issues.extend(checks.check_all(script, theme))
         plan = _plan_audio(args, script, theme, issues)
         issues.extend(_check_cues(script, theme, plan))
+        from history_shorts.living.depth import depth_warnings
+
+        issues.extend(depth_warnings(script))
     return script, theme, issues, plan
 
 
