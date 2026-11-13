@@ -17,10 +17,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+import numpy as np
+
 from history_shorts import ffmpeg
 from history_shorts.config import AudioSpec, Theme
 from history_shorts.ffmpeg import FfmpegInfo
 from history_shorts.output import layer_paths
+from history_shorts.sfx import SynthJob, synth, write_wav
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,7 @@ class RenderOptions:
     text_layers: tuple[ffmpeg.TextLayer | None, ...] = ()  # per slide ``text_in`` layer (A.2)
     sfx: tuple[ffmpeg.VoiceInput, ...] = ()  # sound effects on the timeline (A.2)
     cuts: tuple[tuple[float, float], ...] = ()  # music silent between these times (A.2)
+    synth: tuple[SynthJob, ...] = ()  # synthesized sound effects (M9), written at mux time
 
 
 def default_jobs() -> int:
@@ -174,6 +178,22 @@ def _join(
     return joined
 
 
+def _materialize_synth(
+    jobs: tuple[SynthJob, ...], theme: Theme, work: Path
+) -> tuple[ffmpeg.VoiceInput, ...]:
+    """Write each synthesized cue to ``work/sfx_SS_CC.wav`` and place it on the timeline.
+
+    The RNG key is ``(seed, slide, cue)``, so a cue sounds the same on every render."""
+    inputs: list[ffmpeg.VoiceInput] = []
+    for job in jobs:
+        rng = np.random.default_rng([theme.seed, job.slide_index, job.cue_index])
+        samples = synth(job.name, rng, theme.sfx, duration=job.duration, pan=job.pan)
+        path = work / f"sfx_{job.slide_index:02d}_{job.cue_index:02d}.wav"
+        write_wav(samples, path, theme.sfx.sample_rate)
+        inputs.append(ffmpeg.VoiceInput(path, job.delay_ms, job.gain_db))
+    return tuple(inputs)
+
+
 def _raise_first_failure(futures: list[Future[None]]) -> None:
     for future in futures:
         if not future.cancelled() and (error := future.exception()) is not None:
@@ -199,7 +219,8 @@ def _run_steps(
 
     started = time.perf_counter()
     total = round(sum(durations), TOTAL_DECIMALS)
-    plan = ffmpeg.MixPlan(opts.voices, opts.sfx, opts.cuts)
+    synthesized = _materialize_synth(opts.synth, theme, work)
+    plan = ffmpeg.MixPlan(opts.voices, opts.sfx + synthesized, opts.cuts)
     mux = ffmpeg.mix_cmd(
         info, joined, partial_path(opts.out), total, plan, opts.music, opts.music_volume, opts.audio
     )

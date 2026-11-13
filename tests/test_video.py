@@ -351,3 +351,41 @@ def test_parallel_caps_threads_per_clip(
     seen.clear()
     assemble(INFO, pngs(tmp_path, 2), [2.0] * 2, theme, options(tmp_path / "o.mp4", jobs=1))
     assert all("-threads" not in c for c in seen) and len(seen) == 2
+
+
+# --- M9: synthesized cues ------------------------------------------------------------------
+
+
+def test_materialize_synth_writes_wavs(tmp_path: Path, theme: Theme) -> None:
+    from history_shorts.sfx import SynthJob
+    from history_shorts.video import _materialize_synth
+
+    jobs = (
+        SynthJob("gong", 0, 0, 1500, -6.0, None, (0.0, 0.0), False),
+        SynthJob("whoosh", 1, 99, 2800, -14.0, 0.9, (1.0, -1.0), True),
+    )
+    first, second = tmp_path / "a", tmp_path / "b"
+    first.mkdir()
+    second.mkdir()
+    inputs = _materialize_synth(jobs, theme, first)
+    assert [(i.path.name, i.delay_ms, i.gain_db) for i in inputs] == [
+        ("sfx_00_00.wav", 1500, -6.0),
+        ("sfx_01_99.wav", 2800, -14.0),
+    ]
+    again = _materialize_synth(jobs, theme, second)
+    for a, b in zip(inputs, again, strict=True):
+        assert a.path.read_bytes() == b.path.read_bytes()
+
+
+def test_synth_cues_reach_the_mix(
+    tmp_path: Path, theme: Theme, temp_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from history_shorts.sfx import SynthJob
+
+    calls: RunLog = []
+    monkeypatch.setattr(ffmpeg, "run", fake_run(calls, error=lambda c: RuntimeError()))
+    job = SynthJob("drum", 0, 0, 500, 0.0, None, (0.0, 0.0), False)
+    assemble(INFO, pngs(tmp_path), [2.0, 2.0], theme, options(tmp_path / "o.mp4", synth=(job,)))
+    mux = calls[-1]
+    assert any(arg.endswith("sfx_00_00.wav") for arg in mux)
+    assert any("adelay=500|500" in arg for arg in mux)

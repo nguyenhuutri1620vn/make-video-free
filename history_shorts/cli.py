@@ -311,6 +311,7 @@ def _encode_video(
         transitions=tuple(slide.transition for slide in script.slides),
         text_layers=_text_layers(script, theme, out),
         sfx=cues.sfx_inputs(script, durations),
+        synth=cues.synth_jobs(script, durations, theme),
         cuts=cues.music_cuts(script, durations),
     )
     phase = time.perf_counter()
