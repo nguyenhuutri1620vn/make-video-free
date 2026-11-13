@@ -22,6 +22,7 @@ import numpy as np
 from history_shorts import ffmpeg
 from history_shorts.config import AudioSpec, Theme
 from history_shorts.ffmpeg import FfmpegInfo
+from history_shorts.living.types import LivingClip
 from history_shorts.output import layer_paths
 from history_shorts.sfx import SynthJob, synth, write_wav
 
@@ -52,6 +53,7 @@ class RenderOptions:
     sfx: tuple[ffmpeg.VoiceInput, ...] = ()  # sound effects on the timeline (A.2)
     cuts: tuple[tuple[float, float], ...] = ()  # music silent between these times (A.2)
     synth: tuple[SynthJob, ...] = ()  # synthesized sound effects (M9), written at mux time
+    living: tuple[LivingClip | None, ...] = ()  # per slide: moving planes (M9), or a still
 
 
 def default_jobs() -> int:
@@ -136,6 +138,25 @@ def _clip_cmds(
         enters = k > 0 and transitions[k] != "cut"
         leaves = k + 1 < count and transitions[k + 1] != "cut"
         text = opts.text_layers[k] if k < len(opts.text_layers) else None
+        living = opts.living[k] if k < len(opts.living) else None
+        if living is not None:
+            cmds.append(
+                ffmpeg.living_clip_cmd(
+                    info,
+                    living,
+                    clips[k],
+                    durations[k] + extra[k],
+                    theme.video.fps,
+                    theme.video.crf,
+                    0.0 if enters else fade.fade_in,
+                    0.0 if leaves else fade.fade_out,
+                    motions[k],
+                    theme.living,
+                    threads=threads,
+                    text=text,
+                )
+            )
+            continue
         cmds.append(
             ffmpeg.clip_cmd(
                 info,

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pytest
 from PIL import Image
 
 from history_shorts.config import LivingSpec, load_script
@@ -26,7 +25,7 @@ def _living_script(*indices: int) -> Any:
 def test_pad_covers_travel_shake_and_drift() -> None:
     px, py = living_pad("near", SPEC, 0.0, 5.0)
     assert px >= SPEC.travel_px["near"] + SPEC.shake_px
-    assert py == pytest.approx(px * 1920 / 1080, abs=1)
+    assert px * 16 == py * 9
     drifting = living_pad("far", SPEC, 6.0, 5.0)[0]
     assert drifting >= SPEC.travel_px["far"] + SPEC.shake_px + 30
 

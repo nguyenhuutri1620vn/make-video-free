@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,6 +13,7 @@ from numpy.typing import NDArray
 from history_shorts.scene_config import Depth
 
 FloatRGBA = NDArray[np.float32]  # (h, w, 4): premultiplied RGB, then alpha
+SHEEN_PNG_GAIN = 4  # sheen is ≤ 0.10, so it is stored ×4 for 8-bit precision; FFmpeg divides
 
 
 @dataclass(frozen=True)
@@ -51,3 +54,29 @@ class SpritePlane:
 
 
 AnyPlane = ScenePlane | DriftPlane | SpritePlane
+
+
+@dataclass(frozen=True, slots=True)
+class PlaneFile:
+    """One scene plane on disk. ``path`` is a PNG, or a frame of a sprite whose frames are
+    ``path.parent/%03d.png``. ``pad`` (px, py) is the edge padding of the plane's depth;
+    ``size`` (h, w) the image size; ``origin`` the sprite's top-left in padded pixels."""
+
+    kind: Literal["static", "drift", "sprite"]
+    depth: Depth
+    path: Path
+    frames: int
+    origin: tuple[int, int]
+    velocity: tuple[float, float]
+    pad: tuple[int, int]
+    size: tuple[int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class LivingClip:
+    planes: tuple[PlaneFile, ...]
+    waves: Path
+    sheen: Path
+    chrome: Path
+    text: Path | None
+    shakes: tuple[float, ...]

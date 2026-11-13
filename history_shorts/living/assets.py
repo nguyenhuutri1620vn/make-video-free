@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal
 
@@ -19,49 +18,31 @@ from PIL import Image
 from history_shorts import cues
 from history_shorts.compose import EggshellCache, SlideContext
 from history_shorts.config import LivingSpec, Script, Theme
-from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.living.depth import scene_layers
 from history_shorts.living.planes import LivingStack, build_stack
-from history_shorts.living.types import AnyPlane, DriftPlane, FloatRGBA, SpritePlane
+from history_shorts.living.types import (
+    SHEEN_PNG_GAIN,
+    AnyPlane,
+    DriftPlane,
+    FloatRGBA,
+    LivingClip,
+    PlaneFile,
+    SpritePlane,
+)
 from history_shorts.primitives import FloatImage
 from history_shorts.render import scene_expander
 from history_shorts.scene_config import Depth
 
 PNG_LEVEL: Final = 1  # fast: these files are read once by FFmpeg and then deleted
-SHEEN_PNG_GAIN: Final = 4  # sheen is ≤ 0.10, so ×4 keeps 8-bit precision; FFmpeg divides back
 PAD_SLACK: Final = 2
-
-
-@dataclass(frozen=True, slots=True)
-class PlaneFile:
-    """One scene plane on disk. ``path`` is a PNG, or a frame of a sprite whose frames are
-    ``path.parent/%03d.png``. ``pad`` (px, py) is the edge padding of the plane's depth;
-    ``size`` (h, w) the image size; ``origin`` the sprite's top-left in padded pixels."""
-
-    kind: Literal["static", "drift", "sprite"]
-    depth: Depth
-    path: Path
-    frames: int
-    origin: tuple[int, int]
-    velocity: tuple[float, float]
-    pad: tuple[int, int]
-    size: tuple[int, int]
-
-
-@dataclass(frozen=True, slots=True)
-class LivingClip:
-    planes: tuple[PlaneFile, ...]
-    waves: Path
-    sheen: Path
-    chrome: Path
-    text: Path | None
-    shakes: tuple[float, ...]
+ASPECT: Final = (9, 16)  # CANVAS_W : CANVAS_H in lowest terms
 
 
 def living_pad(depth: Depth, spec: LivingSpec, drift: float, duration: float) -> tuple[int, int]:
     """Edge padding (px, py) of a plane: travel + shake + drift over the clip, aspect-locked."""
-    px = math.ceil(spec.travel_px[depth] + spec.shake_px + abs(drift) * duration + PAD_SLACK)
-    return px, math.ceil(px * CANVAS_H / CANVAS_W)
+    need = spec.travel_px[depth] + spec.shake_px + abs(drift) * duration + PAD_SLACK
+    unit = math.ceil(need / ASPECT[0])  # whole (9, 16) steps keep the padded image 9:16 exactly
+    return unit * ASPECT[0], unit * ASPECT[1]
 
 
 def write_png_rgba(rgba: FloatRGBA, path: Path) -> None:

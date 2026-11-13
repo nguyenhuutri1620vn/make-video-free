@@ -8,9 +8,12 @@ Reports go to stdout, one ``ERROR``/``WARN`` line per issue.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import importlib
 import logging
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 from types import ModuleType
@@ -20,6 +23,7 @@ from history_shorts.audio import AudioPlan
 from history_shorts.config import Script, Theme, load_script, load_theme
 from history_shorts.errors import HistoryShortsError, Issue, Issues, ValidationFailed
 from history_shorts.ffmpeg import TextLayer
+from history_shorts.living.types import LivingClip
 from history_shorts.video import (
     DEFAULT_MUSIC_VOLUME,
     MAX_MUSIC_VOLUME,
@@ -322,11 +326,19 @@ def _encode_video(
     if paths is None:
         return EXIT_ERROR
     timings = {"validate": validated - began, "render_slides": time.perf_counter() - phase}
+    living_root: Path | None = None
     try:
+        if any(slide.living for slide in script.slides):
+            phase = time.perf_counter()
+            living_root, clips = _render_living(script, theme, durations)
+            opts = dataclasses.replace(opts, living=clips)
+            timings["render_living"] = time.perf_counter() - phase
         assemble(info, paths, durations, theme, opts, timings)
     except OSError as exc:
         print(f"ERROR cannot write video to {out}: {exc.strerror or exc}")
         return EXIT_ERROR
+    finally:
+        _drop_living(living_root, args.keep_temp)
     timings["total"] = time.perf_counter() - began
     warnings = [i for i in issues if i.severity == "warning"]
     data = rp.build_report(
@@ -340,6 +352,30 @@ def _encode_video(
     voiced = len(plan.voices) if plan is not None else None
     _print_summary(script, out, report, sum(durations), timings["total"], len(paths), voiced)
     return EXIT_OK
+
+
+def _render_living(
+    script: Script, theme: Theme, durations: list[float]
+) -> tuple[Path, tuple[LivingClip | None, ...]]:
+    """Write the living slides' planes (M9) under a fresh temp directory."""
+    from history_shorts.living.assets import render_living
+    from history_shorts.video import TEMP_PREFIX
+
+    root = Path(tempfile.mkdtemp(prefix=f"{TEMP_PREFIX}living-"))
+    try:
+        return root, render_living(script, theme, durations, root)
+    except BaseException:
+        shutil.rmtree(root, ignore_errors=True)
+        raise
+
+
+def _drop_living(root: Path | None, keep: bool) -> None:
+    if root is None:
+        return
+    if keep:
+        logging.getLogger(__name__).info("kept living-slide planes in %s", root)
+    else:
+        shutil.rmtree(root, ignore_errors=True)
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
