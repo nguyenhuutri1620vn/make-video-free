@@ -16,7 +16,7 @@ from typing import Any, Literal, cast
 
 from history_shorts.errors import Issue, Issues
 from history_shorts.narration import MAX_NARRATION_CHARS, normalise, pause_problems
-from history_shorts.scene_config import LayerScene, TemplateScene, parse_scene
+from history_shorts.scene_config import PLANE_KEY, LayerScene, TemplateScene, parse_scene
 from history_shorts.validation import Ctx, is_int, read_json_object
 
 SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
@@ -392,14 +392,14 @@ def _slide_id(ctx: Ctx, obj: Mapping[str, Any]) -> str:
 
 
 def _check_layer_depths(ctx: Ctx, obj: Mapping[str, Any]) -> None:
-    """A layer ``depth`` needs schema 2.2; the scene parser does not know the version."""
+    """A layer ``plane`` needs schema 2.2; the scene parser does not know the version."""
     scene = obj.get("scene")
     layers = scene.get("layers") if isinstance(scene, dict) else None
     if not isinstance(layers, list):
         return
     for index, layer in enumerate(layers):
-        if isinstance(layer, dict) and "depth" in layer:
-            where = ctx.at("scene").at("layers").idx(index).at("depth")
+        if isinstance(layer, dict) and PLANE_KEY in layer:
+            where = ctx.at("scene").at("layers").idx(index).at(PLANE_KEY)
             where.error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
 
 

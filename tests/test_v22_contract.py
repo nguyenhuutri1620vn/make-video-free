@@ -101,7 +101,7 @@ def test_sound_cue_requires_v22(tmp_script: ScriptFactory) -> None:
 
 
 def test_layer_depth_override(tmp_script: ScriptFactory) -> None:
-    layers = [{**CLOUDS, "depth": "near"}, CLOUDS]
+    layers = [{**CLOUDS, "plane": "near"}, CLOUDS]
     path = _script(tmp_script, "2.2", {"title": "A", "scene": {"layers": layers}})
     scene = load_script(path)[0].slides[0].scene
     assert isinstance(scene, LayerScene)
@@ -109,13 +109,13 @@ def test_layer_depth_override(tmp_script: ScriptFactory) -> None:
 
 
 def test_layer_depth_requires_v22(tmp_script: ScriptFactory) -> None:
-    layers = [{**CLOUDS, "depth": "near"}]
+    layers = [{**CLOUDS, "plane": "near"}]
     path = _script(tmp_script, "2.1", {"title": "A", "scene": {"layers": layers}})
     assert any('requires schema_version "2.2"' in e for e in _errors(path))
 
 
 def test_layer_depth_unknown(tmp_script: ScriptFactory) -> None:
-    layers = [{**CLOUDS, "depth": "deep"}]
+    layers = [{**CLOUDS, "plane": "deep"}]
     path = _script(tmp_script, "2.2", {"title": "A", "scene": {"layers": layers}})
     assert any("far, mid, near" in e for e in _errors(path))
 
