@@ -248,3 +248,53 @@ def test_theme_text_is_nfc_normalised(tmp_theme: TmpTheme) -> None:
     theme, _ = load_theme(_edit(tmp_theme, mutate))
     assert theme.chrome.seal.lines == ("SỬ", "VIỆT")
     assert theme.chrome.footer.text == "Việt"
+
+
+# --- M9: living and sfx blocks -------------------------------------------------------------
+
+
+def test_living_defaults(tmp_theme: TmpTheme) -> None:
+    living = load_theme(tmp_theme())[0].living
+    assert dict(living.travel_px) == {"far": 30.0, "mid": 60.0, "near": 90.0}
+    assert dict(living.zoom_factor) == {"far": 0.35, "mid": 0.7, "near": 1.0}
+    assert (living.prescale, living.loop_seconds, living.shake_px) == (2, 2.0, 6.0)
+    assert dict(living.particle_colors) == {
+        "petals": "pink",
+        "dust": "gold_lt",
+        "embers": "vermilion",
+    }
+
+
+def test_living_override(tmp_theme: TmpTheme) -> None:
+    path = tmp_theme(extra={"living": {"travel_px": {"near": 80}, "shake_px": 4}})
+    living = load_theme(path)[0].living
+    assert dict(living.travel_px) == {"far": 30.0, "mid": 60.0, "near": 80.0}
+    assert living.shake_px == 4.0
+
+
+def test_living_rejects_unknown_depth_key(tmp_theme: TmpTheme) -> None:
+    path = tmp_theme(extra={"living": {"travel_px": {"deep": 10}}})
+    assert any("living.travel_px.deep" in m for m in _messages(path))
+
+
+def test_living_particle_color_must_be_palette_key(tmp_theme: TmpTheme) -> None:
+    path = tmp_theme(extra={"living": {"particle_colors": {"petals": "nope"}}})
+    assert any("living.particle_colors.petals" in m for m in _messages(path))
+
+
+def test_sfx_defaults(tmp_theme: TmpTheme) -> None:
+    sfx = load_theme(tmp_theme())[0].sfx
+    assert (sfx.sample_rate, sfx.auto_whoosh_db, sfx.reverb_wet) == (48000, -14.0, 0.25)
+    assert (sfx.reverb_seconds, sfx.jitter) == (2.2, 0.03)
+
+
+@pytest.mark.parametrize(
+    ("block", "where"),
+    [
+        ({"sample_rate": 22050}, "sfx.sample_rate"),
+        ({"auto_whoosh_db": 3}, "sfx.auto_whoosh_db"),
+        ({"reverb_wet": 1.5}, "sfx.reverb_wet"),
+    ],
+)
+def test_sfx_ranges(tmp_theme: TmpTheme, block: dict[str, Any], where: str) -> None:
+    assert any(where in m for m in _messages(tmp_theme(extra={"sfx": block})))
