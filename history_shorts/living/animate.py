@@ -72,7 +72,7 @@ def _ripple(crop: FloatRGBA, p: float, spec: LivingSpec, motion: Motion) -> Floa
 
 def _brightness(crop: FloatRGBA, factor: float) -> FloatRGBA:
     out = crop.copy()
-    out[..., :3] = np.minimum(crop[..., :3] * factor, crop[..., 3:])
+    out[..., :3] = crop[..., :3] * factor  # grain may lift premultiplied RGB a hair above alpha
     return out
 
 
