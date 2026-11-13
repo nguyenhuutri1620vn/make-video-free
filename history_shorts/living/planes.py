@@ -10,13 +10,13 @@ Planes made of Cairo drawings are recovered by drawing on black and on white (``
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from functools import partial
+from types import MappingProxyType
 from typing import Final
 
 import numpy as np
-from numpy.typing import NDArray
 from PIL import Image
 
 from history_shorts import chrome
@@ -28,25 +28,43 @@ from history_shorts.compose import (
     SlideContext,
     rng_for,
 )
-from history_shorts.layout import CANVAS_H, CANVAS_W
+from history_shorts.config import LivingSpec
+from history_shorts.layout import CANVAS_H, CANVAS_W, REGIONS
+from history_shorts.living.animate import Motion, animate_crop, motion_margin, transform_frame
+from history_shorts.living.particles import particle_sprite
+from history_shorts.living.types import AnyPlane, DriftPlane, FloatRGBA, ScenePlane, SpritePlane
 from history_shorts.primitives import FloatImage, FloatMask
 from history_shorts.scene import LAYER_DRAWERS
-from history_shorts.scene_config import Depth, Layer
+from history_shorts.scene_config import (
+    BirdsLayer,
+    BoatLayer,
+    CloudsLayer,
+    Depth,
+    LanternsLayer,
+    Layer,
+    LotusLayer,
+    RiverLayer,
+    SailBoatLayer,
+    SunLayer,
+)
 from history_shorts.text import draw_text, plan_text
 from history_shorts.textures import grain_field, lacquer_ground, sheen_field, tone_grade
 
-FloatRGBA = NDArray[np.float32]  # (h, w, 4): premultiplied RGB, then alpha
 TEXT_FONTS: Final = ("title", "subtitle")
-
-
-@dataclass(frozen=True)
-class ScenePlane:
-    """Consecutive scene layers of one depth; the first plane (ground) is opaque."""
-
-    depth: Depth
-    rgba: FloatRGBA
-    layer_indices: tuple[int, ...]
-    opaque: bool = False
+DRIFT_KINDS: Final[Mapping[type, str]] = MappingProxyType(
+    {CloudsLayer: "cloud", BirdsLayer: "bird"}
+)
+SPRITE_KINDS: Final[Mapping[type, str]] = MappingProxyType(
+    {
+        BoatLayer: "bob",
+        SailBoatLayer: "bob",
+        RiverLayer: "ripple",
+        LotusLayer: "sway",
+        SunLayer: "pulse",
+        LanternsLayer: "float",
+    }
+)
+ANIMATED: Final = frozenset({*DRIFT_KINDS, *SPRITE_KINDS})
 
 
 @dataclass(frozen=True)
@@ -61,7 +79,7 @@ class TopPlanes:
 
 @dataclass(frozen=True)
 class LivingStack:
-    scene: tuple[ScenePlane, ...]
+    scene: tuple[AnyPlane, ...]
     top: TopPlanes
 
 
@@ -121,35 +139,109 @@ class _Finish:
         return _rgba(rgb, rgba[..., 3])
 
 
-def _groups(depths: Sequence[Depth]) -> list[tuple[Depth, list[int]]]:
-    groups: list[tuple[Depth, list[int]]] = []
+def _groups(
+    layers: Sequence[Layer], depths: Sequence[Depth], animated: bool
+) -> list[tuple[Depth, list[int], bool]]:
+    """Runs of still layers of one depth; an animated layer is a run of its own."""
+    groups: list[tuple[Depth, list[int], bool]] = []
     for k, depth in enumerate(depths):
-        if groups and groups[-1][0] == depth:
+        moving = animated and type(layers[k]) in ANIMATED
+        if groups and groups[-1][0] == depth and not moving and not groups[-1][2]:
             groups[-1][1].append(k)
         else:
-            groups.append((depth, [k]))
+            groups.append((depth, [k], moving))
     return groups
 
 
+class _Animator:
+    """Turns one animated layer into drift or sprite planes."""
+
+    def __init__(self, ctx: SlideContext, fin: _Finish) -> None:
+        self.ctx, self.fin, self.dctx = ctx, fin, _draw_ctx(ctx)
+        self.spec = ctx.theme.living
+        self.frames = max(round(self.spec.loop_seconds * ctx.theme.video.fps), 2)
+
+    def _render(self, k: int, layer: Layer) -> FloatRGBA:
+        draw = partial(draw_indexed, pairs=[(k, layer)], dctx=self.dctx)
+        return self.fin.plane(matte(draw, CANVAS_H, CANVAS_W))
+
+    def _sprite(self, k: int, depth: Depth, rgba: FloatRGBA, motion: Motion) -> SpritePlane:
+        box_h, box_w = rgba.shape[:2]
+        crop, origin = animate_crop(
+            rgba, motion_margin(min(box_h, 600), min(box_w, 600), self.spec)
+        )
+        h, w = crop.shape[:2]
+        anchored = Motion(motion.kind, (w / 2, h - 1.0), motion.freq, motion.sign, motion.flicker)
+        render = partial(_frame_at, crop, anchored, self.spec)
+        return SpritePlane(depth, origin, (h, w), self.frames, render, (k,))
+
+    def planes(self, k: int, layer: Layer, depth: Depth) -> list[AnyPlane]:
+        rng = rng_for(self.ctx.style.seed, self.ctx.slide_index, k + GROUND_LAYER + 1 + ANIM_KEY)
+        sign = 1.0 if rng.random() < 0.5 else -1.0
+        drift = DRIFT_KINDS.get(type(layer))
+        if drift is not None:
+            speed = self.spec.cloud_drift_px_s if drift == "cloud" else self.spec.bird_drift_px_s
+            return [DriftPlane(depth, self._render(k, layer), (sign * speed, 0.0), (k,))]
+        kind = SPRITE_KINDS[type(layer)]
+        if isinstance(layer, LanternsLayer):
+            out: list[AnyPlane] = []
+            for item in layer.items:
+                flicker = (rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-1, 1))
+                motion = Motion(kind, (0.0, 0.0), int(rng.integers(1, 3)), sign, flicker)
+                single = replace(layer, items=(item,))
+                out.append(self._sprite(k, depth, self._render(k, single), motion))
+                sign = -sign
+            return out
+        return [self._sprite(k, depth, self._render(k, layer), Motion(kind, (0.0, 0.0), 1, sign))]
+
+
+ANIM_KEY: Final = 500  # RNG key offset for a layer's motion, apart from its drawing RNG
+
+
+def _frame_at(crop: FloatRGBA, motion: Motion, spec: LivingSpec, p: float) -> FloatRGBA:
+    return transform_frame(crop, p, motion, spec)
+
+
 def _scene_planes(
-    ctx: SlideContext, layers: Sequence[Layer], depths: Sequence[Depth], fin: _Finish
-) -> list[ScenePlane]:
+    ctx: SlideContext,
+    layers: Sequence[Layer],
+    depths: Sequence[Depth],
+    fin: _Finish,
+    animated: bool,
+) -> list[AnyPlane]:
     dctx = _draw_ctx(ctx)
-    groups = _groups(depths)
+    groups = _groups(layers, depths, animated)
     top, mid, bottom = ctx.style.ground
     rng = rng_for(ctx.style.seed, ctx.slide_index, GROUND_LAYER)
     ground = lacquer_ground(
         rng, ctx.theme.palette, top, mid, bottom, width=CANVAS_W, height=CANVAS_H
     )
-    first: list[int] = groups.pop(0)[1] if groups and groups[0][0] == "far" else []
+    still_far = groups and groups[0][0] == "far" and not groups[0][2]
+    first: list[int] = groups.pop(0)[1] if still_far else []
     back = draw_indexed(ground, [(k, layers[k]) for k in first], dctx)
     alpha = np.ones((CANVAS_H, CANVAS_W), dtype=np.float32)
-    planes = [ScenePlane("far", fin.plane(_rgba(back, alpha)), tuple(first), opaque=True)]
-    for depth, indices in groups:
+    planes: list[AnyPlane] = [
+        ScenePlane("far", fin.plane(_rgba(back, alpha)), tuple(first), opaque=True)
+    ]
+    animator = _Animator(ctx, fin)
+    for depth, indices, moving in groups:
+        if moving:
+            planes += animator.planes(indices[0], layers[indices[0]], depth)
+            continue
         pairs = [(k, layers[k]) for k in indices]
         rgba = matte(partial(draw_indexed, pairs=pairs, dctx=dctx), CANVAS_H, CANVAS_W)
         planes.append(ScenePlane(depth, fin.plane(rgba), tuple(indices)))
+    slide = ctx.script.slides[ctx.slide_index]
+    if animated and slide.particles != "none":
+        rng = rng_for(ctx.style.seed, ctx.slide_index, PARTICLE_KEY)
+        spec, palette = ctx.theme.living, ctx.theme.palette
+        planes.append(
+            particle_sprite(slide.particles, spec, palette, rng, animator.frames, REGIONS["visual"])
+        )
     return planes
+
+
+PARTICLE_KEY: Final = 998  # RNG key of a slide's particles
 
 
 def _canvas_rgba(draw: Callable[[Canvas], None]) -> FloatRGBA:
@@ -198,10 +290,34 @@ def _top_planes(ctx: SlideContext, fin: _Finish) -> TopPlanes:
     return TopPlanes(waves, sheen, _chrome_plane(ctx, fin, text_in), text)
 
 
-def build_stack(ctx: SlideContext, layers: Sequence[Layer], depths: Sequence[Depth]) -> LivingStack:
-    """The planes of slide ``ctx.slide_index``; ``depths`` from ``effective_depths``."""
+def build_stack(
+    ctx: SlideContext,
+    layers: Sequence[Layer],
+    depths: Sequence[Depth],
+    *,
+    animated: bool = True,
+) -> LivingStack:
+    """The planes of slide ``ctx.slide_index``; ``depths`` from ``effective_depths``.
+    With ``animated``, moving layers become drift or sprite planes and particles are added."""
     fin = _Finish(ctx)
-    return LivingStack(tuple(_scene_planes(ctx, layers, depths, fin)), _top_planes(ctx, fin))
+    scene = _scene_planes(ctx, layers, depths, fin, animated)
+    return LivingStack(tuple(scene), _top_planes(ctx, fin))
+
+
+def paste(img: FloatImage, sprite: FloatRGBA, origin: tuple[int, int]) -> FloatImage:
+    """Composite ``sprite`` over ``img`` with its top-left corner at ``origin`` (clipped)."""
+    x0, y0 = origin
+    h, w = sprite.shape[:2]
+    ys, xs = (
+        slice(max(y0, 0), min(y0 + h, img.shape[0])),
+        slice(max(x0, 0), min(x0 + w, img.shape[1])),
+    )
+    if ys.start >= ys.stop or xs.start >= xs.stop:
+        return img
+    part = sprite[ys.start - y0 : ys.stop - y0, xs.start - x0 : xs.stop - x0]
+    out = img.copy()
+    out[ys, xs] = over_rgba(img[ys, xs], part)
+    return out
 
 
 def over_rgba(base: FloatImage, plane: FloatRGBA) -> FloatImage:
@@ -212,7 +328,10 @@ def recompose(stack: LivingStack) -> FloatImage:
     """The t = 0 composite of ``stack`` (equals the still slide up to 8-bit rounding)."""
     img = np.zeros((CANVAS_H, CANVAS_W, 3), dtype=np.float32)
     for plane in stack.scene:
-        img = over_rgba(img, plane.rgba)
+        if isinstance(plane, SpritePlane):
+            img = paste(img, plane.frame(0.0), plane.origin)
+        else:
+            img = over_rgba(img, plane.rgba)
     img = over_rgba(img, stack.top.waves)
     img = np.clip(img + stack.top.sheen, 0, 1)
     img = over_rgba(img, stack.top.chrome)
