@@ -508,3 +508,19 @@ def test_unwritable_out_dir_reports_write_error(
     assert code == 1
     assert f"ERROR cannot write slides to {locked / 'slides'}: " in text
     assert "Permission denied" in text
+
+
+def test_preview_ignores_living(tmp_path: Path, tmp_script: Any) -> None:  # M9
+    from history_shorts.cli import main
+
+    scene = {"layers": [{"type": "mountains", "y": 700, "amp": 40}]}
+    outs = []
+    for living in (False, True):
+        slide = {"title": "A", "scene": scene, **({"living": True} if living else {})}
+        script = tmp_script(slides=[slide], extra={"schema_version": "2.2"})
+        out = tmp_path / f"o{living}" / "v.mp4"
+        assert main(["render", "--script", str(script), "--out", str(out), "--preview"]) == 0
+        outs.append(out.parent)
+    still, living = outs
+    assert (still / "slides" / "01.png").read_bytes() == (living / "slides" / "01.png").read_bytes()
+    assert sorted(p.name for p in (living / "slides").iterdir()) == ["01.png"]
