@@ -13,14 +13,18 @@ import shutil
 import tempfile
 import time
 from concurrent.futures import FIRST_EXCEPTION, Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
+
+import numpy as np
 
 from history_shorts import ffmpeg
 from history_shorts.config import AudioSpec, Theme
 from history_shorts.ffmpeg import FfmpegInfo
+from history_shorts.living.types import LivingClip
 from history_shorts.output import layer_paths
+from history_shorts.sfx import SynthJob, synth, write_wav
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,9 @@ PARTIAL_SUFFIX: Final = ".partial.mp4"
 DEFAULT_MUSIC_VOLUME: Final = 0.6
 MAX_MUSIC_VOLUME: Final = 2.0
 TOTAL_DECIMALS: Final = 3
+# A living clip's FFmpeg graph peaks near 2 GB (many full-frame planes at 2x), so a render
+# with living slides encodes at most this many clips at once.
+LIVING_MAX_JOBS: Final = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +55,8 @@ class RenderOptions:
     text_layers: tuple[ffmpeg.TextLayer | None, ...] = ()  # per slide ``text_in`` layer (A.2)
     sfx: tuple[ffmpeg.VoiceInput, ...] = ()  # sound effects on the timeline (A.2)
     cuts: tuple[tuple[float, float], ...] = ()  # music silent between these times (A.2)
+    synth: tuple[SynthJob, ...] = ()  # synthesized sound effects (M9), written at mux time
+    living: tuple[LivingClip | None, ...] = ()  # per slide: moving planes (M9), or a still
 
 
 def default_jobs() -> int:
@@ -96,6 +105,8 @@ def _encode_clips(
     which takes a few seconds. The first failure in slide order is raised.
     """
     clips = [work / f"clip_{number:02d}.mp4" for number in range(1, len(slides) + 1)]
+    if any(clip is not None for clip in opts.living):
+        opts = replace(opts, jobs=min(opts.jobs, LIVING_MAX_JOBS))
     cmds = _clip_cmds(info, slides, durations, theme, opts, clips)
     if opts.jobs <= 1:
         for cmd in cmds:
@@ -132,6 +143,25 @@ def _clip_cmds(
         enters = k > 0 and transitions[k] != "cut"
         leaves = k + 1 < count and transitions[k + 1] != "cut"
         text = opts.text_layers[k] if k < len(opts.text_layers) else None
+        living = opts.living[k] if k < len(opts.living) else None
+        if living is not None:
+            cmds.append(
+                ffmpeg.living_clip_cmd(
+                    info,
+                    living,
+                    clips[k],
+                    durations[k] + extra[k],
+                    theme.video.fps,
+                    theme.video.crf,
+                    0.0 if enters else fade.fade_in,
+                    0.0 if leaves else fade.fade_out,
+                    motions[k],
+                    theme.living,
+                    threads=threads,
+                    text=text,
+                )
+            )
+            continue
         cmds.append(
             ffmpeg.clip_cmd(
                 info,
@@ -174,6 +204,22 @@ def _join(
     return joined
 
 
+def _materialize_synth(
+    jobs: tuple[SynthJob, ...], theme: Theme, work: Path
+) -> tuple[ffmpeg.VoiceInput, ...]:
+    """Write each synthesized cue to ``work/sfx_SS_CC.wav`` and place it on the timeline.
+
+    The RNG key is ``(seed, slide, cue)``, so a cue sounds the same on every render."""
+    inputs: list[ffmpeg.VoiceInput] = []
+    for job in jobs:
+        rng = np.random.default_rng([theme.seed, job.slide_index, job.cue_index])
+        samples = synth(job.name, rng, theme.sfx, duration=job.duration, pan=job.pan)
+        path = work / f"sfx_{job.slide_index:02d}_{job.cue_index:02d}.wav"
+        write_wav(samples, path, theme.sfx.sample_rate)
+        inputs.append(ffmpeg.VoiceInput(path, job.delay_ms, job.gain_db))
+    return tuple(inputs)
+
+
 def _raise_first_failure(futures: list[Future[None]]) -> None:
     for future in futures:
         if not future.cancelled() and (error := future.exception()) is not None:
@@ -199,7 +245,8 @@ def _run_steps(
 
     started = time.perf_counter()
     total = round(sum(durations), TOTAL_DECIMALS)
-    plan = ffmpeg.MixPlan(opts.voices, opts.sfx, opts.cuts)
+    synthesized = _materialize_synth(opts.synth, theme, work)
+    plan = ffmpeg.MixPlan(opts.voices, opts.sfx + synthesized, opts.cuts)
     mux = ffmpeg.mix_cmd(
         info, joined, partial_path(opts.out), total, plan, opts.music, opts.music_volume, opts.audio
     )

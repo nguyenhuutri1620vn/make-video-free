@@ -35,6 +35,10 @@ SIDE_NAMES: tuple[str, ...] = ("left", "right")
 T = TypeVar("T")
 
 Prop = Literal["flag", "spear", "oar", "none"]
+Depth = Literal["far", "mid", "near"]
+DEPTH_NAMES: tuple[str, ...] = ("far", "mid", "near")  # living-slide planes, back to front
+# JSON key of a layer's depth override; not ``depth``, which ``lone_path`` already uses.
+PLANE_KEY = "plane"
 Formation = Literal["centre_pair", "line", "v_shape"]
 
 
@@ -413,6 +417,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
 @dataclass(frozen=True, slots=True)
 class LayerScene:
     layers: tuple[Layer, ...]
+    depths: tuple[Depth | None, ...] = ()  # per layer ``plane`` override (2.2), or empty
 
 
 @dataclass(frozen=True, slots=True)
@@ -852,7 +857,7 @@ def _parse_layer(ctx: Ctx, raw: object) -> Layer | None:
         allowed = ", ".join(LAYER_TYPES)
         ctx.at("type").error(f'unknown layer type "{kind}"; allowed: {allowed}')
         return None
-    obj = ctx.mapping(raw, {*_keys(LAYER_TYPES[kind]), "type"})
+    obj = ctx.mapping(raw, {*_keys(LAYER_TYPES[kind]), "type", PLANE_KEY})
     return _LAYER_PARSERS[kind](ctx, obj)
 
 
@@ -892,11 +897,15 @@ def _parse_template(ctx: Ctx, obj: dict[str, Any]) -> TemplateScene:
 
 def _parse_layer_scene(ctx: Ctx, obj: dict[str, Any]) -> LayerScene:
     layers: list[Layer] = []
+    depths: list[Depth | None] = []
     for child, raw in ctx.at("layers").items(obj["layers"], non_empty=True):
         layer = _parse_layer(child, raw)
         if layer is not None:
             layers.append(layer)
-    return LayerScene(layers=tuple(layers))
+            depth = child.choice(raw, PLANE_KEY, DEPTH_NAMES) if PLANE_KEY in raw else None
+            depths.append(cast("Depth | None", depth or None))
+    any_depth = any(d is not None for d in depths)
+    return LayerScene(layers=tuple(layers), depths=tuple(depths) if any_depth else ())
 
 
 def parse_scene(ctx: Ctx, raw: object) -> LayerScene | TemplateScene | None:

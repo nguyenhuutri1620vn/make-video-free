@@ -268,6 +268,57 @@ class AudioSpec:
     true_peak_db: float = -1.5
 
 
+DEPTH_KEYS: Final = ("far", "mid", "near")
+PARTICLE_KINDS: Final = ("petals", "dust", "embers")
+
+
+def _proxy(values: Mapping[str, Any]) -> Mapping[str, Any]:
+    return MappingProxyType(dict(values))
+
+
+@dataclass(frozen=True, slots=True)
+class LivingSpec:
+    """Living slides (M9): parallax travel, ambient motion and particle settings."""
+
+    travel_px: Mapping[str, float] = field(
+        default_factory=lambda: _proxy({"far": 30.0, "mid": 60.0, "near": 90.0})
+    )
+    zoom_factor: Mapping[str, float] = field(
+        default_factory=lambda: _proxy({"far": 0.35, "mid": 0.7, "near": 1.0})
+    )
+    idle_drift: float = 0.15  # fraction of travel for motion "none"
+    prescale: int = 2
+    loop_seconds: float = 2.0
+    shake_px: float = 6.0
+    shake_seconds: float = 0.4
+    cloud_drift_px_s: float = 6.0
+    bird_drift_px_s: float = 18.0
+    bob_px: float = 5.0
+    roll_deg: float = 1.2
+    sway_deg: float = 1.0
+    ripple_px: float = 2.0
+    flicker: float = 0.06
+    glow_pulse: float = 0.03
+    particle_count: int = 14
+    particle_colors: Mapping[str, str] = field(
+        default_factory=lambda: _proxy({"petals": "pink", "dust": "gold_lt", "embers": "vermilion"})
+    )
+
+
+SAMPLE_RATES: Final = (44100, 48000)
+
+
+@dataclass(frozen=True, slots=True)
+class SfxSpec:
+    """Synthesized sound effects (M9): sample rate, auto whoosh level, reverb and jitter."""
+
+    sample_rate: int = 48000
+    auto_whoosh_db: float = -14.0
+    reverb_wet: float = 0.25
+    reverb_seconds: float = 2.2
+    jitter: float = 0.03
+
+
 @dataclass(frozen=True, slots=True)
 class Theme:
     schema_version: str
@@ -284,6 +335,8 @@ class Theme:
     audio: AudioSpec = field(default_factory=AudioSpec)
     text_in: TextInSpec = field(default_factory=TextInSpec)
     tones: Mapping[str, ToneSpec] = field(default_factory=lambda: DEFAULT_TONES)
+    living: LivingSpec = field(default_factory=LivingSpec)
+    sfx: SfxSpec = field(default_factory=SfxSpec)
 
 
 # --------------------------------------------------------------------------------------
@@ -304,6 +357,8 @@ _THEME_KEYS = (
     "audio",
     "text_in",
     "tones",
+    "living",
+    "sfx",
 )
 
 
@@ -532,6 +587,82 @@ def _parse_tones(ctx: Ctx, data: Mapping[str, Any]) -> Mapping[str, ToneSpec]:
     return MappingProxyType(tones)
 
 
+_LIVING_NUMBERS: Final[Mapping[str, tuple[float, float]]] = MappingProxyType(
+    {
+        "idle_drift": (0, 1),
+        "loop_seconds": (0.5, 8),
+        "shake_px": (0, 30),
+        "shake_seconds": (0.05, 2),
+        "cloud_drift_px_s": (0, 60),
+        "bird_drift_px_s": (0, 120),
+        "bob_px": (0, 30),
+        "roll_deg": (0, 10),
+        "sway_deg": (0, 10),
+        "ripple_px": (0, 10),
+        "flicker": (0, 0.5),
+        "glow_pulse": (0, 0.3),
+    }
+)
+
+
+def _depth_map(
+    ctx: Ctx, obj: Mapping[str, Any], key: str, default: Mapping[str, float], hi: float
+) -> Mapping[str, float]:
+    section, values = ctx.section(obj, key, DEPTH_KEYS), dict(default)
+    for name in section:
+        if name in DEPTH_KEYS:
+            values[name] = ctx.at(key).num(section, name, lo=0, hi=hi)
+        else:
+            ctx.at(key).at(str(name)).error(f"must be one of {', '.join(DEPTH_KEYS)}")
+    return _proxy(values)
+
+
+def _particle_colors(
+    ctx: Ctx, obj: Mapping[str, Any], palette: Palette, default: Mapping[str, str]
+) -> Mapping[str, str]:
+    section, values = ctx.section(obj, "particle_colors", PARTICLE_KINDS), dict(default)
+    pc = ctx.at("particle_colors")
+    for name in PARTICLE_KINDS:
+        if name in section:
+            values[name] = pc.choice(section, name, palette.keys())
+    return _proxy(values)
+
+
+def _parse_living(ctx: Ctx, data: Mapping[str, Any], palette: Palette) -> LivingSpec:
+    keys = ("travel_px", "zoom_factor", "prescale", "particle_count", "particle_colors")
+    obj = ctx.section(data, "living", (*keys, *_LIVING_NUMBERS))
+    lv, d = ctx.at("living"), LivingSpec()
+    numbers = {
+        name: lv.num(obj, name, default=getattr(d, name), lo=lo, hi=hi)
+        for name, (lo, hi) in _LIVING_NUMBERS.items()
+    }
+    return LivingSpec(
+        travel_px=_depth_map(lv, obj, "travel_px", d.travel_px, 200),
+        zoom_factor=_depth_map(lv, obj, "zoom_factor", d.zoom_factor, 1.5),
+        prescale=lv.int_(obj, "prescale", default=d.prescale, lo=1, hi=4),
+        particle_count=lv.int_(obj, "particle_count", default=d.particle_count, lo=0, hi=60),
+        particle_colors=_particle_colors(lv, obj, palette, d.particle_colors),
+        **numbers,
+    )
+
+
+def _parse_sfx(ctx: Ctx, data: Mapping[str, Any]) -> SfxSpec:
+    keys = ("sample_rate", "auto_whoosh_db", "reverb_wet", "reverb_seconds", "jitter")
+    obj = ctx.section(data, "sfx", keys)
+    sx, d = ctx.at("sfx"), SfxSpec()
+    rate = sx.int_(obj, "sample_rate", default=d.sample_rate)
+    if rate not in SAMPLE_RATES:
+        sx.at("sample_rate").error(f"must be one of {', '.join(map(str, SAMPLE_RATES))}")
+        rate = d.sample_rate
+    return SfxSpec(
+        sample_rate=rate,
+        auto_whoosh_db=sx.num(obj, "auto_whoosh_db", default=d.auto_whoosh_db, lo=-40, hi=0),
+        reverb_wet=sx.num(obj, "reverb_wet", default=d.reverb_wet, lo=0, hi=1),
+        reverb_seconds=sx.num(obj, "reverb_seconds", default=d.reverb_seconds, lo=0.2, hi=6),
+        jitter=sx.num(obj, "jitter", default=d.jitter, lo=0, hi=0.2),
+    )
+
+
 def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
     for key in data:
         if key not in _THEME_KEYS:
@@ -544,11 +675,12 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
     transition = ctx.section(data, "transition", ("fade_in", "fade_out", "duration"))
     video = ctx.section(data, "video", ("fps", "crf"))
     tr, vd = ctx.at("transition"), ctx.at("video")
+    palette = _parse_palette(ctx, data)
     return Theme(
         schema_version=version,
         name=ctx.str_(data, "name"),
         seed=ctx.int_(data, "seed", lo=0),
-        palette=_parse_palette(ctx, data),
+        palette=palette,
         fonts=_parse_fonts(ctx, data, path.parent),
         type_scale=_parse_type_scale(ctx, data),
         textures=_parse_textures(ctx, data),
@@ -566,6 +698,8 @@ def _parse_theme(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Theme:
         audio=_parse_audio(ctx, data),
         text_in=_parse_text_in(ctx, data),
         tones=_parse_tones(ctx, data),
+        living=_parse_living(ctx, data, palette),
+        sfx=_parse_sfx(ctx, data),
     )
 
 

@@ -141,3 +141,33 @@ def test_music_without_audio_stream_exit_3(
     assert main(argv) == 3
     assert f"ERROR --music: no audio stream in {cover}" in capsys.readouterr().out
     assert not (out.parent / "slides").exists()
+
+
+def test_synth_cues_and_auto_whoosh_audible(  # AC-27
+    tmp_path: Path, tmp_script: ScriptFactory
+) -> None:
+    slides = [
+        {"title": "A", "duration": 4},
+        {
+            "title": "B",
+            "duration": 4,
+            "transition": "slideleft",
+            "sfx": [{"sound": "gong", "at": 3.0}],
+        },
+    ]
+    script = tmp_script(slides=slides, extra={"schema_version": "2.2"})
+    out = tmp_path / "out" / "fx.mp4"
+    assert main(["render", "--script", str(script), "--out", str(out)]) == 0
+    info = find_ffmpeg()
+
+    def db(start: float, length: float, name: str) -> float:
+        value = rms(info, out, start, length, tmp_path / f"{name}.wav")
+        return 20 * math.log10(max(value, 1e-9) / 32768)
+
+    assert db(3.9, 0.4, "whoosh") > db(2.0, 1.0, "quiet") + 20
+    assert db(7.05, 0.25, "gong") > db(6.0, 0.8, "between") + 10
+    report = json.loads(out.with_name("fx.report.json").read_text(encoding="utf-8"))
+    assert [(c["sound"], c["auto"]) for c in report["synth_sfx"]] == [
+        ("gong", False),
+        ("whoosh", True),
+    ]

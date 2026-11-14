@@ -18,9 +18,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from .config import AudioSpec
+from .config import AudioSpec, LivingSpec
 from .errors import FfmpegFailed, FfmpegMissing, FfmpegTooOld
 from .layout import CANVAS_H, CANVAS_W
+from .living.motion import group_graph, plane_groups, still_loop
+from .living.types import SHEEN_PNG_GAIN, LivingClip
 
 logger = logging.getLogger(__name__)
 
@@ -270,6 +272,106 @@ def clip_cmd(
         "-loop", "1", "-framerate", str(fps), "-t", _secs(duration),
         "-i", str(png),
         "-vf", vf,
+        "-c:v", "libx264", *cap, "-preset", X264_PRESET, "-crf", str(crf),
+        "-pix_fmt", "yuv420p", "-r", str(fps), "-an", str(out),
+    ]  # fmt: skip
+
+
+def _still_input(path: Path, fps: int, duration: float) -> list[str]:
+    return ["-framerate", str(fps), "-i", str(path)]  # one frame; looped by ``still_loop``
+
+
+def _living_inputs(clip: LivingClip, fps: int, duration: float) -> list[str]:
+    args: list[str] = []
+    for plane in clip.planes:
+        if plane.kind == "sprite":
+            pattern = plane.path.parent / "%03d.png"
+            args += ["-stream_loop", "-1", "-t", _secs(duration)]
+            args += ["-framerate", str(fps), "-i", str(pattern)]
+        else:
+            args += _still_input(plane.path, fps, duration)
+    for path in (clip.waves, clip.sheen, clip.chrome):
+        args += _still_input(path, fps, duration)
+    if clip.text is not None:
+        args += _still_input(clip.text, fps, duration)
+    return args
+
+
+def _living_graph(
+    clip: LivingClip,
+    duration: float,
+    fps: int,
+    fades: str,
+    motion: str,
+    spec: LivingSpec,
+    text: TextLayer | None,
+) -> str:
+    """Scene planes moved and stacked, then waves, additive sheen, chrome and text (fixed)."""
+    groups = plane_groups(clip.planes)
+    frames = max(round(duration * fps), 1)
+    count = len(clip.planes) + 3 + (clip.text is not None)
+    parts = [
+        still_loop(i, frames, fps)
+        for i in range(count)
+        if i >= len(clip.planes) or clip.planes[i].kind != "sprite"
+    ]
+    parts += [
+        group_graph(group, clip.planes, motion, duration, fps, spec, clip.shakes, f"p{n}")
+        for n, group in enumerate(groups)
+    ]
+    current = "p0"
+    for n in range(1, len(groups)):
+        parts.append(f"[{current}][p{n}]overlay=0:0:format=auto[s{n}]")
+        current = f"s{n}"
+    waves, sheen, chrome = len(clip.planes), len(clip.planes) + 1, len(clip.planes) + 2
+    gain = f"{1 / SHEEN_PNG_GAIN:g}"
+    parts += [
+        f"[{current}]format=gbrp[scene]",
+        f"[in{waves}]format=gbrap[wv]",
+        "[scene][wv]overlay=0:0:format=gbrp[sw]",
+        f"[in{sheen}]format=gbrp,colorchannelmixer=rr={gain}:gg={gain}:bb={gain}[sh]",
+        "[sw][sh]blend=all_mode=addition[lit]",
+        f"[in{chrome}]format=gbrap[ch]",
+        "[lit][ch]overlay=0:0:format=gbrp[top]",
+    ]
+    last = "top"
+    if clip.text is not None:
+        fade = (
+            f",fade=t=in:st={_secs(text.delay)}:d={_secs(text.duration)}:alpha=1"
+            if text is not None
+            else ""
+        )
+        parts.append(f"[in{chrome + 1}]format=gbrap{fade}[tx]")
+        parts.append("[top][tx]overlay=0:0:format=gbrp[txt]")
+        last = "txt"
+    parts.append(f"[{last}]{fades + ',' if fades else ''}format=yuv420p[v]")
+    return ";".join(parts)
+
+
+def living_clip_cmd(
+    info: FfmpegInfo,
+    clip: LivingClip,
+    out: Path,
+    duration: float,
+    fps: int,
+    crf: int,
+    fade_in: float,
+    fade_out: float,
+    motion: str,
+    spec: LivingSpec,
+    threads: int | None = None,
+    text: TextLayer | None = None,
+) -> list[str]:
+    """A living slide (M9) as one silent H.264 clip: moving planes under fixed chrome."""
+    if motion not in MOTIONS:
+        raise ValueError(f"unknown motion {motion!r}")
+    fades = _fade_filter(duration, fade_in, fade_out)
+    cap = [] if threads is None else ["-threads", str(threads)]
+    graph = _living_graph(clip, duration, fps, fades, motion, spec, text)
+    return [
+        str(info.ffmpeg), "-hide_banner", "-loglevel", "error", "-y",
+        *_living_inputs(clip, fps, duration),
+        "-filter_complex", graph, "-map", "[v]", "-t", _secs(duration),
         "-c:v", "libx264", *cap, "-preset", X264_PRESET, "-crf", str(crf),
         "-pix_fmt", "yuv420p", "-r", str(fps), "-an", str(out),
     ]  # fmt: skip

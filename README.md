@@ -142,6 +142,27 @@ Optional slide fields in a `"2.1"` script (spec Appendix A.2):
 
 `examples/vuong_trieu_nu/script.json` uses every visual effect and one music cut. Its suggested sound cues (add the files, then the `sfx` entries): a drum hit at `vua-nu` 0.0 s, a short "tách" at `65-thanh` 0.0 s, a low drum at `ma-vien` 0.0 s.
 
+### Living slides and synthesized sound (v2.2, M9)
+
+With `"schema_version": "2.2"` (spec Appendix A.4):
+
+- `"living": true` turns a slide into moving planes: far, mid and near layers slide at different speeds under the slide's `motion` (eased in and out), while the gold frame, seal, tag and text stay still. Clouds and birds drift, the river ripples, boats bob, lotus sways, lanterns float and flicker, the sun or moon glows. A layer's plane can be set with `"plane": "far" | "mid" | "near"`.
+- `"particles": "petals" | "dust" | "embers"` adds a few light particles to a living slide.
+- Sound cues can name a sound instead of a file: `{ "sound": "gong", "at": 0.4, "gain_db": -6, "shake": true }`. The sounds are synthesized in code, nothing is downloaded:
+
+| `sound` | Character | Notes |
+|---------|-----------|-------|
+| `gong` | deep bronze gong, about 4 s ring | `shake` allowed |
+| `drum` | big drum hit with a faint bronze ring | `shake` allowed |
+| `bell` | temple bell, about 3 s | |
+| `whoosh` | soft swish | optional `duration` |
+| `wind` | gentle wind bed | `duration` required |
+| `water` | lapping water bed | `duration` required |
+
+- Moving transitions (`slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight`, `circleopen`) get an automatic soft whoosh; `"auto_sfx": false` turns it off for that slide.
+- Tuning lives in the theme's optional `living` and `sfx` blocks (travel per plane, shake size, loop length, reverb, whoosh level).
+- `examples/hai_ba_trung/script.json` uses all of this. `--preview` still writes the still PNGs; the moving planes are built only for the video, in the temp directory (`--keep-temp` keeps them).
+
 ### Scene objects without people
 
 Extra layer types from `docs/visual_backlog.md`, usable in any `{"layers": [...]}` scene:
@@ -220,6 +241,15 @@ NFR-01 and NFR-03, measured on 2026-11-08 with `/usr/bin/time -l` on an Apple M1
 
 The unique-scene script has 7 layer-scene slides (8 eggshell peaks and 2 hills each, positions and heights varied per slide so no eggshell mask repeats) and 3 `landscape` template slides with distinct seeds; it is the worst case for the eggshell cache. Before the final fix wave the cache stored full-frame textures without a bound and that script peaked at 2.09 GB (NFR-03 not met); the cache now stores bounding-box crops only and keeps at most 32 entries (`compose.EGGSHELL_CACHE_MAX_ENTRIES`), and the output is byte-identical. The time rows were measured before that change and are unchanged by it (same work, byte-identical output); the repeated-slide Peak RSS was 0.76 GB before and is 0.54 GB now.
 
+Living slides (M9), measured 2026-11-13 on the same machine with `examples/hai_ba_trung` (8 slides, 5 living, 30 s), M8 = commit 0d0411d with the same script at 2.1:
+
+| Measurement | M8 | M9 | Peak RSS M8 / M9 |
+|---|---|---|---|
+| `render`, `--jobs 1` | 228 s | 206 s | |
+| `render`, default `--jobs` | 123 s | 162 s | 1.31 GB / 1.78 GB |
+
+AC-31 (≤ 3x) is met. NFR-03 (1.5 GB) is **not** met when a script has living slides: one living clip's FFmpeg graph peaks near 1.9 GB (a dozen full-frame planes at 2x), so a render with living slides encodes at most 2 clips at once (`video.LIVING_MAX_JOBS`). Scripts without living slides are unchanged.
+
 All targets are met with wide margins. The targets name a 4-core laptop; this machine has 8 cores, and the parallel clip encode accounts for part of the 10-slide video time.
 
 ## Acceptance
@@ -292,6 +322,7 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Narration timing: a voiced slide is `ceil_to_frame(lead_in + voice + tail)` long; an explicit `duration` wins only when it is at least that long (spec A.1.6).
 - Narration ducking uses FFmpeg `sidechaincompress` with the theme's `audio.duck` values; loudness is one `loudnorm` pass to `audio.loudness_lufs` / `audio.true_peak_db` (spec A.1.7).
 - Motions and cues (v2.1, M8, owner-approved 2026-11-12): transitions overlap the previous clip (clip k is encoded longer and joined with `xfade` at slide k+1's start), so slide starts, voice offsets and the total stay the same; the join re-encodes only when a transition is used. `tone` is a compose step after the frame (FR-21), so text, seal and tag keep their colours. `text_in` slides also write `NN_bg.png` and `NN_text.png`; their text no longer zooms with the scene. Sound effects are owner-supplied files mixed after ducking; a `music_cut` mutes music with 50 ms ramps. Pan motions hold the view at 110 %. A 2.0 script keeps the v2.0 motion list and error text (spec Appendix A.2).
+- Living slides and sound (v2.2, M9, owner-approved 2026-11-13): sound effects may be synthesized in code (numpy/scipy, seeded per cue); downloading sound stays banned. A living slide is split into planes recovered exactly from the still pipeline (grain and tone are linear, so the first frame equals the preview). Ambient motion is applied to each layer's rendered pixels (bob, roll, sway, ripple, glow), not by redrawing, so drawers are unchanged; banners and character flags therefore do not wave yet. Planes of one depth share one `zoompan` on `yuva444p` (RGBA zoompan was about 10x slower, 4:2:0 smeared red and gold edges) at 2x prescale (half-pixel steps, slightly softer fine detail). The layer depth override is `plane`, because `lone_path` already has a `depth` field. Default planes: sky, clouds, birds, mountains, peaks far; hills, river, ground strip, buildings, boats, animals mid; figures and foreground objects near.
 - Example `hai_ba_trung` (2026-11-11): scenes use only the approved templates. `context` uses `landscape`; `fall` and `legacy` use `landscape` with `boats: []` (river only); `hook` uses `group` with the two leaders; `peak` and `outro` use the full `group`. `war` and `loss` have no fitting template yet and render chrome and text only. Long titles carry an explicit `\n` so no line ends on a lone word.
 - `hai_ba_trung` split (2026-11-13): `loss` and `legacy` were each cut in two at a sentence break (new slides `loss_symbol`, a large drum, and `legacy_story`, the bamboo village) because the VoiceStudio voice read them in 14.6 s and 18.3 s, over the 14 s limit. The narration words are unchanged, only divided; each new slide keeps the source of the slide it came from.
 - Example `vuong_trieu_nu` (2026-11-12): the owner's 60 s storyboard adapted to what v2.0/v2.1 can draw. Photos, the Đông Hồ painting, Ban Chiêu and Han figures, maps, counters, split screen and word-by-word text are dropped (C-06; split screen not built). Pans, tones, transitions and text fade-in come from M8. Each shot is one slide without a fixed `duration`, so timing follows the voice (A.1.6) or FR-83 until the voice exists; every slide has its own scene: `group`/`landscape` variants or explicit `layers` (close-up queen, row of generals, empty Han boats, ringed gold disc with birds as a bronze-drum nod, lotus pond), so no slide is text only.

@@ -118,6 +118,17 @@ def build_report(
     }
     if audio is not None:
         data["audio"] = _audio_section(audio, durations, base)
+    if opts.synth:
+        data["synth_sfx"] = [
+            {
+                "slide": script.slides[job.slide_index].id,
+                "sound": job.name,
+                "at_ms": job.delay_ms,
+                "gain_db": job.gain_db,
+                "auto": job.auto,
+            }
+            for job in opts.synth
+        ]
     return data
 
 

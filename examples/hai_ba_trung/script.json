@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "2.2",
   "title": "Hai Bà Trưng: 3 năm độc lập và cái giá của việc mất nước",
   "sources": [
     "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương [CẦN KIỂM TRA SỐ TRANG VÀ BẢN DỊCH]",
@@ -66,7 +66,16 @@
             "facing": 1
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "gong",
+          "at": 0.3,
+          "gain_db": -4,
+          "shake": true
+        }
+      ]
     },
     {
       "id": "context",
@@ -145,7 +154,16 @@
             "scale": 2.2
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.4,
+          "gain_db": -3,
+          "shake": true
+        }
+      ]
     },
     {
       "id": "war",
@@ -307,7 +325,16 @@
             ]
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "water",
+          "at": 0.0,
+          "duration": 3.8,
+          "gain_db": -18
+        }
+      ]
     },
     {
       "id": "loss",
@@ -342,7 +369,14 @@
             "facing": -1
           }
         ]
-      }
+      },
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.3,
+          "gain_db": -8
+        }
+      ]
     },
     {
       "id": "loss_symbol",
@@ -428,7 +462,15 @@
             "scale": 1.55
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "bell",
+          "at": 0.5,
+          "gain_db": -6
+        }
+      ]
     },
     {
       "id": "legacy_story",
@@ -491,7 +533,17 @@
       "text_in": "fade",
       "scene": {
         "template": "group"
-      }
+      },
+      "living": true,
+      "particles": "petals",
+      "sfx": [
+        {
+          "sound": "wind",
+          "at": 0.0,
+          "duration": 2.6,
+          "gain_db": -20
+        }
+      ]
     }
   ]
 }

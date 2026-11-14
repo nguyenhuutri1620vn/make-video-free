@@ -16,12 +16,20 @@ from typing import Any, Literal, cast
 
 from history_shorts.errors import Issue, Issues
 from history_shorts.narration import MAX_NARRATION_CHARS, normalise, pause_problems
-from history_shorts.scene_config import LayerScene, TemplateScene, parse_scene
+from history_shorts.scene_config import PLANE_KEY, LayerScene, TemplateScene, parse_scene
 from history_shorts.validation import Ctx, is_int, read_json_object
 
 SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
 NARRATED_SCHEMA_VERSION = "2.1"  # adds slide ``id`` and ``narration`` (spec A.1.2)
-SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (SCRIPT_SCHEMA_VERSION, NARRATED_SCHEMA_VERSION)
+LIVING_SCHEMA_VERSION = "2.2"  # adds living slides and synthesized sound cues (M9)
+SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (
+    SCRIPT_SCHEMA_VERSION,
+    NARRATED_SCHEMA_VERSION,
+    LIVING_SCHEMA_VERSION,
+)
+SCHEMA_LEVELS: Mapping[str, int] = {v: n for n, v in enumerate(SUPPORTED_SCHEMA_VERSIONS)}
+NARRATED_LEVEL = 1
+LIVING_LEVEL = 2
 SLIDE_ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 
 MAX_TAG_CHARS = 28
@@ -60,6 +68,15 @@ SFX_GAIN_DB = (-24.0, 12.0)
 MUSIC_CUT_SECONDS = (0.1, 5.0)
 A2_KEYS: tuple[str, ...] = ("transition", "tone", "text_in", "sfx", "music_cut")
 
+# M9 (2.2): living slides and synthesized sound cues.
+V22_KEYS: tuple[str, ...] = ("living", "particles", "auto_sfx")
+SOUND_NAMES: tuple[str, ...] = ("gong", "drum", "bell", "whoosh", "wind", "water")
+BED_SOUNDS: tuple[str, ...] = ("wind", "water")  # need a ``duration``
+HIT_SOUNDS: tuple[str, ...] = ("gong", "drum")  # may ``shake`` the scene
+PARTICLE_NAMES: tuple[str, ...] = ("none", "petals", "dust", "embers")
+BED_SECONDS = (0.5, 14.0)
+V22_CUE_KEYS: tuple[str, ...] = ("sound", "duration", "shake")
+
 # Optional kind of a citation in ``sources`` (spec 6.1), shown in the sources block.
 SOURCE_TYPES: tuple[str, ...] = ("book", "journal", "news", "web", "other")
 
@@ -85,8 +102,9 @@ _SLIDE_KEYS = (
     "id",
     "narration",
     *A2_KEYS,
+    *V22_KEYS,
 )
-_SFX_KEYS = ("file", "at", "gain_db")
+_SFX_KEYS = ("file", "at", "gain_db", *V22_CUE_KEYS)
 _MUSIC_CUT_KEYS = ("at", "duration")
 
 
@@ -103,11 +121,15 @@ Motion = Literal["none", "zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up
 
 @dataclass(frozen=True, slots=True)
 class SfxCue:
-    """A sound effect: the owner's file, its start after the slide start, and its gain."""
+    """A sound effect: the owner's file or a synthesized ``sound`` (2.2), its start after the
+    slide start and its gain. Exactly one of ``path`` and ``sound`` is set."""
 
-    path: Path
+    path: Path | None
     at: float
     gain_db: float = 0.0
+    sound: str | None = None
+    duration: float | None = None  # length of a bed sound (``BED_SOUNDS``)
+    shake: bool = False  # a hit shakes a living slide's scene (``HIT_SOUNDS``)
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +157,9 @@ class Slide:
     text_in: str = "none"
     sfx: tuple[SfxCue, ...] = ()
     music_cut: MusicCut | None = None
+    living: bool = False  # parallax planes and ambient motion (2.2)
+    particles: str = "none"
+    auto_sfx: bool = True  # a whoosh on moving transitions into this slide (2.2)
 
 
 @dataclass(frozen=True, slots=True)
@@ -282,28 +307,57 @@ def _narration(ctx: Ctx, obj: Mapping[str, Any]) -> str | None:
     return text
 
 
-def _parse_sfx_cue(ctx: Ctx, raw: object, base: Path) -> SfxCue | None:
+def _sound_fields(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[str, float | None, bool]:
+    """``sound``, ``duration`` and ``shake`` of a synthesized cue (2.2)."""
+    sound = ctx.choice(obj, "sound", SOUND_NAMES)
+    duration: float | None = None
+    if sound in BED_SOUNDS:
+        if "duration" not in obj:
+            ctx.at("duration").error(f"required for {sound}")
+        duration = ctx.num(obj, "duration", default=1.0, lo=BED_SECONDS[0], hi=BED_SECONDS[1])
+    elif sound == "whoosh" and "duration" in obj:
+        duration = ctx.num(obj, "duration", lo=BED_SECONDS[0], hi=BED_SECONDS[1])
+    elif "duration" in obj:
+        ctx.at("duration").error(f"only {', '.join((*BED_SOUNDS, 'whoosh'))} take a duration")
+    shake = ctx.bool_(obj, "shake", default=False)
+    if shake and sound not in HIT_SOUNDS:
+        ctx.at("shake").error(f"only {' and '.join(HIT_SOUNDS)} can shake")
+    return sound, duration, shake
+
+
+def _parse_sfx_cue(ctx: Ctx, raw: object, base: Path, level: int) -> SfxCue | None:
     obj = ctx.mapping(raw, _SFX_KEYS)
     if not obj:
         return None
     errors = len(ctx.issues.errors)
-    name = ctx.str_(obj, "file")
+    if level < LIVING_LEVEL:
+        for key in V22_CUE_KEYS:
+            if key in obj:
+                ctx.at(key).error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
     at = ctx.num(obj, "at", default=0.0, lo=0, hi=MAX_SLIDE_SECONDS)
     gain = ctx.num(obj, "gain_db", default=0.0, lo=SFX_GAIN_DB[0], hi=SFX_GAIN_DB[1])
+    if ("file" in obj) == ("sound" in obj):
+        ctx.error("give either 'file' or 'sound'")
+        return None
+    if "sound" in obj:
+        sound, duration, shake = _sound_fields(ctx, obj)
+        ok = len(ctx.issues.errors) == errors
+        return SfxCue(None, at, gain, sound, duration, shake) if ok else None
+    name = ctx.str_(obj, "file")
     path = (base / name).resolve() if name else base
     if name and not path.is_file():
         ctx.at("file").error(f"file not found: {path}")
     return SfxCue(path, at, gain) if len(ctx.issues.errors) == errors else None
 
 
-def _parse_sfx(ctx: Ctx, obj: Mapping[str, Any], base: Path) -> tuple[SfxCue, ...]:
+def _parse_sfx(ctx: Ctx, obj: Mapping[str, Any], base: Path, level: int) -> tuple[SfxCue, ...]:
     """``sfx``: up to ``MAX_SFX`` cues; files resolve relative to the script (spec A.2.1)."""
     if "sfx" not in obj:
         return ()
     pairs = ctx.at("sfx").items(obj["sfx"])
     if len(pairs) > MAX_SFX:
         ctx.at("sfx").error(f"must contain at most {MAX_SFX} cues")
-    cues = (_parse_sfx_cue(child, raw, base) for child, raw in pairs)
+    cues = (_parse_sfx_cue(child, raw, base, level) for child, raw in pairs)
     return tuple(cue for cue in cues if cue is not None)
 
 
@@ -339,17 +393,39 @@ def _slide_id(ctx: Ctx, obj: Mapping[str, Any]) -> str:
     return value
 
 
+def _check_layer_depths(ctx: Ctx, obj: Mapping[str, Any]) -> None:
+    """A layer ``plane`` needs schema 2.2; the scene parser does not know the version."""
+    scene = obj.get("scene")
+    layers = scene.get("layers") if isinstance(scene, dict) else None
+    if not isinstance(layers, list):
+        return
+    for index, layer in enumerate(layers):
+        if isinstance(layer, dict) and PLANE_KEY in layer:
+            where = ctx.at("scene").at("layers").idx(index).at(PLANE_KEY)
+            where.error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
+
+
+def _check_version_keys(ctx: Ctx, obj: Mapping[str, Any], level: int) -> None:
+    if level < NARRATED_LEVEL:
+        for key in ("id", "narration", *A2_KEYS):
+            if key in obj:
+                ctx.at(key).error(f'requires schema_version "{NARRATED_SCHEMA_VERSION}"')
+    if level < LIVING_LEVEL:
+        for key in V22_KEYS:
+            if key in obj:
+                ctx.at(key).error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
+        _check_layer_depths(ctx, obj)
+
+
 def _parse_slide(
-    ctx: Ctx, raw: object, sources: tuple[Source, ...] | None, narrated: bool, base: Path
+    ctx: Ctx, raw: object, sources: tuple[Source, ...] | None, level: int, base: Path
 ) -> Slide | None:
     if not isinstance(raw, dict):
         ctx.error("must be an object")
         return None
     obj = ctx.mapping(raw, _SLIDE_KEYS)
-    if not narrated:
-        for key in ("id", "narration", *A2_KEYS):
-            if key in obj:
-                ctx.at(key).error(f'requires schema_version "{NARRATED_SCHEMA_VERSION}"')
+    narrated = level >= NARRATED_LEVEL
+    _check_version_keys(ctx, obj, level)
     claim = ctx.bool_(obj, "claim", default=False)
     source = _parse_source_indices(ctx, obj, sources)
     if claim and "source" not in obj:
@@ -373,8 +449,11 @@ def _parse_slide(
         transition=ctx.choice(obj, "transition", TRANSITION_NAMES, default="cut"),
         tone=ctx.choice(obj, "tone", TONE_NAMES, default="none"),
         text_in=ctx.choice(obj, "text_in", TEXT_IN_NAMES, default="none"),
-        sfx=_parse_sfx(ctx, obj, base),
+        sfx=_parse_sfx(ctx, obj, base, level),
         music_cut=_parse_music_cut(ctx, obj),
+        living=ctx.bool_(obj, "living", default=False),
+        particles=ctx.choice(obj, "particles", PARTICLE_NAMES, default="none"),
+        auto_sfx=ctx.bool_(obj, "auto_sfx", default=True),
     )
 
 
@@ -395,7 +474,7 @@ def _parse_slides(
     ctx: Ctx,
     obj: Mapping[str, Any],
     sources: tuple[Source, ...] | None,
-    narrated: bool,
+    level: int,
     base: Path,
 ) -> tuple[Slide, ...]:
     slides_ctx = ctx.at("slides")
@@ -405,7 +484,7 @@ def _parse_slides(
     pairs = slides_ctx.items(obj["slides"])
     if isinstance(obj["slides"], list) and not MIN_SLIDES <= len(pairs) <= MAX_SLIDES:
         slides_ctx.error(f"must contain {MIN_SLIDES}–{MAX_SLIDES} slides")
-    parsed = [(child, _parse_slide(child, raw, sources, narrated, base)) for child, raw in pairs]
+    parsed = [(child, _parse_slide(child, raw, sources, level, base)) for child, raw in pairs]
     _check_slide_ids(parsed)
     if parsed and parsed[0][1] is not None and parsed[0][1].transition != "cut":
         parsed[0][0].at("transition").warning("the first slide has no previous slide (ignored)")
@@ -436,8 +515,8 @@ def _parse_script(ctx: Ctx, data: Mapping[str, Any], path: Path) -> Script:
         )
     title = _text(ctx, data, "title", required=True)
     sources = _parse_sources(ctx, data)
-    narrated = version == NARRATED_SCHEMA_VERSION
-    slides = _parse_slides(ctx, data, sources, narrated, path.parent)
+    level = SCHEMA_LEVELS.get(version, 0)
+    slides = _parse_slides(ctx, data, sources, level, path.parent)
     if not ctx.issues.errors:
         _check_total_duration(ctx, slides)
     return Script(version, title, sources or (), slides, path)

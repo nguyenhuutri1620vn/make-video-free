@@ -839,7 +839,7 @@ M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest lo
 | `transition` | enum   | `cut`   | How this slide enters from the previous one: `cut` (theme fades, as v2.0), `fade`, `fadeblack`, `dissolve`, `slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight`, `circleopen`. Ignored with a warning on the first slide. |
 | `tone`       | enum   | `none`  | Colour grade of ground, scene and chrome (not text): `warm`, `cold`, `gray`. Values from the theme `tones` block. |
 | `text_in`    | enum   | `none`  | `fade`: title and subtitle stay still on a separate layer and fade in after `text_in.delay` over `text_in.duration`, while the scene keeps its motion. |
-| `sfx`        | array  | `[]`    | Up to 4 cues `{ "file": path, "at": s, "gain_db": dB }`. `file` resolves relative to the script, must exist and contain audio; `at` ≥ 0 and before the slide ends; `gain_db` −24…+12, default 0. The owner supplies every file; history-shorts never downloads or generates sound. |
+| `sfx`        | array  | `[]`    | Up to 4 cues `{ "file": path, "at": s, "gain_db": dB }`. `file` resolves relative to the script, must exist and contain audio; `at` ≥ 0 and before the slide ends; `gain_db` −24…+12, default 0. Files are the owner's; with `schema_version` `"2.2"` a cue may instead name a synthesized `sound` (A.4). history-shorts never downloads sound. |
 | `music_cut`  | object | none    | `{ "at": s, "duration": s }`: music is silent from slide start + `at` for `duration` (0.1–5 s), with 50 ms ramps. Warning when rendered without `--music`. |
 
 #### A.2.2 Theme additions (all optional; defaults shown)
@@ -870,6 +870,43 @@ M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest lo
 | AC-25 | A script without A.2 fields produces the same FFmpeg commands as before (command tests). |
 
 **A.3 Poses.** Kneeling and riding an elephant (see FR-50).
+
+**A.4 Living slides and synthesized sound.** Milestone M9, owner-approved 2026-11-13 (design: `docs/superpowers/specs/2026-11-13-living-scenes-sfx-design.md`). All fields need `schema_version` `"2.2"`; a 2.0/2.1 script renders exactly as before (AC-30).
+
+#### A.4.1 Script fields
+
+| Field | Where | Default | Notes |
+|-------|-------|---------|-------|
+| `living` | slide | `false` | The scene is split into planes (far, mid, near) that move at different speeds under the slide's `motion`; frame, seal, tag and text stay fixed. Ambient motion: clouds and birds drift, river ripples, boats bob, lotus sways, lanterns float and flicker, sun/moon glow pulses. `motion: none` drifts very slightly. |
+| `particles` | slide | `none` | `petals`, `dust`, `embers`: a few light particles in the visual region, on living slides only. |
+| `auto_sfx` | slide | `true` | A `whoosh` is added under a `slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight` or `circleopen` transition into this slide, panned with it, at theme `sfx.auto_whoosh_db`. |
+| `sfx[].sound` | cue | — | Instead of `file`: `gong`, `drum`, `bell`, `whoosh`, `wind`, `water`, synthesized in code (numpy/scipy, no AI, no download). Exactly one of `file` and `sound`. |
+| `sfx[].duration` | cue | — | Required for `wind` and `water` (0.5–14 s, must end within the slide); optional for `whoosh`; rejected for the others. |
+| `sfx[].shake` | cue | `false` | `gong` and `drum` only: a short damped shake of the moving planes at `at` (warning on a still slide). |
+| `scene.layers[].plane` | layer | type default | `far`, `mid` or `near` override. Planes never step back down the list; a raised plane is a warning. |
+
+#### A.4.2 Theme additions (all optional)
+
+`living`: `travel_px` per plane (far 30, mid 60, near 90), `zoom_factor` (0.35, 0.7, 1.0), `idle_drift` 0.15, `prescale` 2, `loop_seconds` 2.0, `shake_px` 6, `shake_seconds` 0.4, `cloud_drift_px_s` 6, `bird_drift_px_s` 18, `bob_px` 5, `roll_deg` 1.2, `sway_deg` 1.0, `ripple_px` 2, `flicker` 0.06, `glow_pulse` 0.03, `particle_count` 14, `particle_colors` (`petals` pink, `dust` gold_lt, `embers` vermilion; palette keys).
+`sfx`: `sample_rate` 48000 (or 44100), `auto_whoosh_db` −14, `reverb_wet` 0.25, `reverb_seconds` 2.2, `jitter` 0.03.
+
+#### A.4.3 Rendering
+
+- Planes are recovered exactly from the still pipeline (grain and tone are linear), so a living slide's first frame matches its `--preview` PNG. Planes are padded with edge replication by a whole multiple of 9×16 px covering travel, shake and drift.
+- Ambient motions are periodic over `loop_seconds` and are the identity at the loop start. Banners and character flags do not wave yet (their cloth is not a separate layer).
+- FFmpeg cuts a moving window from each group of planes with `zoompan` on `yuva444p` at `prescale`; motion is eased `(1 − cos πt)/2`.
+- Synthesized cues are written as 16-bit WAV in the render temp directory with RNG `[seed, slide, cue]` and mixed like file cues.
+
+#### A.4.4 Acceptance (M9)
+
+| ID | Criterion |
+|----|-----------|
+| AC-26 | Each synthesized sound is deterministic, finite, peaks at −1 dBFS and its power-weighted spectral centroid lies in its documented range. |
+| AC-27 | Synthesized cues and the auto whoosh are audible at their offsets; no whoosh with `auto_sfx: false`. |
+| AC-28 | In a living render the chrome band is stable, nearer planes move more than farther ones, no scene pixel is exposed, and an early frame matches the preview (region ΔE ≤ 2). |
+| AC-29 | Every ambient loop is seamless and is the identity at its start. |
+| AC-30 | Scripts without 2.2 fields produce the same FFmpeg commands and snapshots as before. |
+| AC-31 | Render time of the updated `hai_ba_trung` example is reported against M8. |
 
 ---
 

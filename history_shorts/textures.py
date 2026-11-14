@@ -177,16 +177,26 @@ def eggshell(
     return out
 
 
+def sheen_field(h: int, w: int, palette: Palette, sheen: SheenSpec) -> FloatImage:
+    """The warm radial sheen that ``finish`` adds (living slides keep it as a fixed plane)."""
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    d = np.sqrt((xx - sheen.x) ** 2 + (yy - sheen.y) ** 2) / sheen.r
+    glow = (np.clip(1 - d, 0, 1) ** 2 * sheen.strength)[..., None] * _colour(palette, "sheen")
+    return np.asarray(glow, dtype=np.float32)
+
+
+def grain_field(h: int, w: int, rng: Generator, grain: float) -> FloatMask:
+    """The multiplicative grain factor of ``finish``: 1 ± ``grain``."""
+    return np.asarray(1 + grain * noise(h, w, FINISH_GRAIN_SIGMA, rng), dtype=np.float32)
+
+
 def finish(
     img: FloatImage, rng: Generator, palette: Palette, sheen: SheenSpec, grain: float
 ) -> FloatImage:
     """Warm radial sheen (added) and very fine grain (multiplied); nothing else."""
     h, w = img.shape[:2]
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    d = np.sqrt((xx - sheen.x) ** 2 + (yy - sheen.y) ** 2) / sheen.r
-    glow = (np.clip(1 - d, 0, 1) ** 2 * sheen.strength)[..., None] * _colour(palette, "sheen")
-    out = img + glow
-    out *= (1 + grain * noise(h, w, FINISH_GRAIN_SIGMA, rng))[..., None]
+    out = img + sheen_field(h, w, palette, sheen)
+    out *= grain_field(h, w, rng, grain)[..., None]
     return np.asarray(np.clip(out, 0, 1), dtype=np.float32)
 
 
