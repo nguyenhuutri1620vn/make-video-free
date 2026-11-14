@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import logging
 import sys
 import time
@@ -28,7 +29,7 @@ from history_shorts.video import (
     default_jobs,
 )
 
-COMMANDS = ("render", "validate", "gallery", "export-narration")
+COMMANDS = ("render", "validate", "gallery", "export-narration", "audio-manifest")
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -387,6 +388,28 @@ def _cmd_export_narration(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_audio_manifest(args: argparse.Namespace) -> int:
+    """Pair recorded voices with an export and write ``audio_manifest.json`` (A.1.8)."""
+    from history_shorts import voice_manifest
+
+    narration: Path = args.narration
+    voices: Path = args.voices if args.voices is not None else narration
+    if not voices.is_dir():
+        print(f"ERROR --voices: {voices} is not a folder")
+        return ValidationFailed.exit_code
+    issues = Issues()
+    try:
+        path = voice_manifest.build(narration, voices, issues)
+    except OSError as exc:
+        print(f"ERROR cannot write {voices / voice_manifest.AUDIO_MANIFEST}: {exc.strerror or exc}")
+        return EXIT_ERROR
+    if path is None:
+        return _print_report(issues.items)
+    count = len(json.loads(path.read_text(encoding="utf-8"))["segments"])
+    print(f"Paired {count} voices; wrote {path}")
+    return EXIT_OK
+
+
 def _cmd_gallery(args: argparse.Namespace) -> int:
     from history_shorts.gallery import render_gallery
     from history_shorts.render import write_png
@@ -488,7 +511,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"history-shorts {__version__}")
     sub = parser.add_subparsers(
-        dest="command", required=True, metavar="{render,validate,gallery,export-narration}"
+        dest="command",
+        required=True,
+        metavar="{render,validate,gallery,export-narration,audio-manifest}",
     )
     _add_render_parser(sub)
     gallery = sub.add_parser("gallery", help="contact sheet of every role, facing and prop")
@@ -508,6 +533,19 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--script", type=Path, required=True, help="path to script.json")
     export.add_argument("--out", type=Path, required=True, help="output folder")
     export.set_defaults(run=_cmd_export_narration)
+    pair = sub.add_parser(
+        "audio-manifest", help="pair recorded <id>.wav/.flac voices into audio_manifest.json (v2.1)"
+    )
+    pair.add_argument(
+        "--narration", type=Path, required=True, help="folder written by export-narration"
+    )
+    pair.add_argument(
+        "--voices",
+        type=Path,
+        default=None,
+        help="voice files folder; audio_manifest.json goes here (default: --narration)",
+    )
+    pair.set_defaults(run=_cmd_audio_manifest)
     return parser
 
 

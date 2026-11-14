@@ -56,8 +56,10 @@ python -m history_shorts render --script examples/me_linh/script.json --music so
 python -m history_shorts render --script examples/nu_tuong/script.json --preview
 python -m history_shorts render --script examples/me_linh/script.json --preview --out output/me_linh.mp4 --debug-safe-zone
 python -m history_shorts gallery --out output/gallery.png
-python -m history_shorts export-narration --script examples/nu_tuong/script.json --out output/narration
-python -m history_shorts render --script examples/nu_tuong/script.json --audio output/voice/audio_manifest.json
+python -m history_shorts export-narration --script examples/hai_ba_trung/script.json --out output/voice/hai_ba_trung
+python -m history_shorts audio-manifest --narration output/voice/hai_ba_trung
+python -m history_shorts render --script examples/hai_ba_trung/script.json --audio output/voice/hai_ba_trung/audio_manifest.json
+python tools/make_video.py --script examples/hai_ba_trung/script.json --music song.mp3 --voice-cmd "my-tts {text} {wav}"
 ```
 
 `render` validates the script first (exit 3 and nothing written on any error). Without `--preview` it then looks for FFmpeg (exit 4 with an install hint when it is missing or older than 4.4, before any slide is drawn), renders the slide PNGs, encodes one H.264 clip per slide with the theme's fades, joins the clips, adds the audio track and writes the MP4 (1080x1920, 30 fps, `yuv420p`, CRF from the theme, `+faststart`), a render report and a console summary. `--out` defaults to `output/<slug of the title>.mp4` relative to the current directory; its folder is created when missing, and paths with spaces, apostrophes and Vietnamese characters work.
@@ -100,8 +102,26 @@ Narration is voiced by the owner's separate sound project (VoiceStudio). history
 
 1. Add `"schema_version": "2.1"` and, on each slide, `narration` (Vietnamese, 1 to 600 characters, `[pause Nms]` with N from 50 to 3000 is the only bracket tag) and an explicit `id` (`^[a-z0-9][a-z0-9_-]{0,31}$`, unique). `id` is required on every slide once any slide has `narration`.
 2. `python -m history_shorts export-narration --script S --out DIR` writes `DIR/<id>.txt` (UTF-8, LF, one final newline) and `DIR/manifest.json`, which records the SHA-256 of each file. Re-running on an unchanged script gives byte-identical output. Only files named in the manifest are written.
-3. The sound project turns each `.txt` into a WAV or FLAC file (0.3 to 14.0 s) and writes `audio_manifest.json` next to them, copying each `text_sha256` unchanged.
+3. The sound project turns each `.txt` into `<id>.wav` or `<id>.flac` (0.3 to 14.0 s) in the same folder (or any folder). Then `python -m history_shorts audio-manifest --narration DIR [--voices VOICES]` writes `audio_manifest.json` into the voices folder, copying each `text_sha256` unchanged. It exits 3 and writes nothing when a voice is missing, when one id has both `.wav` and `.flac`, when a `.txt` was edited by hand, or when a voice is older than its `.txt` (re-record). A `gain_db` you added by hand is kept while that text is unchanged. `export-narration` leaves unchanged files untouched, so only edited narrations count as stale.
 4. `validate --audio PATH` and `render --audio PATH` check the manifest. Editing a narration after export fails with exit 3 and names the stale slide ids (re-record those). A voice file that is missing, outside the manifest folder, unreadable or out of range also exits 3.
+
+#### One-command pipeline
+
+`tools/make_video.py` runs every step and stops at the first failure:
+
+```bash
+python tools/make_video.py --script examples/hai_ba_trung/script.json --music music/nhac.mp3 --voice-cmd "voicestudio-cli --input {text} --output {wav}"
+```
+
+`--voice-cmd` is your sound project's command for one voice; `{text}`, `{wav}` and `{id}` are replaced in each argument and it runs without a shell. It is called only for voices that are missing or older than their text, so re-runs are quick. Without `--voice-cmd` the tool lists the `.txt` → `.wav` files to record in `output/voice/<script folder>/` and exits 3; record them and run the same command again. Other options: `--out`, `--theme`, `--music-volume`, `--work` (narration and voice folder). A script without narration goes straight to `render`.
+
+**Draft voice without VoiceStudio (macOS).** `tools/say_voice.py` voices one `.txt` with the built-in offline `say` voice "Linh" (vi_VN), turning `[pause Nms]` into silence and writing a 16-bit mono WAV:
+
+```bash
+.venv/bin/python tools/make_video.py --script examples/hai_ba_trung/script.json --voice-cmd ".venv/bin/python tools/say_voice.py {text} {wav}"
+```
+
+It speaks at 200 words per minute by default (`--rate N` to change; `--voice NAME` for another `say` voice), because Linh's default pace pushed the longest `hai_ba_trung` slide to 16.6 s, over the 14 s limit. It is a placeholder voice: delete the `.wav` files (or re-record them) when the real voices exist. Use the venv's Python explicitly if `python` is a shell alias, since `--voice-cmd` runs without a shell.
 
 Timing: a voiced slide lasts `ceil_to_frame(lead_in + voice + tail)` (defaults 0.3 s and 0.5 s, from the theme's `audio` block). An explicit `duration` is kept when it is at least that long, and is an error when shorter. A slide cannot exceed 15 s. The voice starts `lead_in` after the slide starts.
 
@@ -267,8 +287,11 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Coverage (NFR-08): `pytest-cov` is an owner-approved dev dependency (2026-11-08, spec C-03); coverage runs as a separate command and is not part of `pytest -q`.
 - Planned for v2.1, not implemented: extra motions and extra poses (Appendix A.2 onward).
 - Narration audio (v2.1, M7): history-shorts and the owner's separate sound project exchange files only. `export-narration` writes `<id>.txt` and a manifest with `text_sha256`; the sound project returns `audio_manifest.json` and voice files; `render --audio` fits slide timing to the voice, ducks music and normalises loudness. No TTS inside history-shorts (spec Appendix A.1, C-01, C-02).
+- Voice pairing (2026-11-13): `audio-manifest` builds `audio_manifest.json` from `<id>.wav`/`<id>.flac` files, and a voice older than its `.txt` counts as stale (export keeps the mtime of unchanged files). The one-command pipeline is `tools/make_video.py`, outside the package, because history-shorts itself never starts the sound project (spec A.1.1, A.1.8).
+- Draft voice (2026-11-13): while VoiceStudio is unavailable, `tools/say_voice.py` uses the offline macOS `say` voice Linh as a `--voice-cmd`, at 200 wpm so every `hai_ba_trung` slide stays under 14 s. Like the sound project, it lives in `tools/` and history-shorts never calls it (C-01, spec A.1.1).
 - Narration timing: a voiced slide is `ceil_to_frame(lead_in + voice + tail)` long; an explicit `duration` wins only when it is at least that long (spec A.1.6).
 - Narration ducking uses FFmpeg `sidechaincompress` with the theme's `audio.duck` values; loudness is one `loudnorm` pass to `audio.loudness_lufs` / `audio.true_peak_db` (spec A.1.7).
 - Motions and cues (v2.1, M8, owner-approved 2026-11-12): transitions overlap the previous clip (clip k is encoded longer and joined with `xfade` at slide k+1's start), so slide starts, voice offsets and the total stay the same; the join re-encodes only when a transition is used. `tone` is a compose step after the frame (FR-21), so text, seal and tag keep their colours. `text_in` slides also write `NN_bg.png` and `NN_text.png`; their text no longer zooms with the scene. Sound effects are owner-supplied files mixed after ducking; a `music_cut` mutes music with 50 ms ramps. Pan motions hold the view at 110 %. A 2.0 script keeps the v2.0 motion list and error text (spec Appendix A.2).
 - Example `hai_ba_trung` (2026-11-11): scenes use only the approved templates. `context` uses `landscape`; `fall` and `legacy` use `landscape` with `boats: []` (river only); `hook` uses `group` with the two leaders; `peak` and `outro` use the full `group`. `war` and `loss` have no fitting template yet and render chrome and text only. Long titles carry an explicit `\n` so no line ends on a lone word.
+- `hai_ba_trung` split (2026-11-13): `loss` and `legacy` were each cut in two at a sentence break (new slides `loss_symbol`, a large drum, and `legacy_story`, the bamboo village) because the VoiceStudio voice read them in 14.6 s and 18.3 s, over the 14 s limit. The narration words are unchanged, only divided; each new slide keeps the source of the slide it came from.
 - Example `vuong_trieu_nu` (2026-11-12): the owner's 60 s storyboard adapted to what v2.0/v2.1 can draw. Photos, the Đông Hồ painting, Ban Chiêu and Han figures, maps, counters, split screen and word-by-word text are dropped (C-06; split screen not built). Pans, tones, transitions and text fade-in come from M8. Each shot is one slide without a fixed `duration`, so timing follows the voice (A.1.6) or FR-83 until the voice exists; every slide has its own scene: `group`/`landscape` variants or explicit `layers` (close-up queen, row of generals, empty Han boats, ringed gold disc with birds as a bronze-drum nod, lotus pond), so no slide is text only.

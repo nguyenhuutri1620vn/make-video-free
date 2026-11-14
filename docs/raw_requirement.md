@@ -812,6 +812,9 @@ Optional theme block `audio` (all keys optional; defaults shown):
 - The render report adds `audio`: manifest path and SHA-256, and per slide `{id, voice_file, voice_seconds, duration}`. The console summary adds a voiced-slide count.
 - New §11 rows: stale narration (exit 3), bad audio file (exit 3), slide too long for its voice (exit 3).
 - Guard test extended: no TTS/ASR packages imported in `history_shorts/` (for example `pyttsx3`, `gtts`, `TTS`, `whisper`, `vosk`).
+- New sub-command `audio-manifest --narration DIR [--voices DIR]` (owner-approved 2026-11-13). It pairs each segment of `DIR/manifest.json` with `<id>.wav` or `<id>.flac` in the voices folder (default: `DIR`), copies `text_sha256` unchanged and writes `audio_manifest.json` into the voices folder, so the sound project only has to save audio files. Errors (exit 3, nothing written): a `.txt` whose bytes no longer match the manifest (re-export), a missing voice, both `.wav` and `.flac` for one id, or a voice file older than its `.txt` (re-record). `gain_db` from an existing `audio_manifest.json` is kept for segments whose `text_sha256` is unchanged. It reads and writes files only and starts nothing (A.1.1).
+- `export-narration` does not rewrite a file whose bytes are unchanged, so the `.txt` mtime only moves when its text changes.
+- `tools/make_video.py` (outside the package, so A.1.1 still holds for `history_shorts/`) runs validate → export-narration → owner-supplied `--voice-cmd` for each missing or stale voice (argument list, no shell) → audio-manifest → render. Without `--voice-cmd` it lists the voices to record and exits 3.
 
 #### A.1.9 Acceptance (M7)
 

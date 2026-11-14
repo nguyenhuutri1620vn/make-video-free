@@ -101,7 +101,8 @@ def voiced_slide_seconds(slide: Slide, voice_seconds: float, fps: int, audio: Au
 def export_narration(script: Script, out_dir: Path) -> Path:
     """Write ``<id>.txt`` for every narrated slide and ``manifest.json`` into ``out_dir``.
 
-    Byte-identical on a second run for an unchanged script. Returns the manifest path.
+    Byte-identical on a second run for an unchanged script, and unchanged files are not
+    rewritten (their mtime is kept for the voice-freshness check). Returns the manifest path.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     segments: list[dict[str, object]] = []
@@ -110,7 +111,7 @@ def export_narration(script: Script, out_dir: Path) -> Path:
             continue
         name = f"{slide.id}.txt"
         data = narration.file_bytes(slide.narration)
-        (out_dir / name).write_bytes(data)
+        _write_if_changed(out_dir / name, data)
         segments.append(
             {
                 "id": slide.id,
@@ -126,8 +127,19 @@ def export_narration(script: Script, out_dir: Path) -> Path:
         "segments": segments,
     }
     path = out_dir / NARRATION_MANIFEST
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+    _write_if_changed(path, text.encode("utf-8"))
     return path
+
+
+def _write_if_changed(path: Path, data: bytes) -> None:
+    """Write only when the bytes differ, so an unchanged file keeps its mtime (A.1.8)."""
+    try:
+        if path.read_bytes() == data:
+            return
+    except OSError:
+        pass
+    path.write_bytes(data)
 
 
 # --------------------------------------------------------------------------------------

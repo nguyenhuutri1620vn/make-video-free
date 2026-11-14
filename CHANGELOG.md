@@ -85,3 +85,9 @@ Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04
 - `sources` items may be objects `{"text", "type"}` with `type` one of `book`, `journal`, `news`, `web`, `other`; plain strings still work. The sources block prints `[n] (type) text`, and the report stores `{text, type}` for every source.
 - A slide's `source` may be an array of indices, for claims backed by several sources.
 - `nu_tuong`: slide 4 is now Bát Nàn Đại tướng (Vũ Thị Thục) with two news sources; the Lê Chân placeholder source is replaced by a journal article (Bùi Đức Mậu, Lại Thị Thanh Bình, 2025).
+
+## Unreleased
+
+- `audio-manifest --narration DIR [--voices DIR]` writes `audio_manifest.json` from recorded `<id>.wav`/`<id>.flac` files; missing, ambiguous or stale voices exit 3 (spec A.1.8).
+- `export-narration` no longer rewrites unchanged files, so their mtime marks when the text last changed.
+- `tools/make_video.py`: one command from script to voiced video (validate, export, owner's `--voice-cmd`, pair, render).
