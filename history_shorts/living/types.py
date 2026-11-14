@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from history_shorts.scene_config import Depth
+from history_shorts.textures import ToneMatrix
 
 FloatRGBA = NDArray[np.float32]  # (h, w, 4): premultiplied RGB, then alpha
 SHEEN_PNG_GAIN = 4  # sheen is ≤ 0.10, so it is stored ×4 for 8-bit precision; FFmpeg divides
@@ -80,3 +81,5 @@ class LivingClip:
     chrome: Path
     text: Path | None
     shakes: tuple[float, ...]
+    frame: Path | None = None  # the gold frame, overlaid before the tone
+    tone: ToneMatrix | None = None  # applied once to the composite, as on the still

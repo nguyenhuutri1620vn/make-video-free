@@ -1,10 +1,13 @@
 """Split a slide into premultiplied planes whose t = 0 composite equals the still slide.
 
-The still slide is ``Pillow(T(frame + (1 - a_f) * (G * (waves + (1 - a_w) * scene) + G * sheen)))``
-with grain ``G`` (a per-pixel factor) and tone ``T`` (linear in RGB). Both distribute over
-premultiplied compositing, so each scene plane gets ``T(G * rgb)``, the waves plane likewise,
-the sheen becomes a fixed additive plane ``T(G * sheen)``, and the frame plus the Pillow
-chrome (seal, tag, progress bar, footer, and the text unless it fades in) form one top plane.
+The still slide is ``Pillow(T(frame + (1 - a_f) * C))`` with the finished scene
+``C = clip(G * (waves + (1 - a_w) * scene) + G * sheen)``, grain ``G`` (a per-pixel
+factor) and tone ``T`` (a 3x3 matrix, then a clip). Grain distributes over premultiplied
+compositing, so each scene plane gets ``G * rgb``, the waves plane likewise, and the sheen
+becomes a fixed additive plane ``G * sheen``. The tone is not applied per plane: a plane's
+toned colour can pass 1 and be clipped where a plane above still lets it show through, so
+``T`` is applied once to the composite after the frame, as on the still. The Pillow chrome
+(seal, tag, progress bar, footer, and the text unless it fades in) forms one plane above.
 Planes made of Cairo drawings are recovered by drawing on black and on white (``matte``).
 """
 
@@ -29,7 +32,7 @@ from history_shorts.compose import (
     SlideContext,
     rng_for,
 )
-from history_shorts.config import LivingSpec
+from history_shorts.config import LivingSpec, ToneSpec
 from history_shorts.layout import CANVAS_H, CANVAS_W, REGIONS
 from history_shorts.living.animate import Motion, animate_crop, motion_margin, transform_frame
 from history_shorts.living.particles import particle_sprite
@@ -71,10 +74,13 @@ ANIMATED: Final = frozenset({*DRIFT_KINDS, *SPRITE_KINDS})
 
 @dataclass(frozen=True)
 class TopPlanes:
-    """The fixed planes over the moving scene: waves, additive sheen, chrome, fading text."""
+    """The fixed planes over the moving scene: waves, additive sheen, frame, then the tone
+    (``None`` for none), then chrome and fading text."""
 
     waves: FloatRGBA
     sheen: FloatImage
+    frame: FloatRGBA
+    tone: ToneSpec | None
     chrome: FloatRGBA
     text: FloatRGBA | None
 
@@ -125,7 +131,7 @@ def draw_indexed(
 
 
 class _Finish:
-    """Grain and tone of a slide, applied to premultiplied planes."""
+    """Grain of a slide, applied to premultiplied planes; its tone, applied to the composite."""
 
     def __init__(self, ctx: SlideContext) -> None:
         rng = rng_for(ctx.style.seed, ctx.slide_index, FINISH_LAYER)
@@ -133,12 +139,8 @@ class _Finish:
         name = ctx.script.slides[ctx.slide_index].tone
         self.tone = ctx.theme.tones[name] if name != "none" else None
 
-    def toned(self, rgb: FloatImage) -> FloatImage:
-        return rgb if self.tone is None else tone_grade(rgb, self.tone)
-
     def plane(self, rgba: FloatRGBA) -> FloatRGBA:
-        rgb = self.toned(np.asarray(rgba[..., :3] * self.grain, dtype=np.float32))
-        return _rgba(rgb, rgba[..., 3])
+        return _rgba(np.asarray(rgba[..., :3] * self.grain, dtype=np.float32), rgba[..., 3])
 
 
 def _groups(
@@ -254,12 +256,13 @@ def _canvas_rgba(draw: Callable[[Canvas], None]) -> FloatRGBA:
     return _rgba(rgb, alpha)
 
 
-def _chrome_plane(ctx: SlideContext, fin: _Finish, text_in: bool) -> FloatRGBA:
+def _frame_plane(ctx: SlideContext) -> FloatRGBA:
+    frame = _canvas_rgba(lambda cv: chrome.draw_frame(cv, ctx.theme.palette))
+    return frame if ctx.theme.chrome.frame else np.zeros_like(frame)
+
+
+def _chrome_plane(ctx: SlideContext, text_in: bool) -> FloatRGBA:
     theme, slide = ctx.theme, ctx.script.slides[ctx.slide_index]
-    frame = _canvas_rgba(lambda cv: chrome.draw_frame(cv, theme.palette))
-    if not theme.chrome.frame:
-        frame = np.zeros_like(frame)
-    frame = _rgba(fin.toned(frame[..., :3]), frame[..., 3])
     plan = plan_text(slide, theme)
 
     def pillow(image: Image.Image) -> None:
@@ -274,7 +277,7 @@ def _chrome_plane(ctx: SlideContext, fin: _Finish, text_in: bool) -> FloatRGBA:
         if theme.chrome.footer.enabled:
             chrome.draw_footer(image, theme)
 
-    return _pillow_matte(frame, pillow)
+    return _pillow_matte(np.zeros((CANVAS_H, CANVAS_W, 4), dtype=np.float32), pillow)
 
 
 def _top_planes(ctx: SlideContext, fin: _Finish) -> TopPlanes:
@@ -283,14 +286,15 @@ def _top_planes(ctx: SlideContext, fin: _Finish) -> TopPlanes:
         _canvas_rgba(lambda cv: chrome.draw_waves(cv, theme.palette, theme.chrome.waves))
     )
     glow = sheen_field(CANVAS_H, CANVAS_W, theme.palette, ctx.style.sheen)
-    sheen = fin.toned(np.asarray(glow * fin.grain, dtype=np.float32))
+    sheen = np.asarray(glow * fin.grain, dtype=np.float32)
     text_in = slide.text_in != "none"
     text = None
     if text_in:
         empty = np.zeros((CANVAS_H, CANVAS_W, 4), dtype=np.float32)
         plan = plan_text(slide, theme)
         text = _pillow_matte(empty, lambda image: draw_text(image, plan, theme))
-    return TopPlanes(waves, sheen, _chrome_plane(ctx, fin, text_in), text)
+    chrome_plane = _chrome_plane(ctx, text_in)
+    return TopPlanes(waves, sheen, _frame_plane(ctx), fin.tone, chrome_plane, text)
 
 
 def build_stack(
@@ -337,6 +341,9 @@ def recompose(stack: LivingStack) -> FloatImage:
             img = over_rgba(img, plane.rgba)
     img = over_rgba(img, stack.top.waves)
     img = np.clip(img + stack.top.sheen, 0, 1)
+    img = over_rgba(img, stack.top.frame)
+    if stack.top.tone is not None:
+        img = tone_grade(img, stack.top.tone)
     img = over_rgba(img, stack.top.chrome)
     if stack.top.text is not None:
         img = over_rgba(img, stack.top.text)

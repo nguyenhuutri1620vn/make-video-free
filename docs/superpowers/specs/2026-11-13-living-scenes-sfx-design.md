@@ -214,6 +214,7 @@ Owner sign-off: render the updated example and show it; the owner judges "natura
 
 - Ambient motion is applied to each animated layer's rendered pixels (bob, roll, sway, ripple warp, glow), not through a phase-aware drawer, so no drawer changed. Consequence: `banners` and character flags do not wave yet (backlog #20).
 - The layer override key is `plane`, not `depth`: `lone_path` already has a numeric `depth`.
+- The slide tone is applied once in FFmpeg (`colorchannelmixer`, the tone's 3x3 matrix) after the sheen and the gold frame, not per plane. Toning each plane clipped bright colours (a warm sun) that a partly transparent plane above still shows; found on `legacy_story` after the 2026-11-14 merge. Planes and the sheen are now untoned, and the frame is its own plane.
 - Living planes are written to the render temp directory, not `slides/`.
 - `zoompan` runs on `yuva444p` with planes of one depth grouped, for speed; spectral-centroid checks use the power spectrum.
 

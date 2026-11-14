@@ -59,5 +59,7 @@ def test_render_living_files(tmp_path: Path, theme: Any) -> None:  # RF-4
         for path in (clip.waves, clip.sheen, clip.chrome):
             assert path.is_file()
         assert (clip.text is not None) == (script.slides[index].text_in != "none")
+        assert (clip.tone is None) == (script.slides[index].tone == "none")
+        assert clip.frame is not None and clip.frame.is_file()
     assert any(p.kind == "sprite" for p in fifth.planes)
     assert any(p.kind == "drift" for p in fifth.planes)

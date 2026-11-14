@@ -114,6 +114,26 @@ def test_living_cmd_structure() -> None:
     assert re.search(r"between\(on/30,1,", graph)
 
 
+def test_living_cmd_tones_once_after_frame() -> None:
+    import dataclasses
+
+    matrix = ((1.1, 0.0, 0.0), (0.0, 0.9, 0.0), (0.05, 0.0, 0.8))
+    clip = dataclasses.replace(_clip(False), frame=Path("/t/f.png"), tone=matrix)
+    cmd = living_clip_cmd(INFO, clip, Path("/o.mp4"), 4.0, 30, 20, 0.3, 0.3, "none", SPEC)
+    assert cmd.count("-i") == 3 + 4 and "/t/f.png" in cmd
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    mixer = "colorchannelmixer=rr=1.1:rg=0:rb=0:gr=0:gg=0.9:gb=0:br=0.05:bg=0:bb=0.8"
+    assert graph.count(mixer) == 1
+    assert graph.index("blend=all_mode=addition") < graph.index("[fr]overlay")
+    assert graph.index("[fr]overlay") < graph.index(mixer) < graph.index("[ch]overlay")
+
+
+def test_living_cmd_untoned_has_no_tone_mixer() -> None:
+    cmd = living_clip_cmd(INFO, _clip(False), Path("/o.mp4"), 4.0, 30, 20, 0.3, 0.3, "none", SPEC)
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    assert graph.count("colorchannelmixer") == 1  # the sheen gain only
+
+
 def test_living_cmd_text_fades_in() -> None:
     from history_shorts.ffmpeg import TextLayer
 

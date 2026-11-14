@@ -9,6 +9,7 @@
       "duration": 4,
       "living": true,
       "motion": "pan_right",
+      "tone": "warm",
       "scene": {
         "layers": [
           {"type": "mountains", "y": 930, "amp": 1.2},

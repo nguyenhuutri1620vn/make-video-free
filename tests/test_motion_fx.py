@@ -31,7 +31,7 @@ from history_shorts.ffmpeg import (
     voice_mux_cmd,
     xfade_cmd,
 )
-from history_shorts.textures import tone_grade
+from history_shorts.textures import tone_grade, tone_matrix
 from history_shorts.video import overlaps
 
 INFO = FfmpegInfo(Path("ffmpeg"), Path("ffprobe"), (8, 1))
@@ -149,6 +149,14 @@ def test_tone_identity() -> None:
     img = np.random.default_rng(2).random((4, 4, 3), dtype=np.float32)
     out = tone_grade(img, ToneSpec(1.0, 1.0, (0, 0, 0), 0.0))
     assert np.allclose(out, img, atol=1e-6)
+
+
+@pytest.mark.parametrize("name", ["warm", "gray", "cold"])
+def test_tone_matrix_matches_tone_grade(theme: Any, name: str) -> None:  # living tone (M9)
+    img = np.random.default_rng(3).random((8, 8, 3), dtype=np.float32)
+    matrix = np.asarray(tone_matrix(theme.tones[name]), dtype=np.float32)
+    assert matrix.shape == (3, 3)
+    assert np.allclose(np.clip(img @ matrix.T, 0, 1), tone_grade(img, theme.tones[name]), atol=1e-6)
 
 
 def test_tone_changes_scene_but_not_text(tmp_script: ScriptFactory, theme: Any) -> None:  # AC-23

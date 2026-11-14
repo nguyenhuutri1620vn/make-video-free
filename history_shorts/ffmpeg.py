@@ -294,7 +294,16 @@ def _living_inputs(clip: LivingClip, fps: int, duration: float) -> list[str]:
         args += _still_input(path, fps, duration)
     if clip.text is not None:
         args += _still_input(clip.text, fps, duration)
+    if clip.frame is not None:
+        args += _still_input(clip.frame, fps, duration)
     return args
+
+
+def _mixer(matrix: tuple[tuple[float, float, float], ...]) -> str:
+    """``colorchannelmixer`` applying ``matrix`` (rows: output r, g, b); it clips like the still."""
+    names = ("r", "g", "b")
+    terms = [f"{o}{i}={matrix[a][b]:.6g}" for a, o in enumerate(names) for b, i in enumerate(names)]
+    return "colorchannelmixer=" + ":".join(terms)
 
 
 def _living_graph(
@@ -306,10 +315,11 @@ def _living_graph(
     spec: LivingSpec,
     text: TextLayer | None,
 ) -> str:
-    """Scene planes moved and stacked, then waves, additive sheen, chrome and text (fixed)."""
+    """Scene planes moved and stacked, then waves, additive sheen, frame, the tone (once, as on
+    the still), chrome and text (fixed)."""
     groups = plane_groups(clip.planes)
     frames = max(round(duration * fps), 1)
-    count = len(clip.planes) + 3 + (clip.text is not None)
+    count = len(clip.planes) + 3 + (clip.text is not None) + (clip.frame is not None)
     parts = [
         still_loop(i, frames, fps)
         for i in range(count)
@@ -331,9 +341,16 @@ def _living_graph(
         "[scene][wv]overlay=0:0:format=gbrp[sw]",
         f"[in{sheen}]format=gbrp,colorchannelmixer=rr={gain}:gg={gain}:bb={gain}[sh]",
         "[sw][sh]blend=all_mode=addition[lit]",
-        f"[in{chrome}]format=gbrap[ch]",
-        "[lit][ch]overlay=0:0:format=gbrp[top]",
     ]
+    under = "lit"
+    if clip.frame is not None:
+        frame = chrome + 1 + (clip.text is not None)
+        parts += [f"[in{frame}]format=gbrap[fr]", f"[{under}][fr]overlay=0:0:format=gbrp[framed]"]
+        under = "framed"
+    if clip.tone is not None:
+        parts.append(f"[{under}]{_mixer(clip.tone)}[toned]")
+        under = "toned"
+    parts += [f"[in{chrome}]format=gbrap[ch]", f"[{under}][ch]overlay=0:0:format=gbrp[top]"]
     last = "top"
     if clip.text is not None:
         fade = (

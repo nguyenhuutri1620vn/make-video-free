@@ -203,6 +203,23 @@ def finish(
 LUMA: tuple[float, float, float] = (0.299, 0.587, 0.114)  # Rec. 601 weights for saturation
 
 
+ToneMatrix = tuple[tuple[float, float, float], ...]  # 3 rows: out_c = sum_j m[c][j] * in_j
+
+
+def tone_matrix(tone: ToneSpec) -> ToneMatrix:
+    """``tone_grade`` as a 3x3 matrix (it is linear before its clip), for FFmpeg's
+    ``colorchannelmixer`` on living slides."""
+    keep = tone.brightness * (1 - tone.strength)
+
+    def row(c: int) -> tuple[float, float, float]:
+        mix = keep * (1 - tone.saturation) + 2 * tone.strength * tone.tint[c] / 255.0
+        own = keep * tone.saturation
+        r, g, b = (mix * w for w in LUMA)
+        return (r + own * (c == 0), g + own * (c == 1), b + own * (c == 2))
+
+    return (row(0), row(1), row(2))
+
+
 def tone_grade(img: FloatImage, tone: ToneSpec) -> FloatImage:
     """Colour grade for a slide ``tone`` (spec A.2.1): scale saturation around the luma, scale
     brightness, then mix in the tint colour by ``strength``."""

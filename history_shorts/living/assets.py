@@ -32,6 +32,7 @@ from history_shorts.living.types import (
 from history_shorts.primitives import FloatImage
 from history_shorts.render import scene_expander
 from history_shorts.scene_config import Depth
+from history_shorts.textures import tone_matrix
 
 PNG_LEVEL: Final = 1  # fast: these files are read once by FFmpeg and then deleted
 PAD_SLACK: Final = 2
@@ -103,6 +104,7 @@ def write_living(
     top = stack.top
     write_png_rgba(top.waves, directory / "waves.png")
     _write_rgb(top.sheen * SHEEN_PNG_GAIN, directory / "sheen.png")
+    write_png_rgba(top.frame, directory / "frame.png")
     write_png_rgba(top.chrome, directory / "chrome.png")
     text = None
     if top.text is not None:
@@ -115,6 +117,8 @@ def write_living(
         directory / "chrome.png",
         text,
         shakes,
+        directory / "frame.png",
+        None if top.tone is None else tone_matrix(top.tone),
     )
 
 
