@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "2.2",
   "title": "Gần 100 nữ tướng của Hai Bà Trưng",
   "sources": [
     "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
@@ -56,7 +56,16 @@
             ]
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "gong",
+          "at": 0.2,
+          "gain_db": -4,
+          "shake": true
+        }
+      ]
     },
     {
       "id": "tuong-nu",
@@ -264,7 +273,16 @@
             "rows": 4
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.2,
+          "gain_db": -3,
+          "shake": true
+        }
+      ]
     },
     {
       "id": "mien-bien",
@@ -292,7 +310,15 @@
             ]
           }
         ]
-      }
+      },
+      "sfx": [
+        {
+          "sound": "water",
+          "at": 0.0,
+          "duration": 3.6,
+          "gain_db": -20
+        }
+      ]
     },
     {
       "id": "thanh-hoa",
@@ -382,7 +408,14 @@
             "scale": 1.55
           }
         ]
-      }
+      },
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.3,
+          "gain_db": -6
+        }
+      ]
     },
     {
       "id": "me-con-chau",
@@ -492,7 +525,15 @@
             "depth": 340
           }
         ]
-      }
+      },
+      "sfx": [
+        {
+          "sound": "wind",
+          "at": 0.0,
+          "duration": 4.8,
+          "gain_db": -20
+        }
+      ]
     },
     {
       "id": "hai-muoi-51",
@@ -571,7 +612,16 @@
             "scale": 2.2
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "wind",
+          "at": 0.0,
+          "duration": 4.8,
+          "gain_db": -18
+        }
+      ]
     },
     {
       "id": "khong-tin",
@@ -733,7 +783,16 @@
             ]
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "gong",
+          "at": 0.3,
+          "gain_db": -8,
+          "shake": true
+        }
+      ]
     },
     {
       "id": "tho-than",
@@ -794,7 +853,15 @@
             "scale": 1.55
           }
         ]
-      }
+      },
+      "living": true,
+      "sfx": [
+        {
+          "sound": "bell",
+          "at": 0.4,
+          "gain_db": -6
+        }
+      ]
     },
     {
       "id": "chua-quen",
@@ -858,7 +925,17 @@
             "scale": 2.3
           }
         ]
-      }
+      },
+      "living": true,
+      "particles": "petals",
+      "sfx": [
+        {
+          "sound": "water",
+          "at": 0.0,
+          "duration": 3.2,
+          "gain_db": -22
+        }
+      ]
     },
     {
       "id": "tap-2",
