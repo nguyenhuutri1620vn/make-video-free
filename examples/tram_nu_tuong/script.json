@@ -1,0 +1,890 @@
+{
+  "schema_version": "2.1",
+  "title": "Gần 100 nữ tướng của Hai Bà Trưng",
+  "sources": [
+    "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
+    {
+      "text": "Bùi Đức Mậu, Lại Thị Thanh Bình (2025). \"Tục thờ nữ tướng Lê Chân của cư dân thành phố Hải Phòng\". Tạp chí Thông tin Khoa học xã hội, số 2(506), tr. 51–58. ISSN 0866-8647. https://vjol.info.vn/ssir/article/view/129011",
+      "type": "journal"
+    },
+    {
+      "text": "Báo Dân Việt, \"Một nữ đại tướng huyền thoại của dân tộc Việt Nam, tên tục là Vũ Thị Thục...\"",
+      "type": "news"
+    },
+    {
+      "text": "Báo Phú Thọ, \"Nữ đại tướng huyền thoại của dân tộc Việt\"",
+      "type": "news"
+    },
+    "[CẦN BỔ SUNG NGUỒN: con số gần 100 nữ tướng thời Hai Bà Trưng]",
+    "[CẦN BỔ SUNG NGUỒN: Lê Thị Hoa cầm quân vùng Thanh Hóa]",
+    "[CẦN BỔ SUNG NGUỒN: nữ tướng ra trận cùng con trai và cháu ruột — tên, thần tích]",
+    "[CẦN BỔ SUNG NGUỒN: nữ tướng cạo đầu giả làm ni cô để tụ quân — tên, thần tích]",
+    "[CẦN BỔ SUNG NGUỒN: 51 tướng theo Hai Bà ở một vùng Bắc Ninh, 20 người là nữ]"
+  ],
+  "slides": [
+    {
+      "id": "vua-nu",
+      "title": "VUA: NỮ",
+      "narration": "Vua là phụ nữ.",
+      "motion": "zoom_in",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 260,
+            "rings": 1
+          },
+          {
+            "type": "ground",
+            "y": 1100,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "x": 540,
+                "baseline": 1108,
+                "height": 820,
+                "prop": "none"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tuong-nu",
+      "title": "TƯỚNG: NỮ",
+      "narration": "Tướng… cũng là phụ nữ.",
+      "motion": "zoom_in",
+      "transition": "fade",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 640,
+            "r": 300,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "elephant",
+            "x": 520,
+            "y": 1100,
+            "scale": 2.1,
+            "facing": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "nam-40",
+      "title": "Năm 40",
+      "narration": "Nghe như phim, nhưng là chuyện thật ở Việt Nam.",
+      "motion": "zoom_out",
+      "transition": "dissolve",
+      "text_in": "fade",
+      "scene": {
+        "template": "group"
+      }
+    },
+    {
+      "id": "hai-ba",
+      "title": "Hai Bà Trưng",
+      "narration": "Ai cũng biết Hai Bà Trưng.",
+      "claim": true,
+      "source": 0,
+      "motion": "pan_right",
+      "transition": "fade",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 880,
+            "amp": 1.0
+          },
+          {
+            "type": "clouds",
+            "items": [
+              {
+                "x": 270,
+                "y": 330,
+                "scale": 0.8
+              },
+              {
+                "x": 860,
+                "y": 330,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "formation": "line",
+            "items": [
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "it-ai-biet",
+      "title": "Nhưng ít ai biết…",
+      "narration": "Nhưng ít ai biết:",
+      "motion": "zoom_in",
+      "transition": "fadeblack",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 540,
+            "y": 560,
+            "r": 70,
+            "rings": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "tram-nu-tuong",
+      "title": "~100\nNỮ TƯỚNG",
+      "subtitle": "theo thần tích các làng",
+      "narration": "đứng sau hai bà là gần 100 nữ tướng.",
+      "claim": true,
+      "source": 4,
+      "motion": "zoom_out",
+      "transition": "circleopen",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 560,
+            "r": 230,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "banners",
+            "y": 1080,
+            "rows": 4
+          }
+        ]
+      }
+    },
+    {
+      "id": "mien-bien",
+      "title": "Trấn giữ\nmiền biển",
+      "subtitle": "Lê Chân · theo thần tích",
+      "narration": "Và không phải tướng phụ đâu. Có người trấn giữ cả miền biển.",
+      "claim": true,
+      "source": 1,
+      "motion": "zoom_in",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.72,
+                0.5
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "thanh-hoa",
+      "title": "Cầm quân\nvùng Thanh Hóa",
+      "subtitle": "Lê Thị Hoa · theo thần tích",
+      "narration": "Có người cầm quân cả vùng Thanh Hóa bây giờ.",
+      "claim": true,
+      "source": 5,
+      "motion": "pan_down",
+      "transition": "dissolve",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.33,
+                0.92
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "700-nu-binh",
+      "title": "700 NỮ BINH",
+      "subtitle": "Bát Nàn · theo thần tích",
+      "narration": "Có bà kéo về 700 quân… toàn là phụ nữ.",
+      "claim": true,
+      "source": 2,
+      "motion": "zoom_in",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 680,
+            "r": 280,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 180,
+                "y": 420,
+                "scale": 0.8
+              },
+              {
+                "x": 900,
+                "y": 440,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "temple",
+            "x": 540,
+            "y": 1100,
+            "scale": 1.55
+          }
+        ]
+      }
+    },
+    {
+      "id": "me-con-chau",
+      "title": "MẸ · CON · CHÁU",
+      "subtitle": "theo thần tích",
+      "narration": "Có bà ra trận cùng con trai và cháu ruột.",
+      "claim": true,
+      "source": 6,
+      "motion": "pan_left",
+      "transition": "slideleft",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 620,
+            "r": 240,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 430,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 460,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "bamboo_village",
+            "x": 540,
+            "y": 1095,
+            "scale": 1.7
+          }
+        ]
+      }
+    },
+    {
+      "id": "ni-co",
+      "title": "GIẢ ĐI TU…\nĐỂ KHỞI NGHĨA",
+      "subtitle": "theo truyền thuyết",
+      "narration": "Còn có người cạo đầu giả làm ni cô, đi khắp nơi gom quân mà giặc không hề hay biết.",
+      "claim": true,
+      "source": 7,
+      "motion": "zoom_in",
+      "transition": "fadeblack",
+      "tone": "gray",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 540,
+            "y": 520,
+            "r": 90,
+            "rings": 1
+          },
+          {
+            "type": "peaks",
+            "y": 800,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 300,
+                "height": 380,
+                "width": 150
+              },
+              {
+                "x": 780,
+                "height": 420,
+                "width": 160
+              },
+              {
+                "x": 120,
+                "height": 300,
+                "width": 130
+              },
+              {
+                "x": 960,
+                "height": 320,
+                "width": 130
+              }
+            ]
+          },
+          {
+            "type": "mountains",
+            "y": 860,
+            "amp": 0.8
+          },
+          {
+            "type": "lone_path",
+            "y": 1145,
+            "depth": 340
+          }
+        ]
+      }
+    },
+    {
+      "id": "hai-muoi-51",
+      "title": "20/51",
+      "subtitle": "tướng theo Hai Bà ở một vùng Bắc Ninh",
+      "narration": "Chỉ riêng một vùng ở Bắc Ninh, có 51 tướng theo hai bà. 20 người là phụ nữ.",
+      "claim": true,
+      "source": 8,
+      "motion": "zoom_in",
+      "transition": "fade",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.46,
+                0.3
+              ]
+            ],
+            "scatter": 51
+          }
+        ]
+      }
+    },
+    {
+      "id": "bo-di",
+      "title": "Họ bỏ đi…",
+      "narration": "Vậy mà khi quân Hán kéo sang, sử cũ chép rằng nhiều người đã bỏ hai bà mà đi…",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_out",
+      "transition": "fadeblack",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 760,
+            "y": 470,
+            "r": 100,
+            "rings": 1
+          },
+          {
+            "type": "mountains",
+            "y": 930,
+            "amp": 1.2
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "fallen_flags",
+            "x": 560,
+            "y": 1095,
+            "scale": 2.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "khong-tin",
+      "title": "…vì không tin\nphụ nữ thắng được",
+      "narration": "…chỉ vì không tin phụ nữ đánh thắng được.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_in",
+      "tone": "cold",
+      "music_cut": {
+        "at": 0.0,
+        "duration": 1.0
+      },
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 540,
+            "y": 560,
+            "r": 70,
+            "rings": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "sup-do",
+      "title": "Ba năm sau",
+      "subtitle": "vương triều sụp đổ",
+      "narration": "Ba năm sau, vương triều sụp đổ.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_out",
+      "transition": "fade",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 770,
+            "y": 450,
+            "r": 125,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 300,
+                "y": 400,
+                "scale": 1.6
+              },
+              {
+                "x": 360,
+                "y": 440,
+                "scale": 1.2
+              },
+              {
+                "x": 250,
+                "y": 470,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "type": "peaks",
+            "y": 900,
+            "fill": "gradient",
+            "items": [
+              {
+                "x": 470,
+                "height": 380,
+                "width": 120
+              },
+              {
+                "x": 860,
+                "height": 360,
+                "width": 130
+              },
+              {
+                "x": 120,
+                "height": 330,
+                "width": 120
+              },
+              {
+                "x": 660,
+                "height": 290,
+                "width": 115
+              },
+              {
+                "x": 300,
+                "height": 250,
+                "width": 105
+              },
+              {
+                "x": 1030,
+                "height": 260,
+                "width": 100
+              }
+            ]
+          },
+          {
+            "type": "clouds",
+            "outline": "gold_dk",
+            "items": [
+              {
+                "x": 640,
+                "y": 650,
+                "scale": 0.9,
+                "flip": -1
+              },
+              {
+                "x": 960,
+                "y": 760,
+                "scale": 0.8
+              }
+            ]
+          },
+          {
+            "type": "river",
+            "y": 940,
+            "height": 290
+          },
+          {
+            "type": "lanterns",
+            "items": [
+              {
+                "x": 760,
+                "y": 975,
+                "scale": 0.9
+              },
+              {
+                "x": 330,
+                "y": 990,
+                "scale": 1.0
+              },
+              {
+                "x": 610,
+                "y": 1010,
+                "scale": 1.2
+              },
+              {
+                "x": 880,
+                "y": 1040,
+                "scale": 1.5
+              },
+              {
+                "x": 230,
+                "y": 1060,
+                "scale": 1.7
+              },
+              {
+                "x": 520,
+                "y": 1095,
+                "scale": 2.1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tho-than",
+      "title": "Gần 2.000 năm",
+      "subtitle": "nhiều làng vẫn thờ họ làm thần",
+      "narration": "Nhưng gần hai nghìn năm qua, rất nhiều làng vẫn thờ những người phụ nữ ấy làm thần.",
+      "motion": "pan_right",
+      "transition": "dissolve",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 680,
+            "r": 280,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 180,
+                "y": 420,
+                "scale": 0.8
+              },
+              {
+                "x": 900,
+                "y": 440,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "temple",
+            "x": 540,
+            "y": 1100,
+            "scale": 1.55
+          }
+        ]
+      }
+    },
+    {
+      "id": "chua-quen",
+      "title": "…nhưng chưa\nbao giờ quên họ.",
+      "narration": "Người ta từng không tin họ… nhưng chưa bao giờ quên họ.",
+      "motion": "zoom_in",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 760,
+            "y": 470,
+            "r": 120,
+            "rings": 1
+          },
+          {
+            "type": "birds",
+            "items": [
+              {
+                "x": 260,
+                "y": 430,
+                "scale": 1.4
+              },
+              {
+                "x": 330,
+                "y": 470,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 960,
+            "height": 40
+          },
+          {
+            "type": "temple",
+            "x": 540,
+            "y": 965,
+            "scale": 1.2,
+            "incense": true
+          },
+          {
+            "type": "river",
+            "y": 1000,
+            "height": 200
+          },
+          {
+            "type": "lotus",
+            "x": 300,
+            "y": 1080,
+            "scale": 2.0
+          },
+          {
+            "type": "lotus",
+            "x": 790,
+            "y": 1095,
+            "scale": 2.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "tap-2",
+      "title": "TẬP 2",
+      "subtitle": "Người giữ cả miền biển là ai?",
+      "narration": "Muốn biết người phụ nữ giữ cả miền biển là ai? Follow, tập sau mình kể.",
+      "motion": "zoom_in",
+      "transition": "slideup",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.72,
+                0.5
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

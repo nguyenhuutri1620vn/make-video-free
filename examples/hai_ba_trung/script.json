@@ -312,8 +312,8 @@
     {
       "id": "loss",
       "title": "Trống đồng →\nNgựa đồng",
-      "subtitle": "Một nền văn hóa thành chiến lợi phẩm",
-      "narration": "Mã Viện đặt cả vùng đất dưới sự cai trị trực tiếp. Theo Hậu Hán Thư, ông thu trống đồng của người Lạc Việt, nấu chảy để đúc ngựa đồng. Biểu tượng của cả một nền văn hóa bị biến thành chiến lợi phẩm.",
+      "subtitle": "Mã Viện nấu trống, đúc ngựa",
+      "narration": "Mã Viện đặt cả vùng đất dưới sự cai trị trực tiếp. Theo Hậu Hán Thư, ông thu trống đồng của người Lạc Việt, nấu chảy để đúc ngựa đồng.",
       "claim": true,
       "source": 1,
       "motion": "zoom_in",
@@ -345,10 +345,33 @@
       }
     },
     {
+      "id": "loss_symbol",
+      "title": "Một nền văn hóa",
+      "subtitle": "bị biến thành chiến lợi phẩm",
+      "narration": "Biểu tượng của cả một nền văn hóa bị biến thành chiến lợi phẩm.",
+      "claim": true,
+      "source": 1,
+      "motion": "zoom_out",
+      "transition": "fade",
+      "tone": "gray",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 720,
+            "r": 400,
+            "birds": 8
+          }
+        ]
+      }
+    },
+    {
       "id": "legacy",
       "title": "Có thứ không\nnấu chảy được",
       "subtitle": "Đền thờ hai bà ở Hát Môn",
-      "narration": "Nhưng có thứ không nấu chảy được. Tương truyền, chỉ vài năm sau, dân đã lập đền thờ hai bà. Suốt gần 900 năm Bắc thuộc, câu chuyện ấy được truyền từ đời này sang đời khác, cho đến khi Ngô Quyền giành lại độc lập năm 939.",
+      "narration": "Nhưng có thứ không nấu chảy được. Tương truyền, chỉ vài năm sau, dân đã lập đền thờ hai bà.",
       "claim": true,
       "source": 0,
       "motion": "zoom_in",
@@ -403,6 +426,57 @@
             "x": 540,
             "y": 1100,
             "scale": 1.55
+          }
+        ]
+      }
+    },
+    {
+      "id": "legacy_story",
+      "title": "Gần 900 năm\nBắc thuộc",
+      "subtitle": "Đến năm 939, Ngô Quyền giành lại độc lập",
+      "narration": "Suốt gần 900 năm Bắc thuộc, câu chuyện ấy được truyền từ đời này sang đời khác, cho đến khi Ngô Quyền giành lại độc lập năm 939.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_out",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 620,
+            "r": 240,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 430,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 460,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "bamboo_village",
+            "x": 540,
+            "y": 1095,
+            "scale": 1.7
           }
         ]
       }

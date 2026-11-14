@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "title": "Nữ tướng thời Hai Bà Trưng",
   "sources": [
     "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998).",
@@ -24,9 +24,24 @@
       "scene": {
         "template": "group",
         "characters": [
-          { "role": "leader" }, { "role": "leader" },
-          { "role": "general_alt" }, { "role": "general_alt" },
-          { "role": "general" }, { "role": "general" }
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general"
+          },
+          {
+            "role": "general"
+          }
         ]
       }
     },
@@ -39,7 +54,14 @@
       "source": 0,
       "scene": {
         "template": "group",
-        "characters": [ { "role": "leader" }, { "role": "leader" } ]
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          }
+        ]
       }
     },
     {
@@ -50,7 +72,14 @@
       "source": 1,
       "scene": {
         "template": "group",
-        "characters": [ { "role": "general" }, { "role": "general" } ]
+        "characters": [
+          {
+            "role": "general"
+          },
+          {
+            "role": "general"
+          }
+        ]
       }
     },
     {
@@ -58,10 +87,20 @@
       "title": "Bát Nàn Đại tướng\nVũ Thị Thục",
       "subtitle": "Bát Nàn Đại tướng – từ làng Phượng Lâu ra trận, nay thành Mẫu thần được thờ khắp Sơn Nam",
       "claim": true,
-      "source": [2, 3],
+      "source": [
+        2,
+        3
+      ],
       "scene": {
         "template": "group",
-        "characters": [ { "role": "general_alt" }, { "role": "general_alt" } ]
+        "characters": [
+          {
+            "role": "general_alt"
+          },
+          {
+            "role": "general_alt"
+          }
+        ]
       }
     },
     {
