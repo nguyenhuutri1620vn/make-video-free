@@ -107,6 +107,13 @@ def test_report_music_hash_and_dev_ffmpeg(tmp_path: Path, theme: Theme) -> None:
     assert isinstance(versions, dict) and versions["ffmpeg"] == "dev"
 
 
+def test_report_records_sfx_volume_when_changed(tmp_path: Path, theme: Theme) -> None:
+    script = example("me_linh")
+    opts = RenderOptions(out=tmp_path / "v.mp4", music=None, sfx_volume=0.5)
+    data = build_report(script, theme, opts, [], [], TIMINGS, [], INFO)
+    assert data["sfx_volume"] == 0.5
+
+
 def test_write_report_atomic_utf8_sorted(tmp_path: Path, theme: Theme) -> None:
     data = build(tmp_path, theme)
     out = tmp_path / "Sử Việt" / "nu tuong.mp4"

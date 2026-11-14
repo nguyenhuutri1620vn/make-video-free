@@ -118,6 +118,8 @@ def build_report(
     }
     if audio is not None:
         data["audio"] = _audio_section(audio, durations, base)
+    if opts.sfx_volume != 1:
+        data["sfx_volume"] = opts.sfx_volume  # applied on top of every effect's gain_db
     if opts.synth:
         data["synth_sfx"] = [
             {
