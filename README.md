@@ -113,7 +113,7 @@ Narration is voiced by the owner's separate sound project (VoiceStudio). history
 python tools/make_video.py --script examples/hai_ba_trung/script.json --music music/nhac.mp3 --voice-cmd "voicestudio-cli --input {text} --output {wav}"
 ```
 
-`--voice-cmd` is your sound project's command for one voice; `{text}`, `{wav}` and `{id}` are replaced in each argument and it runs without a shell. It is called only for voices that are missing or older than their text, so re-runs are quick. Without `--voice-cmd` the tool lists the `.txt` → `.wav` files to record in `output/voice/<script folder>/` and exits 3; record them and run the same command again. Other options: `--out`, `--theme`, `--music-volume`, `--work` (narration and voice folder). A script without narration goes straight to `render`.
+`--voice-cmd` is your sound project's command for one voice; `{text}`, `{wav}` and `{id}` are replaced in each argument and it runs without a shell. It is called only for voices that are missing or older than their text, so re-runs are quick. Without `--voice-cmd` the tool lists the `.txt` → `.wav` files to record in `output/voice/<script folder>/` and exits 3; record them and run the same command again. Other options: `--out`, `--theme`, `--music-volume`, `--sfx-volume`, `--work` (narration and voice folder). A script without narration goes straight to `render`.
 
 **Draft voice without VoiceStudio (macOS).** `tools/say_voice.py` voices one `.txt` with the built-in offline `say` voice "Linh" (vi_VN), turning `[pause Nms]` into silence and writing a 16-bit mono WAV:
 
@@ -158,6 +158,8 @@ With `"schema_version": "2.2"` (spec Appendix A.4):
 | `whoosh` | soft swish | optional `duration` |
 | `wind` | gentle wind bed | `duration` required |
 | `water` | lapping water bed | `duration` required |
+
+`render --sfx-volume 0.5` plays every sound effect (file cues, synthesized sounds and the automatic whoosh) at half amplitude, about −6 dB, on top of each cue's `gain_db`. Range 0 to 2, default 1; 0 mutes the effects.
 
 - Moving transitions (`slideleft`, `slideright`, `slideup`, `wipeleft`, `wiperight`, `circleopen`) get an automatic soft whoosh; `"auto_sfx": false` turns it off for that slide.
 - Tuning lives in the theme's optional `living` and `sfx` blocks (travel per plane, shake size, loop length, reverb, whoosh level).

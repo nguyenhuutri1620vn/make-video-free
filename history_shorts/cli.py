@@ -16,6 +16,7 @@ import shutil
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 
@@ -27,7 +28,9 @@ from history_shorts.ffmpeg import TextLayer
 from history_shorts.living.types import LivingClip
 from history_shorts.video import (
     DEFAULT_MUSIC_VOLUME,
+    DEFAULT_SFX_VOLUME,
     MAX_MUSIC_VOLUME,
+    MAX_SFX_VOLUME,
     RenderOptions,
     assemble,
     default_jobs,
@@ -195,6 +198,7 @@ def _warn_ignored_flags(args: argparse.Namespace) -> None:
             for flag, value in (
                 ("--music", args.music),
                 ("--music-volume", args.music_volume),
+                ("--sfx-volume", args.sfx_volume),
                 ("--keep-temp", args.keep_temp),
                 ("--jobs", args.jobs),
                 ("--audio", args.audio),
@@ -310,6 +314,7 @@ def _encode_video(
         out=out,
         music=music,
         music_volume=DEFAULT_MUSIC_VOLUME if args.music_volume is None else args.music_volume,
+        sfx_volume=DEFAULT_SFX_VOLUME if args.sfx_volume is None else args.sfx_volume,
         keep_temp=args.keep_temp,
         jobs=default_jobs() if args.jobs is None else args.jobs,
         verbose=args.verbose,
@@ -479,14 +484,19 @@ def _add_theme_option(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _music_volume(text: str) -> float:
-    try:
-        value = float(text)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"invalid number: {text!r}") from None
-    if not 0.0 <= value <= MAX_MUSIC_VOLUME:  # also rejects nan
-        raise argparse.ArgumentTypeError(f"{text} is outside 0 to {MAX_MUSIC_VOLUME:g}")
-    return value
+def _volume(limit: float) -> Callable[[str], float]:
+    """An argparse type: a number from 0 to ``limit``."""
+
+    def parse(text: str) -> float:
+        try:
+            value = float(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"invalid number: {text!r}") from None
+        if not 0.0 <= value <= limit:  # also rejects nan
+            raise argparse.ArgumentTypeError(f"{text} is outside 0 to {limit:g}")
+        return value
+
+    return parse
 
 
 def _jobs(text: str) -> int:
@@ -520,9 +530,15 @@ def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser])
     )
     render.add_argument(
         "--music-volume",
-        type=_music_volume,
+        type=_volume(MAX_MUSIC_VOLUME),
         default=None,
         help="music volume, 0 to 2 (default: 0.6)",
+    )
+    render.add_argument(
+        "--sfx-volume",
+        type=_volume(MAX_SFX_VOLUME),
+        default=None,
+        help="sound-effect volume, 0 to 2; 0.5 is half as loud (default: 1)",
     )
     _add_audio_option(render)
     render.add_argument("--preview", action="store_true", help="write slide PNGs only, no video")

@@ -116,6 +116,7 @@ def _parse(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--out", type=Path, default=None, help="video path")
     parser.add_argument("--music", type=Path, default=None)
     parser.add_argument("--music-volume", default=None)
+    parser.add_argument("--sfx-volume", default=None)
     parser.add_argument("--voice-cmd", default=None, help="template with {text} {wav} {id}")
     parser.add_argument("--work", type=Path, default=None, help="narration and voice folder")
     return parser.parse_args(argv)
@@ -128,6 +129,7 @@ def _render_args(args: argparse.Namespace, audio: Path | None) -> list[str]:
         ("--out", args.out),
         ("--music", args.music),
         ("--music-volume", args.music_volume),
+        ("--sfx-volume", args.sfx_volume),
         ("--audio", audio),
     ):
         if value is not None:

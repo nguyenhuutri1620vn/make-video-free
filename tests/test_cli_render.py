@@ -169,6 +169,31 @@ def test_music_volume_bounds_accepted(
     assert code == 0
 
 
+@pytest.mark.parametrize("value", ["-0.1", "2.5", "loud", "nan"])
+def test_sfx_volume_out_of_range_is_usage_error(
+    tmp_path: Path, tmp_script: ScriptFactory, value: str
+) -> None:
+    script = tmp_script(slides=TWO)
+    with pytest.raises(SystemExit) as exc:
+        main(argv_for(script, tmp_path / "v.mp4", "--sfx-volume", value))
+    assert exc.value.code == 2
+
+
+def test_sfx_volume_scales_every_effect_in_the_mix(
+    tmp_path: Path,
+    tmp_script: ScriptFactory,
+    fake_ffmpeg: list[list[str]],
+    temp_root: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    slides = [{"title": "A", "duration": 2.0, "sfx": [{"sound": "gong", "at": 0.5, "gain_db": -4}]}]
+    script = tmp_script(slides=slides, extra={"schema_version": "2.2"})
+    code, _ = run_cli(argv_for(script, tmp_path / "v.mp4", "--sfx-volume", "0.5"), capsys)
+    assert code == 0
+    mux = fake_ffmpeg[-1]  # encode, join, then the audio mix
+    assert "volume=-10.0206dB" in mux[mux.index("-filter_complex") + 1]
+
+
 def test_ffmpeg_is_located_before_slides_are_rendered(
     tmp_path: Path,
     tmp_script: ScriptFactory,
@@ -382,9 +407,11 @@ def test_preview_ignores_video_flags_with_a_warning(
 ) -> None:
     script = tmp_script(slides=[{"title": "A"}])
     argv = argv_for(script, tmp_path / "v.mp4", "--preview", "--music", str(tmp_path / "x.mp3"))
-    code, text = run_cli([*argv, "--music-volume", "0.4", "--keep-temp"], capsys)
+    code, text = run_cli(
+        [*argv, "--music-volume", "0.4", "--sfx-volume", "0.5", "--keep-temp"], capsys
+    )
     assert code == 0
-    for flag in ("--music", "--music-volume", "--keep-temp"):
+    for flag in ("--music", "--music-volume", "--sfx-volume", "--keep-temp"):
         assert f"WARN {flag} has no effect with --preview" in text
 
 

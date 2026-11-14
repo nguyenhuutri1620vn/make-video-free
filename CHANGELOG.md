@@ -90,4 +90,6 @@ Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04
 
 - `audio-manifest --narration DIR [--voices DIR]` writes `audio_manifest.json` from recorded `<id>.wav`/`<id>.flac` files; missing, ambiguous or stale voices exit 3 (spec A.1.8).
 - `export-narration` no longer rewrites unchanged files, so their mtime marks when the text last changed.
+- `render --sfx-volume FACTOR` (0 to 2, default 1) scales every sound effect; 0.5 is half as loud.
+- Living slides apply the slide tone once to the composite (FFmpeg `colorchannelmixer`), so a toned living slide's first frame matches the still.
 - `tools/make_video.py`: one command from script to voiced video (validate, export, owner's `--voice-cmd`, pair, render).

@@ -80,6 +80,13 @@ def test_without_voice_cmd_lists_files_and_stops(
     assert not (work / "audio_manifest.json").exists()
 
 
+def test_render_args_pass_volumes(tool: ModuleType, tmp_path: Path) -> None:
+    args = tool._parse(["--script", "s.json", "--music-volume", "0.4", "--sfx-volume", "0.5"])
+    cmd = tool._render_args(args, None)
+    assert cmd[cmd.index("--music-volume") + 1] == "0.4"
+    assert cmd[cmd.index("--sfx-volume") + 1] == "0.5"
+
+
 def test_has_narration(tool: ModuleType, script: Path, tmp_script: Make) -> None:
     assert tool.has_narration(script)
     assert not tool.has_narration(tmp_script())

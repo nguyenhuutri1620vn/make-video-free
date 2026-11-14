@@ -8,6 +8,7 @@ so a failed or interrupted run never leaves a partial file at the output path.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import shutil
 import tempfile
@@ -32,6 +33,8 @@ TEMP_PREFIX: Final = "history-shorts-"
 PARTIAL_SUFFIX: Final = ".partial.mp4"
 DEFAULT_MUSIC_VOLUME: Final = 0.6
 MAX_MUSIC_VOLUME: Final = 2.0
+DEFAULT_SFX_VOLUME: Final = 1.0
+MAX_SFX_VOLUME: Final = 2.0
 TOTAL_DECIMALS: Final = 3
 # A living clip's FFmpeg graph peaks near 2 GB (many full-frame planes at 2x), so a render
 # with living slides encodes at most this many clips at once.
@@ -57,6 +60,7 @@ class RenderOptions:
     cuts: tuple[tuple[float, float], ...] = ()  # music silent between these times (A.2)
     synth: tuple[SynthJob, ...] = ()  # synthesized sound effects (M9), written at mux time
     living: tuple[LivingClip | None, ...] = ()  # per slide: moving planes (M9), or a still
+    sfx_volume: float = DEFAULT_SFX_VOLUME  # amplitude factor on every sound effect
 
 
 def default_jobs() -> int:
@@ -220,6 +224,18 @@ def _materialize_synth(
     return tuple(inputs)
 
 
+def scale_effects(
+    clips: tuple[ffmpeg.VoiceInput, ...], volume: float
+) -> tuple[ffmpeg.VoiceInput, ...]:
+    """Every effect at ``volume`` times its amplitude (``--sfx-volume``); 0 drops them all."""
+    if volume <= 0:
+        return ()
+    if volume == 1:
+        return clips
+    shift = 20 * math.log10(volume)
+    return tuple(replace(clip, gain_db=clip.gain_db + shift) for clip in clips)
+
+
 def _raise_first_failure(futures: list[Future[None]]) -> None:
     for future in futures:
         if not future.cancelled() and (error := future.exception()) is not None:
@@ -246,7 +262,8 @@ def _run_steps(
     started = time.perf_counter()
     total = round(sum(durations), TOTAL_DECIMALS)
     synthesized = _materialize_synth(opts.synth, theme, work)
-    plan = ffmpeg.MixPlan(opts.voices, opts.sfx + synthesized, opts.cuts)
+    effects = scale_effects(opts.sfx + synthesized, opts.sfx_volume)
+    plan = ffmpeg.MixPlan(opts.voices, effects, opts.cuts)
     mux = ffmpeg.mix_cmd(
         info, joined, partial_path(opts.out), total, plan, opts.music, opts.music_volume, opts.audio
     )

@@ -59,9 +59,21 @@ def pngs(tmp_path: Path, n: int = 2) -> list[Path]:
     return [tmp_path / f"{i + 1:02d}.png" for i in range(n)]
 
 
+def test_scale_effects_halves_amplitude() -> None:
+    from history_shorts.video import scale_effects
+
+    clips = (ffmpeg.VoiceInput(Path("a.wav"), 100, -4.0), ffmpeg.VoiceInput(Path("b.wav"), 0, 0.0))
+    half = scale_effects(clips, 0.5)
+    assert [c.gain_db for c in half] == pytest.approx([-4.0 - 6.0206, -6.0206], abs=1e-4)
+    assert [(c.path, c.delay_ms) for c in half] == [(c.path, c.delay_ms) for c in clips]
+    assert scale_effects(clips, 1.0) == clips
+    assert scale_effects(clips, 0.0) == ()
+
+
 def test_render_options_defaults_and_frozen(tmp_path: Path) -> None:
     opts = RenderOptions(out=tmp_path / "o.mp4", music=None)
     assert (opts.music_volume, opts.keep_temp, opts.jobs, opts.verbose) == (0.6, False, 1, False)
+    assert opts.sfx_volume == 1.0
     with pytest.raises(AttributeError):
         opts.jobs = 2  # type: ignore[misc]
 

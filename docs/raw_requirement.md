@@ -218,6 +218,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-83 | Auto-duration when `duration` is absent: `clamp(chars × 0.08 s, 2.5 s, 6.0 s)`.                                                             | M   |
 | FR-84 | Optional slow zoom per slide (`"motion": "zoom_in"`, 100 % → 106 %) via FFmpeg `zoompan` on a 4× pre-scaled PNG (smooth sub-pixel zoom).                        | S   |
 | FR-85 | `--music`: loop or trim to video length, fade in 0.5 s, fade out 1.5 s, volume `--music-volume` (default 0.6), AAC 192 kbps 48 kHz stereo.  | M   |
+| FR-85a | `--sfx-volume` (0 to 2, default 1): amplitude factor on every sound effect (file cues, synthesized sounds, auto whoosh), on top of each cue's `gain_db`; 0 drops them; outside the range is a usage error (exit 2). Owner-requested 2026-11-14. | S   |
 | FR-86 | Without music, add a silent AAC track.                                                                                                      | S   |
 | FR-87 | `--jobs N` encodes clips in parallel (default CPU − 1).                                                                                     | S   |
 
@@ -408,6 +409,7 @@ Optional texture overrides (`tile`, `worn`, `cell`, `gap`) take the same units a
 ```
 python -m history_shorts render   --script PATH [--theme PATH] [--out PATH]
                                   [--music PATH] [--music-volume FLOAT]
+                                  [--sfx-volume FLOAT]
                                   [--preview] [--keep-temp] [--jobs N]
                                   [--debug-safe-zone] [--verbose]
 python -m history_shorts validate --script PATH [--theme PATH]
