@@ -22,6 +22,7 @@ from history_shorts.scene_config import (
     DrumLayer,
     ElephantLayer,
     FallenFlagsLayer,
+    FurnaceLayer,
     GongLayer,
     GroundLayer,
     HillsLayer,
@@ -34,6 +35,7 @@ from history_shorts.scene_config import (
     MapLayer,
     MountainsLayer,
     PeaksLayer,
+    PlinthLayer,
     RegaliaLayer,
     RiverLayer,
     SailBoatLayer,
@@ -77,6 +79,8 @@ DEFAULT_DEPTH: Final[Mapping[type, Depth]] = MappingProxyType(
         FallenFlagsLayer: "near",
         LanternsLayer: "near",
         TabletLayer: "near",
+        FurnaceLayer: "mid",
+        PlinthLayer: "mid",
     }
 )
 

@@ -19,12 +19,14 @@ from . import (
     drum,
     elephant,
     fallen_flags,
+    furnace,
     gong,
     horse,
     lanterns,
     lone_path,
     lotus,
     people,
+    plinth,
     regalia,
     sail_boat,
     scroll,
@@ -64,6 +66,8 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         horse.DRAWERS,
         citadel.DRAWERS,
         bamboo_village.DRAWERS,
+        furnace.DRAWERS,
+        plinth.DRAWERS,
     )
 )
 

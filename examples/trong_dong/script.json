@@ -1,0 +1,480 @@
+{
+  "schema_version": "2.2",
+  "title": "Trống đồng từng bị nấu chảy để đúc một con ngựa",
+  "sources": [
+    "Phạm Việp, Hậu Hán thư, Mã Viện liệt truyện [CẦN KIỂM TRA: số quyển, bản dịch; chiều cao ngựa đồng 3 thước 5 tấc và việc dâng lên Hán Quang Vũ Đế làm mẫu xem tướng ngựa]",
+    "[CẦN BỔ SUNG NGUỒN: “trống càng to càng quý”, treo giữa sân, gõ bằng trâm vàng — sách xưa chép về các tộc phương Nam; ghi rõ tên sách]"
+  ],
+  "slides": [
+    {
+      "id": "trong-dong",
+      "title": "TRỐNG ĐỒNG",
+      "narration": "Trống đồng, biểu tượng thiêng liêng mà người Việt ngàn đời tôn kính.",
+      "motion": "zoom_in",
+      "tone": "warm",
+      "text_in": "fade",
+      "living": true,
+      "scene": {
+        "layers": [
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 720,
+            "r": 400,
+            "birds": 8
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.2,
+          "gain_db": -6
+        }
+      ]
+    },
+    {
+      "id": "le-hoi",
+      "title": "Linh vật · Quyền lực\nNiềm tự hào",
+      "narration": "Nó là linh vật trong lễ hội, là quyền lực của thủ lĩnh, là niềm tự hào của cả một dân tộc.",
+      "motion": "pan_right",
+      "transition": "dissolve",
+      "tone": "warm",
+      "text_in": "fade",
+      "living": true,
+      "particles": "petals",
+      "scene": {
+        "layers": [
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "banners",
+            "y": 1080,
+            "rows": 3
+          },
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 690,
+            "r": 250,
+            "birds": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "nhung",
+      "title": "NHƯNG",
+      "narration": "Nhưng…",
+      "duration": 2.0,
+      "music_cut": {
+        "at": 0.0,
+        "duration": 0.5
+      },
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.5,
+          "gain_db": 0,
+          "shake": true
+        }
+      ],
+      "living": true
+    },
+    {
+      "id": "nau-chay",
+      "title": "…từng bị\nNẤU CHẢY",
+      "narration": "…biểu tượng ấy từng bị nấu chảy, chỉ để đúc ra một con ngựa.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_out",
+      "transition": "fadeblack",
+      "tone": "gray",
+      "text_in": "fade",
+      "living": true,
+      "particles": "embers",
+      "scene": {
+        "layers": [
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 720,
+            "r": 400,
+            "birds": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "ma-vien",
+      "title": "NĂM 43 · MÃ VIỆN",
+      "narration": "Năm 43, tướng nhà Hán là Mã Viện đàn áp xong cuộc khởi nghĩa Hai Bà Trưng.",
+      "claim": true,
+      "source": 0,
+      "motion": "pan_down",
+      "transition": "dissolve",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "map",
+            "x": 110,
+            "y": 330,
+            "w": 860,
+            "h": 780,
+            "dots": [
+              [
+                0.34,
+                0.36
+              ]
+            ],
+            "arrow": true
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "drum",
+          "at": 0.3,
+          "gain_db": -8
+        }
+      ]
+    },
+    {
+      "id": "thu-trong",
+      "title": "Ngang nhiên thu lấy",
+      "narration": "Rồi ông ta ngang nhiên thu lấy trống đồng của người Lạc Việt.",
+      "claim": true,
+      "source": 0,
+      "motion": "pan_left",
+      "transition": "slideleft",
+      "tone": "cold",
+      "text_in": "fade",
+      "living": true,
+      "scene": {
+        "layers": [
+          {
+            "type": "moon",
+            "x": 800,
+            "y": 440,
+            "r": 95,
+            "rings": 1
+          },
+          {
+            "type": "mountains",
+            "y": 900,
+            "amp": 1.0
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "bamboo_village",
+            "x": 440,
+            "y": 1095,
+            "scale": 1.5
+          },
+          {
+            "type": "drum",
+            "x": 900,
+            "y": 1010,
+            "r": 105,
+            "birds": 0
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "wind",
+          "at": 0.0,
+          "duration": 2.4,
+          "gain_db": -20
+        }
+      ]
+    },
+    {
+      "id": "ky-uc",
+      "title": "“Trống càng to\ncàng quý”",
+      "subtitle": "theo sách xưa",
+      "narration": "Theo sách xưa chép về các tộc phương Nam, trống càng to càng quý. Trống mới đúc được treo giữa sân, cả vùng kéo về mở tiệc.",
+      "claim": true,
+      "source": 1,
+      "motion": "zoom_in",
+      "transition": "fade",
+      "tone": "warm",
+      "text_in": "fade",
+      "living": true,
+      "particles": "petals",
+      "scene": {
+        "layers": [
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 340,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 360,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "stilt_house",
+            "x": 800,
+            "y": 1095,
+            "scale": 1.2,
+            "bamboo": false
+          },
+          {
+            "type": "drum",
+            "x": 400,
+            "y": 700,
+            "r": 280,
+            "birds": 8
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "leader",
+                "x": 800,
+                "baseline": 1104,
+                "height": 330,
+                "prop": "none",
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "gong",
+          "at": 0.4,
+          "gain_db": -10
+        }
+      ]
+    },
+    {
+      "id": "vao-lo",
+      "title": "VÀO LÒ",
+      "narration": "Vậy mà Mã Viện đem những chiếc trống ấy ném vào lò lửa.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_in",
+      "transition": "fadeblack",
+      "text_in": "fade",
+      "living": true,
+      "particles": "embers",
+      "scene": {
+        "layers": [
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "furnace",
+            "x": 640,
+            "y": 1095,
+            "scale": 1.35
+          },
+          {
+            "type": "drum",
+            "x": 175,
+            "y": 1010,
+            "r": 82,
+            "birds": 0
+          },
+          {
+            "type": "drum",
+            "x": 335,
+            "y": 1010,
+            "r": 82,
+            "birds": 0
+          },
+          {
+            "type": "drum",
+            "x": 255,
+            "y": 868,
+            "r": 82,
+            "birds": 0
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": 0.0,
+          "gain_db": -4
+        },
+        {
+          "sound": "drum",
+          "at": 0.6,
+          "gain_db": -4,
+          "shake": true
+        }
+      ],
+      "tone": "warm"
+    },
+    {
+      "id": "ngua-dong",
+      "title": "~80 CM",
+      "subtitle": "chỉ ngang hông người lớn",
+      "narration": "Đúc thành một con ngựa đồng cao chừng 80 phân, chỉ ngang hông một người trưởng thành.",
+      "claim": true,
+      "source": 0,
+      "motion": "zoom_in",
+      "transition": "fade",
+      "tone": "gray",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "horse",
+            "x": 400,
+            "y": 1095,
+            "scale": 1.5,
+            "facing": 1
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "items": [
+              {
+                "role": "general_alt",
+                "x": 800,
+                "baseline": 1100,
+                "height": 470,
+                "prop": "none",
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "dang-vua",
+      "title": "CHỈ ĐỂ…\nlàm thước đo ngựa quý",
+      "narration": "Mang về dâng Hán Quang Vũ Đế… [pause 350ms] chỉ để [pause 150ms] làm khuôn mẫu chọn ngựa quý.",
+      "claim": true,
+      "source": 0,
+      "motion": "pan_up",
+      "transition": "dissolve",
+      "tone": "cold",
+      "text_in": "fade",
+      "scene": {
+        "layers": [
+          {
+            "type": "regalia",
+            "x": 540,
+            "y": 820,
+            "scale": 1.9,
+            "screen": true
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "horse",
+            "x": 540,
+            "y": 1095,
+            "scale": 0.85,
+            "facing": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "con-hay-mat",
+      "title": "Nó còn…\nhay đã mất?",
+      "subtitle": "Nguồn: Hậu Hán thư · Mã Viện truyện",
+      "narration": "Đến nay, không ai biết con ngựa ấy còn hay đã mất.",
+      "motion": "zoom_out",
+      "transition": "fadeblack",
+      "tone": "gray",
+      "text_in": "fade",
+      "living": true,
+      "particles": "dust",
+      "scene": {
+        "layers": [
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "plinth",
+            "x": 540,
+            "y": 1095,
+            "scale": 1.6
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "sound": "wind",
+          "at": 0.0,
+          "duration": 2.4,
+          "gain_db": -18
+        }
+      ]
+    },
+    {
+      "id": "lap",
+      "title": "TRỐNG ĐỒNG",
+      "duration": 1.0,
+      "transition": "dissolve",
+      "tone": "warm",
+      "scene": {
+        "layers": [
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 720,
+            "r": 400,
+            "birds": 8
+          }
+        ]
+      }
+    }
+  ]
+}

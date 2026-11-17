@@ -16,12 +16,14 @@ from history_shorts.config import (
     DrumLayer,
     ElephantLayer,
     FallenFlagsLayer,
+    FurnaceLayer,
     GongLayer,
     HorseLayer,
     LanternItem,
     LanternsLayer,
     LonePathLayer,
     MapLayer,
+    PlinthLayer,
     RegaliaLayer,
     SailBoatLayer,
     ScrollLayer,
@@ -40,10 +42,12 @@ from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
 from history_shorts.scene.fallen_flags import draw_fallen_flags
+from history_shorts.scene.furnace import draw_furnace
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.horse import draw_horse
 from history_shorts.scene.lanterns import draw_lanterns
 from history_shorts.scene.lone_path import draw_lone_path
+from history_shorts.scene.plinth import draw_plinth
 from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.sail_boat import draw_sail_boat
 from history_shorts.scene.scroll import draw_scroll
@@ -434,3 +438,45 @@ def test_bamboo_village_bounds_and_determinism(ctx: Any, flat_base: Base) -> Non
     assert ys.max() <= 1100 + 2 and ys.min() >= 1100 - 262
     assert xs.min() >= 540 - 330 and xs.max() <= 540 + 330
     assert np.array_equal(after, draw_bamboo_village(flat_base(), layer, ctx, 1))
+
+
+# --- furnace and plinth (Trống đồng video) ------------------------------------------------
+
+
+def test_furnace_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "furnace", "x": 540, "y": 1095, "scale": 1.4}
+    assert _layer(tmp_script, raw) == FurnaceLayer(540, 1095, 1.4)
+    assert LAYER_DRAWERS[FurnaceLayer] is draw_furnace
+
+
+def test_furnace_bounds_and_determinism(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = FurnaceLayer(540, 1100, 1.0)
+    after = draw_furnace(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    # the halo (radius 300 about y -150) is the widest part; flames reach -400
+    assert ys.min() >= 1100 - 452 and ys.max() <= 1100 + 152
+    assert xs.min() >= 540 - 302 and xs.max() <= 540 + 302
+    # the mouth glows: hotter (more red) than the kiln wall beside it
+    assert after[1090, 540, 0] > after[1090, 540 + 110, 0]
+    assert np.array_equal(after, draw_furnace(flat_base(), layer, ctx, 1))
+
+
+def test_plinth_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "plinth", "x": 540, "y": 1095, "scale": 1.6}
+    assert _layer(tmp_script, raw) == PlinthLayer(540, 1095, 1.6)
+    assert LAYER_DRAWERS[PlinthLayer] is draw_plinth
+
+
+def test_plinth_bounds_beam_fades_and_determinism(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = PlinthLayer(540, 1100, 1.0)
+    after = draw_plinth(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    assert ys.min() >= 1100 - 540 and ys.max() <= 1100 + 2
+    assert xs.min() >= 540 - 152 and xs.max() <= 540 + 152
+    # the beam fades out upwards: barely changed near its top, clearly lit near the plinth
+    near_top = np.abs(after[1100 - 525, 540] - base[1100 - 525, 540]).max()
+    near_cap = np.abs(after[1100 - 200, 540] - base[1100 - 200, 540]).max()
+    assert near_top < 0.02 < near_cap
+    assert np.array_equal(after, draw_plinth(flat_base(), layer, ctx, 1))
