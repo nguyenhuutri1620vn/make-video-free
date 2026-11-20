@@ -16,7 +16,8 @@ from history_shorts.config import ElephantLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 
-from .registry import LayerDrawer, entry
+from .cloth import ClothWave
+from .registry import LayerDrawer, PhaseDrawer, entry, phase_entry
 
 OUTLINE: Final = "gold"
 OUTLINE_WIDTH: Final = 1.6
@@ -46,6 +47,7 @@ POLE_COLOR: Final = "gold_dk"
 POLE_WIDTH: Final = 3.0
 FLAG_FILL: Final = "vermilion"
 FLAG_EMBLEM: Final = (16.0, -276.0, 7.0)  # circle on the flag: x, y, r
+FLAG_LENGTH: Final = 88.0  # pole to the flag's free edge, for the cloth wave
 
 TAIL: Final = ((-124.0, -112.0), (-140.0, -80.0), (-136.0, -50.0))
 TAIL_WIDTH: Final = 2.5
@@ -99,16 +101,18 @@ def _cloth(cv: Canvas, ctx: DrawContext) -> None:
         cv.color(pal[CLOTH_TRIM]).stroke(1.0)
 
 
-def _flag(cv: Canvas, ctx: DrawContext) -> None:
+def _flag(cv: Canvas, ctx: DrawContext, phase: float) -> None:
     pal = ctx.palette
     (x0, y0), (x1, y1) = POLE
     cv.color(pal[POLE_COLOR]).M(x0, y0).L(x1, y1).stroke(POLE_WIDTH)
     cv.color(pal[OUTLINE]).ellipse(x1, y1 - 4, 4.5, 4.5).fill()
-    cv.M(x1, y1 + 2).C(20, y1 - 6, 44, y1 + 10, 70, y1 + 4).L(56, y1 + 24).L(70, y1 + 44)
-    cv.C(44, y1 + 48, 20, y1 + 36, x1, y1 + 46).Z()
+    w = ClothWave(x1, FLAG_LENGTH, phase, ctx.theme.living.cloth_wave, 0.0).pt
+    cv.M(*w(x1, y1 + 2)).C(*w(20, y1 - 6), *w(44, y1 + 10), *w(70, y1 + 4))
+    cv.L(*w(56, y1 + 24)).L(*w(70, y1 + 44))
+    cv.C(*w(44, y1 + 48), *w(20, y1 + 36), *w(x1, y1 + 46)).Z()
     cv.color(pal[FLAG_FILL]).fill(keep=True).color(pal[OUTLINE]).stroke(OUTLINE_WIDTH)
     fx, fy, fr = FLAG_EMBLEM
-    cv.color(pal[OUTLINE]).ellipse(fx, fy, fr, fr).stroke(1.2)
+    cv.color(pal[OUTLINE]).ellipse(*w(fx, fy), fr, fr).stroke(1.2)
 
 
 def _face(cv: Canvas, ctx: DrawContext) -> None:
@@ -129,6 +133,13 @@ def draw_elephant(
     img: FloatImage, layer: ElephantLayer, ctx: DrawContext, index: int
 ) -> FloatImage:
     """Far legs, tail, body, near legs, head and ear, saddle cloth, flag, tusk and eye."""
+    return draw_elephant_at(img, layer, ctx, index, 0.0)
+
+
+def draw_elephant_at(
+    img: FloatImage, layer: ElephantLayer, ctx: DrawContext, index: int, phase: float
+) -> FloatImage:
+    """The elephant at loop ``phase``: only its flag waves (M10)."""
     cv = Canvas(CANVAS_W, CANVAS_H)
     cv.save()
     cv.translate(layer.x, layer.y)
@@ -142,7 +153,7 @@ def draw_elephant(
     _ear_path(cv)
     _fill(cv, ctx, EAR_FILL, -162, -80)
     if layer.flag:
-        _flag(cv, ctx)
+        _flag(cv, ctx, phase)
     _cloth(cv, ctx)
     _face(cv, ctx)
     cv.restore()
@@ -150,3 +161,4 @@ def draw_elephant(
 
 
 DRAWERS: dict[type, LayerDrawer] = dict([entry(ElephantLayer, draw_elephant)])
+PHASE_DRAWERS: dict[type, PhaseDrawer] = dict([phase_entry(ElephantLayer, draw_elephant_at)])

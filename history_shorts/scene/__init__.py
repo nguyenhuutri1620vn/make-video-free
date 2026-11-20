@@ -74,7 +74,12 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
 
 # Layers that move on 2.3 living slides by being redrawn at a loop phase (M10).
 PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType(
-    merge(furnace.PHASE_DRAWERS, temple.PHASE_DRAWERS)
+    merge(
+        furnace.PHASE_DRAWERS,
+        temple.PHASE_DRAWERS,
+        banners.PHASE_DRAWERS,
+        elephant.PHASE_DRAWERS,
+    )
 )
 
 

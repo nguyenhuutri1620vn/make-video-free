@@ -17,7 +17,8 @@ from history_shorts.config import BannersLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 
-from .registry import LayerDrawer, entry
+from .cloth import ClothWave
+from .registry import LayerDrawer, PhaseDrawer, entry, phase_entry
 
 ROW_STEP: Final = 70.0  # px between row baselines
 BACK_SCALE: Final = 0.5
@@ -42,6 +43,7 @@ FLAG_FILLS: Final = ("vermilion", "vermilion_dk")
 FLAG_SIZE: Final = (84.0, 52.0)  # length, height
 FLAG_OUTLINE: Final = "gold"
 FLAG_EMBLEM: Final = 8.0
+FLAG_SHIFT: Final = 2.4  # radians of wave shift between neighbouring flags
 
 
 def _hill(cv: Canvas, ctx: DrawContext, base: float) -> None:
@@ -64,7 +66,9 @@ def _ridge_y(base: float, x: float) -> float:
     return (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t**2 * p1 + t**3 * p0
 
 
-def _pole(cv: Canvas, ctx: DrawContext, x: float, foot: float, s: float, kind: int) -> None:
+def _pole(
+    cv: Canvas, ctx: DrawContext, x: float, foot: float, s: float, kind: int, phase: float
+) -> None:
     pal = ctx.palette
     top = foot - POLE_HEIGHT * s
     cv.color(pal[POLE_COLOR]).M(x, foot).L(x, top).stroke(POLE_WIDTH * max(s, 0.5))
@@ -75,35 +79,52 @@ def _pole(cv: Canvas, ctx: DrawContext, x: float, foot: float, s: float, kind: i
         cv.color(pal[BLADE_FILL]).fill(keep=True).color(pal[FLAG_OUTLINE]).stroke(0.8)
         return
     length, height = FLAG_SIZE[0] * s, FLAG_SIZE[1] * s
-    cv.M(x, top).C(x + length * 0.35, top - height * 0.15, x + length * 0.7, top + height * 0.2,
-                   x + length, top + height * 0.1)  # fmt: skip
-    cv.L(x + length * 0.8, top + height * 0.55).L(x + length, top + height)
-    cv.C(
-        x + length * 0.6, top + height * 1.1, x + length * 0.3, top + height * 0.8, x, top + height
-    )
+    w = ClothWave(x, length, phase, ctx.theme.living.cloth_wave, FLAG_SHIFT * kind).pt
+    cv.M(*w(x, top)).C(*w(x + length * 0.35, top - height * 0.15),
+                       *w(x + length * 0.7, top + height * 0.2),
+                       *w(x + length, top + height * 0.1))  # fmt: skip
+    cv.L(*w(x + length * 0.8, top + height * 0.55)).L(*w(x + length, top + height))
+    cv.C(*w(x + length * 0.6, top + height * 1.1), *w(x + length * 0.3, top + height * 0.8),
+         *w(x, top + height))  # fmt: skip
     cv.Z().color(pal[FLAG_FILLS[kind % 2]]).fill(keep=True)
     cv.color(pal[FLAG_OUTLINE]).stroke(1.0)
-    cv.color(pal[FLAG_OUTLINE]).ellipse(x + length * 0.4, top + height * 0.45, FLAG_EMBLEM * s,
-                                        FLAG_EMBLEM * s).stroke(0.8)  # fmt: skip
+    ex, ey = w(x + length * 0.4, top + height * 0.45)
+    cv.color(pal[FLAG_OUTLINE]).ellipse(ex, ey, FLAG_EMBLEM * s, FLAG_EMBLEM * s).stroke(0.8)
 
 
-def _row(cv: Canvas, ctx: DrawContext, rng: Generator, base: float, k: int, count: int) -> None:
+def _row(
+    cv: Canvas,
+    ctx: DrawContext,
+    rng: Generator,
+    base: float,
+    k: int,
+    count: int,
+    phase: float,
+) -> None:
     s = BACK_SCALE + SCALE_STEP * k
     step = (CANVAS_W - 2 * MARGIN) / max(count - 1, 1)
     for n in range(count):
         x = MARGIN + n * step + float(rng.uniform(-JITTER, JITTER)) * step
-        _pole(cv, ctx, x, _ridge_y(base, x) + 6, s, n + k)
+        _pole(cv, ctx, x, _ridge_y(base, x) + 6, s, n + k, phase)
     _hill(cv, ctx, base)
 
 
 def draw_banners(img: FloatImage, layer: BannersLayer, ctx: DrawContext, index: int) -> FloatImage:
     """Back row first; each row's poles stand in its hill, which covers their feet."""
+    return draw_banners_at(img, layer, ctx, index, 0.0)
+
+
+def draw_banners_at(
+    img: FloatImage, layer: BannersLayer, ctx: DrawContext, index: int, phase: float
+) -> FloatImage:
+    """The banners at loop ``phase``: every flag waves, out of step with its neighbours."""
     rng = ctx.rng(index)
     cv = Canvas(CANVAS_W, CANVAS_H)
     for k in range(layer.rows):
         base = layer.y - (layer.rows - 1 - k) * ROW_STEP
-        _row(cv, ctx, rng, base, k, max(BACK_COUNT - COUNT_STEP * k, 3))
+        _row(cv, ctx, rng, base, k, max(BACK_COUNT - COUNT_STEP * k, 3), phase)
     return over(img, cv)
 
 
 DRAWERS: dict[type, LayerDrawer] = dict([entry(BannersLayer, draw_banners)])
+PHASE_DRAWERS: dict[type, PhaseDrawer] = dict([phase_entry(BannersLayer, draw_banners_at)])
