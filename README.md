@@ -165,6 +165,26 @@ With `"schema_version": "2.2"` (spec Appendix A.4):
 - Tuning lives in the theme's optional `living` and `sfx` blocks (travel per plane, shake size, loop length, reverb, whoosh level).
 - `examples/hai_ba_trung/script.json` uses all of this. `--preview` still writes the still PNGs; the moving planes are built only for the video, in the temp directory (`--keep-temp` keeps them).
 
+### Characters and scenes that move (v2.3, M10)
+
+With `"schema_version": "2.3"` (spec Appendix A.5), a living slide comes alive without new fields: furnace flames flicker, temple incense smoke sways, banners and the elephant's flag wave, and every character breathes and sways slightly while held flags wave. Boat crew move with their boat.
+
+Characters can also act at a given time:
+
+```json
+"actions": [
+  { "who": "leader_1", "do": "rally", "at": 0.6 },
+  { "who": "dan", "do": "kneel", "at": 1.2 }
+]
+```
+
+- Give a character an `id` (`[a-z0-9_]`); template characters already have one (`group`: `leader_1`, `leader_2`, `general_alt_1`, `general_alt_2`, `general_1`, `general_2`; `landscape` crew: `crew_1` to `crew_4`).
+- Actions: `rally` (raise the free arm; a flag-bearer raises the flag), `bow`, `kneel`, `sit`, `stand_up`, `raise_flag`, `look`. `duration` overrides the default length.
+- A character can start `"pose": "kneeling"` or `"seated"`, stay still with `"idle": false`, or stand on a boat with `"on": <boat layer index>`.
+- `validate` checks ids, action names, overlaps, the slide end (auto timing when no voice is given, so leave room) and FR-48 while moving.
+- Tuning lives in the theme `living` block (`flame_px`, `smoke_sway_px`, `cloth_wave`, `idle_loop_seconds`, `breath_scale`, `idle_sway_deg`, `idle_head_deg`, `flag_wave_hz`).
+- `examples/hai_ba_trung` and `examples/trong_dong` use 2.3.
+
 ### Scene objects without people
 
 Extra layer types from `docs/visual_backlog.md`, usable in any `{"layers": [...]}` scene:
@@ -327,6 +347,7 @@ Owner decisions recorded in the spec (v2.0.1), one line each:
 - Narration ducking uses FFmpeg `sidechaincompress` with the theme's `audio.duck` values; loudness is one `loudnorm` pass to `audio.loudness_lufs` / `audio.true_peak_db` (spec A.1.7).
 - Motions and cues (v2.1, M8, owner-approved 2026-11-12): transitions overlap the previous clip (clip k is encoded longer and joined with `xfade` at slide k+1's start), so slide starts, voice offsets and the total stay the same; the join re-encodes only when a transition is used. `tone` is a compose step after the frame (FR-21), so text, seal and tag keep their colours. `text_in` slides also write `NN_bg.png` and `NN_text.png`; their text no longer zooms with the scene. Sound effects are owner-supplied files mixed after ducking; a `music_cut` mutes music with 50 ms ramps. Pan motions hold the view at 110 %. A 2.0 script keeps the v2.0 motion list and error text (spec Appendix A.2).
 - Living slides and sound (v2.2, M9, owner-approved 2026-11-13): sound effects may be synthesized in code (numpy/scipy, seeded per cue); downloading sound stays banned. A living slide is split into planes recovered exactly from the still pipeline (grain and tone are linear, so the first frame equals the preview). Ambient motion is applied to each layer's rendered pixels (bob, roll, sway, ripple, glow), not by redrawing, so drawers are unchanged; banners and character flags therefore do not wave yet. Planes of one depth share one `zoompan` on `yuva444p` (RGBA zoompan was about 10x slower, 4:2:0 smeared red and gold edges) at 2x prescale (half-pixel steps, slightly softer fine detail). The layer depth override is `plane`, because `lone_path` already has a `depth` field. Default planes: sky, clouds, birds, mountains, peaks far; hills, river, ground strip, buildings, boats, animals mid; figures and foreground objects near.
+- Character and scene animation (v2.3, M10, owner-approved 2026-11-20): moving scene layers are redrawn per loop phase (phase 0 is the still drawing). Characters are drawn through a kit rig (`KitRig`: joint per part, split robe and sleeves) only when a style carries a `Pose`; `--preview` and still slides keep the original paths, so snapshots do not change, and a living first frame matches within ΔE ≤ 2. A held prop translates with the hand without turning and never sinks below the feet. Kneeling squashes the skirt rather than drawing a new silhouette. A raised sleeve shows the kit's existing fist. A characters layer is one lazily drawn sprite; `on` is limited to boat layers. FR-48 runs over sampled poses. Example `me_linh` stays a 2.0 reference script.
 - Example `hai_ba_trung` (2026-11-11): scenes use only the approved templates. `context` uses `landscape`; `fall` and `legacy` use `landscape` with `boats: []` (river only); `hook` uses `group` with the two leaders; `peak` and `outro` use the full `group`. `war` and `loss` have no fitting template yet and render chrome and text only. Long titles carry an explicit `\n` so no line ends on a lone word.
 - `hai_ba_trung` split (2026-11-13): `loss` and `legacy` were each cut in two at a sentence break (new slides `loss_symbol`, a large drum, and `legacy_story`, the bamboo village) because the VoiceStudio voice read them in 14.6 s and 18.3 s, over the 14 s limit. The narration words are unchanged, only divided; each new slide keeps the source of the slide it came from.
 - Example `vuong_trieu_nu` (2026-11-12): the owner's 60 s storyboard adapted to what v2.0/v2.1 can draw. Photos, the Đông Hồ painting, Ban Chiêu and Han figures, maps, counters, split screen and word-by-word text are dropped (C-06; split screen not built). Pans, tones, transitions and text fade-in come from M8. Each shot is one slide without a fixed `duration`, so timing follows the voice (A.1.6) or FR-83 until the voice exists; every slide has its own scene: `group`/`landscape` variants or explicit `layers` (close-up queen, row of generals, empty Han boats, ringed gold disc with birds as a bronze-drum nod, lotus pond), so no slide is text only.

@@ -93,3 +93,6 @@ Acceptance: AC-01..AC-15 met (see the README); owner sign-off on AC-03 and AC-04
 - `render --sfx-volume FACTOR` (0 to 2, default 1) scales every sound effect; 0.5 is half as loud.
 - Living slides apply the slide tone once to the composite (FFmpeg `colorchannelmixer`), so a toned living slide's first frame matches the still.
 - `tools/make_video.py`: one command from script to voiced video (validate, export, owner's `--voice-cmd`, pair, render).
+
+- Schema 2.3 (M10): on living slides furnace flames flicker, incense smoke sways, banners and flags wave, and characters breathe, sway and can perform timed `actions` (`rally`, `bow`, `kneel`, `sit`, `stand_up`, `raise_flag`, `look`). Characters gain `id`, `pose`, `idle` and `on`; template characters have default ids. FR-48 is checked while characters move.
+- `hai_ba_trung` and `trong_dong` use schema 2.3; `hai_ba_trung`'s closing group raises a fist.

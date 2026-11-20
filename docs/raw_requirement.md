@@ -897,7 +897,7 @@ M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest lo
 #### A.4.3 Rendering
 
 - Planes are recovered exactly from the still pipeline (grain and tone are linear), so a living slide's first frame matches its `--preview` PNG. Planes are padded with edge replication by a whole multiple of 9×16 px covering travel, shake and drift.
-- Ambient motions are periodic over `loop_seconds` and are the identity at the loop start. Banners and character flags do not wave yet (their cloth is not a separate layer).
+- Ambient motions are periodic over `loop_seconds` and are the identity at the loop start. Banners and character flags wave from 2.3 on (A.5).
 - FFmpeg cuts a moving window from each group of planes with `zoompan` on `yuva444p` at `prescale`; motion is eased `(1 − cos πt)/2`.
 - Synthesized cues are written as 16-bit WAV in the render temp directory with RNG `[seed, slide, cue]` and mixed like file cues.
 
@@ -911,6 +911,43 @@ M7 deliverables: `script.json` 2.1 fields, `export-narration`, audio manifest lo
 | AC-29 | Every ambient loop is seamless and is the identity at its start. |
 | AC-30 | Scripts without 2.2 fields produce the same FFmpeg commands and snapshots as before. |
 | AC-31 | Render time of the updated `hai_ba_trung` example is reported against M8. |
+
+**A.5 Character and scene animation.** Milestone M10, owner-approved 2026-11-20 (design: `docs/superpowers/specs/2026-11-20-character-scene-animation-design.md`). All fields need `schema_version` `"2.3"`; a 2.2 script, living or not, renders exactly as before. FR-50 `kneeling` and `seated` are delivered through a character's `pose`.
+
+#### A.5.1 Script fields
+
+| Field | Where | Default | Notes |
+|-------|-------|---------|-------|
+| `id` | character | none | `[a-z0-9_]{1,32}`, unique per slide; what an action's `who` names. Template characters have default ids: `group` `leader_1`, `leader_2`, `general_alt_1`, `general_alt_2`, `general_1`, `general_2`; `landscape` crew `crew_1` to `crew_4`. |
+| `pose` | character | `standing` | `standing`, `kneeling`, `seated`: the pose at the slide start, also in the preview. |
+| `idle` | character | `true` | On a living slide the character breathes and sways slightly; `false` keeps it still between actions. |
+| `on` | character (characters layer) | none | Index of a `boat` layer of the same scene; the character bobs with that boat. All characters of one layer share one boat; crew never use it. |
+| `actions` | slide | `[]` | `{"who", "do", "at", "duration"?}`: character `who` performs `do` from `at` s. `do` is `rally`, `bow`, `kneel`, `sit`, `stand_up`, `raise_flag`, `look`. Errors: unknown id or action, two actions of one character overlapping, an action ending after the slide (auto timing when no voice is given), `stand_up` without a kneeling or seated character, `raise_flag` without a flag. A warning on a still slide. |
+
+On a 2.3 living slide, without any new field: furnace flames flicker, temple incense smoke sways, banners and the elephant flag wave, characters and boat crew breathe and sway and their flags wave.
+
+#### A.5.2 Theme additions (all optional, `living` block)
+
+`flame_px` 10, `flame_glow` 0.08, `smoke_sway_px` 8, `cloth_wave` 0.08, `idle_loop_seconds` 4.0, `breath_scale` 0.006, `idle_sway_deg` 0.6, `idle_head_deg` 1.0, `flag_wave_hz` 0.5.
+
+#### A.5.3 Rendering
+
+- Moving scene layers are redrawn at each loop phase (phase 0 is the still drawing), not warped.
+- Characters are drawn through the kit's rig: joints at the waist, neck, shoulders and elbows; the robe is cut under the belt and a hanging sleeve at its elbow. A held prop moves with the hand without turning (a spear stays upright; when the hand drops the shaft slides through it). A raised sleeve shows the kit's fist. Kneeling squashes and widens the skirt and lowers the upper body.
+- A characters layer (or a boat with crew) is one sprite drawn frame by frame inside a box from the posed geometry; with actions it spans the clip, otherwise it loops one idle breath.
+- FR-48 is checked over the motion: 25 slide samples plus 11 per action; a new hit reads "overlaps X while moving".
+
+#### A.5.4 Acceptance (M10)
+
+| ID | Criterion |
+|----|-----------|
+| AC-32 | `--preview` and still slides are unchanged (snapshots); a living first frame matches the preview within region ΔE ≤ 2. |
+| AC-33 | In every pose the hand centre is within 0.5 unit of the shaft and a held spear is upright. |
+| AC-34 | No gap opens at the elbow or waist in any sampled pose. |
+| AC-35 | Idle and redraw loops are seamless; non-moving pixels stay the same. |
+| AC-36 | A carried character moves with its boat within 1 px. |
+| AC-37 | Every 2.3 validation rule has a test; FR-48 uses the motion's union boxes. |
+| AC-38 | Render time of the updated `hai_ba_trung` example is reported against 2.2. |
 
 ---
 

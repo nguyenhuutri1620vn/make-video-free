@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.2",
+  "schema_version": "2.3",
   "title": "Hai Bà Trưng: 3 năm độc lập và cái giá của việc mất nước",
   "sources": [
     "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, quyển 3, Kỷ Trưng Nữ Vương [CẦN KIỂM TRA SỐ TRANG VÀ BẢN DỊCH]",
@@ -531,6 +531,7 @@
       "motion": "zoom_out",
       "transition": "slideup",
       "text_in": "fade",
+      "actions": [{"who": "leader_1", "do": "rally", "at": 0.6}],
       "scene": {
         "template": "group"
       },
