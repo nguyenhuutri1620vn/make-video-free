@@ -160,17 +160,21 @@ def test_free_arm_raise(facing: int, prop: str, palette: Any) -> None:
         assert joints["hand"].apply(HAND_CENTER) == pytest.approx(HAND_CENTER)
 
 
-def _fist_pixel(style: Any, palette: Any) -> Any:
+def _fist_pixels(style: Any, palette: Any) -> tuple[int, float]:
+    """Count of opaque fist-coloured pixels and their mean distance (units) from the cuff."""
     from history_shorts.characters.kits.ancient_female_rig import FIST_AT
 
-    side = "far"
     m = kit_for(style).rig.joints(style, style.pose)  # type: ignore[union-attr]
-    return _render(style, palette, names=("sleeves",))[_px(m[f"{side}_fore"].apply(FIST_AT[side]))]
+    img = _render(style, palette, names=("sleeves",))
+    egg = np.array(palette["egg"]) / 255
+    ys, xs = np.nonzero((np.abs(img[..., :3] - egg).max(axis=2) < 0.03) & (img[..., 3] > 0.99))
+    if not len(ys):
+        return 0, math.inf
+    centre = (xs.mean() / SCALE - 40, ys.mean() / SCALE - 150)
+    return len(ys), math.dist(centre, m["far_fore"].apply(FIST_AT["far"]))
 
 
 def test_raised_arm_shows_fist(palette: Any) -> None:
-    egg = np.array(palette["egg"]) / 255
-    raised = _fist_pixel(_style(palette, "spear", Pose(far_shoulder=120.0)), palette)
-    assert raised[3] > 0.99 and np.abs(raised[:3] - egg).max() < 0.03
-    low = _fist_pixel(_style(palette, "spear", Pose(far_shoulder=20.0)), palette)
-    assert low[3] < 0.01
+    count, dist = _fist_pixels(_style(palette, "spear", Pose(far_shoulder=120.0)), palette)
+    assert count > 2 * SCALE * SCALE and dist < 2.5
+    assert _fist_pixels(_style(palette, "spear", Pose(far_shoulder=20.0)), palette)[0] == 0
