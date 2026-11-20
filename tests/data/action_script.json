@@ -1,0 +1,30 @@
+{
+  "schema_version": "2.3",
+  "title": "Action test",
+  "sources": ["Test fixture"],
+  "slides": [
+    {
+      "title": "Hô hào",
+      "subtitle": "Cảnh thử",
+      "duration": 3,
+      "living": true,
+      "scene": {
+        "layers": [
+          {"type": "mountains", "y": 930, "amp": 1.2},
+          {"type": "hills", "side": "left", "base": 1100, "top": 900},
+          {
+            "type": "characters",
+            "items": [
+              {"role": "general", "id": "tuong", "x": 420, "baseline": 1120, "height": 420},
+              {"role": "boat_crew", "id": "dan", "x": 700, "baseline": 1120, "height": 360, "facing": -1}
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {"who": "tuong", "do": "rally", "at": 0.6},
+        {"who": "dan", "do": "kneel", "at": 1.2}
+      ]
+    }
+  ]
+}

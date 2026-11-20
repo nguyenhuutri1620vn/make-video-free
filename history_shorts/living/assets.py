@@ -141,8 +141,8 @@ def render_living(
         ctx = SlideContext(script, theme, index, style, draw, False, cache)
         layers, depths = scene_layers(slide, theme)
         redraw = script.schema_version == ANIMATED_SCHEMA_VERSION
-        stack = build_stack(ctx, layers, depths, redraw=redraw)
         duration = durations[index] + theme.transition.duration
+        stack = build_stack(ctx, layers, depths, redraw=redraw, clip_seconds=duration)
         target = root / f"{index + 1:02d}"
         clips.append(write_living(stack, target, theme.living, duration, cues.shake_times(slide)))
     return tuple(clips)

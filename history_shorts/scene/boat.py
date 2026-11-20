@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
@@ -92,19 +93,20 @@ def _draw_hull(cv: Canvas, ctx: DrawContext) -> None:
 
 def draw_boat(img: FloatImage, layer: BoatLayer, ctx: DrawContext, index: int) -> FloatImage:
     """Crew first, then the hull on top of their feet, all on one canvas."""
-    return _draw(img, layer, ctx, None)
+    return draw_boat_posed(img, layer, ctx, None)
 
 
 def draw_boat_at(
     img: FloatImage, layer: BoatLayer, ctx: DrawContext, index: int, phase: float
 ) -> FloatImage:
     """The boat with its crew at idle loop ``phase`` (M10); the hull still covers their feet."""
-    return _draw(img, layer, ctx, idle_poses(ctx, index, len(layer.crew), phase))
+    return draw_boat_posed(img, layer, ctx, idle_poses(ctx, index, len(layer.crew), phase))
 
 
-def _draw(
-    img: FloatImage, layer: BoatLayer, ctx: DrawContext, poses: list[Pose] | None
+def draw_boat_posed(
+    img: FloatImage, layer: BoatLayer, ctx: DrawContext, poses: Sequence[Pose] | None
 ) -> FloatImage:
+    """The boat with its crew in ``poses`` (crew order), or still crew for None."""
     cv = Canvas(CANVAS_W, CANVAS_H)
     draw_figures(cv, crew_placements(layer), ctx.palette, poses)
     cv.save()

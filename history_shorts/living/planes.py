@@ -35,6 +35,7 @@ from history_shorts.compose import (
 from history_shorts.config import LivingSpec, ToneSpec
 from history_shorts.layout import CANVAS_H, CANVAS_W, REGIONS
 from history_shorts.living.animate import Motion, animate_crop, motion_margin, transform_frame
+from history_shorts.living.characters import CharacterSprite, carrier_bob
 from history_shorts.living.particles import particle_sprite
 from history_shorts.living.types import AnyPlane, DriftPlane, FloatRGBA, ScenePlane, SpritePlane
 from history_shorts.primitives import FloatImage, FloatMask
@@ -42,6 +43,7 @@ from history_shorts.scene import LAYER_DRAWERS, PHASE_DRAWERS, phase_loop_second
 from history_shorts.scene_config import (
     BirdsLayer,
     BoatLayer,
+    CharactersLayer,
     CloudsLayer,
     Depth,
     LanternsLayer,
@@ -164,8 +166,16 @@ def _groups(
 class _Animator:
     """Turns one animated layer into drift or sprite planes."""
 
-    def __init__(self, ctx: SlideContext, fin: _Finish, redraw: bool = False) -> None:
+    def __init__(
+        self,
+        ctx: SlideContext,
+        fin: _Finish,
+        redraw: bool = False,
+        layers: Sequence[Layer] = (),
+        clip_seconds: float | None = None,
+    ) -> None:
         self.ctx, self.fin, self.dctx, self.redraw = ctx, fin, _draw_ctx(ctx), redraw
+        self.layers, self.clip_seconds = layers, clip_seconds
         self.spec = ctx.theme.living
         self.frames = max(round(self.spec.loop_seconds * ctx.theme.video.fps), 2)
 
@@ -211,6 +221,26 @@ class _Animator:
         render = partial(_loop_frame, tuple(frames))
         return SpritePlane(depth, origin, (h, w), count, render, (k,))
 
+    def _people(self, k: int, layer: Layer, depth: Depth) -> SpritePlane:
+        """A characters layer or a boat with crew, posed frame by frame (M10)."""
+        bob = None
+        carrier = k if isinstance(layer, BoatLayer) else _carrier_of(layer)
+        if carrier is not None and 0 <= carrier < len(self.layers):
+            bob = carrier_bob(
+                self.ctx, carrier, self._render(carrier, self.layers[carrier]), self.spec
+            )
+        sprite = CharacterSprite(
+            self.ctx,
+            self.dctx,
+            k,
+            layer,
+            self.fin.plane,
+            lambda draw: matte(draw, CANVAS_H, CANVAS_W),
+            self.clip_seconds,
+            bob,
+        )
+        return sprite.plane(depth)
+
     def _with_motion(
         self,
         frames: list[FloatRGBA],
@@ -233,6 +263,9 @@ class _Animator:
     def planes(self, k: int, layer: Layer, depth: Depth) -> list[AnyPlane]:
         rng = rng_for(self.ctx.style.seed, self.ctx.slide_index, k + GROUND_LAYER + 1 + ANIM_KEY)
         sign = 1.0 if rng.random() < 0.5 else -1.0
+        people = isinstance(layer, CharactersLayer) or isinstance(layer, BoatLayer) and layer.crew
+        if self.redraw and people:
+            return [self._people(k, layer, depth)]
         if self.redraw and redraws(layer):
             return [self._redrawn(k, layer, depth, sign)]
         drift = DRIFT_KINDS.get(type(layer))
@@ -250,6 +283,13 @@ class _Animator:
                 sign = -sign
             return out
         return [self._sprite(k, depth, self._render(k, layer), Motion(kind, (0.0, 0.0), 1, sign))]
+
+
+def _carrier_of(layer: Layer) -> int | None:
+    """The boat layer the layer's characters stand on (validation keeps it to one)."""
+    if not isinstance(layer, CharactersLayer):
+        return None
+    return next((c.on for c in layer.items if c.on is not None), None)
 
 
 def union_frames(
@@ -286,6 +326,7 @@ def _scene_planes(
     fin: _Finish,
     animated: bool,
     redraw: bool = False,
+    clip_seconds: float | None = None,
 ) -> list[AnyPlane]:
     dctx = _draw_ctx(ctx)
     groups = _groups(layers, depths, animated, redraw)
@@ -301,7 +342,7 @@ def _scene_planes(
     planes: list[AnyPlane] = [
         ScenePlane("far", fin.plane(_rgba(back, alpha)), tuple(first), opaque=True)
     ]
-    animator = _Animator(ctx, fin, redraw)
+    animator = _Animator(ctx, fin, redraw, layers, clip_seconds)
     for depth, indices, moving in groups:
         if moving:
             planes += animator.planes(indices[0], layers[indices[0]], depth)
@@ -377,12 +418,14 @@ def build_stack(
     *,
     animated: bool = True,
     redraw: bool = False,
+    clip_seconds: float | None = None,
 ) -> LivingStack:
     """The planes of slide ``ctx.slide_index``; ``depths`` from ``effective_depths``.
     With ``animated``, moving layers become drift or sprite planes and particles are added;
-    with ``redraw`` (schema 2.3), layers with a phase drawer are redrawn per loop frame."""
+    with ``redraw`` (schema 2.3), layers with a phase drawer are redrawn per loop frame and
+    characters follow their timelines over ``clip_seconds`` (slide plus transition)."""
     fin = _Finish(ctx)
-    scene = _scene_planes(ctx, layers, depths, fin, animated, redraw)
+    scene = _scene_planes(ctx, layers, depths, fin, animated, redraw, clip_seconds)
     return LivingStack(tuple(scene), _top_planes(ctx, fin))
 
 

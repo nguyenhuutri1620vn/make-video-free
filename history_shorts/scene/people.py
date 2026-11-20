@@ -70,6 +70,15 @@ def draw_characters(
     return over(img, cv)
 
 
+def draw_characters_posed(
+    img: FloatImage, layer: CharactersLayer, ctx: DrawContext, poses: Sequence[Pose]
+) -> FloatImage:
+    """The characters, each in its pose from ``poses`` (draw order)."""
+    cv = Canvas(CANVAS_W, CANVAS_H)
+    draw_figures(cv, placed_characters(layer), ctx.palette, poses)
+    return over(img, cv)
+
+
 def draw_characters_at(
     img: FloatImage, layer: CharactersLayer, ctx: DrawContext, index: int, phase: float
 ) -> FloatImage:

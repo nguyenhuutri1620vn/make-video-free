@@ -530,6 +530,8 @@ def _check_actions(script: Script, theme: Theme, issues: Issues) -> None:
                 issues.error(name, f"{path}.id", f"duplicate character id '{cid}'")
             if cid:
                 seen[cid] = path
+        if isinstance(slide.scene, LayerScene):
+            _check_carriers(name, f"{base}.scene", slide.scene, issues)
         if not slide.actions:
             continue
         if not slide.living:
@@ -571,3 +573,29 @@ def _check_action_list(
             issues.error(name, f"{where}.do", "stand_up needs a kneeling or seated character")
         if action.do in ("kneel", "sit", "stand_up"):
             crouched[action.who] = action.do != "stand_up"
+
+
+def _check_carriers(name: str, base: str, scene: LayerScene, issues: Issues) -> None:
+    """``on`` names a boat layer of the same scene, one per characters layer; crew have none."""
+    for k, layer in enumerate(scene.layers):
+        where = f"{base}.layers[{k}]"
+        if isinstance(layer, BoatLayer):
+            for n, spec in enumerate(layer.crew):
+                if spec.on is not None:
+                    issues.error(name, f"{where}.crew[{n}].on", "crew already stand on their boat")
+            continue
+        if not isinstance(layer, CharactersLayer):
+            continue
+        carriers = {spec.on for spec in layer.items if spec.on is not None}
+        for n, spec in enumerate(layer.items):
+            if spec.on is None:
+                continue
+            target = scene.layers[spec.on] if spec.on < len(scene.layers) else None
+            if not isinstance(target, BoatLayer):
+                issues.error(name, f"{where}.items[{n}].on", "must be the index of a boat layer")
+            elif len(carriers) > 1 or any(c.on is None for c in layer.items):
+                issues.error(
+                    name,
+                    f"{where}.items[{n}].on",
+                    "every character of a layer must stand on the same boat",
+                )
