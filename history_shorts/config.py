@@ -305,6 +305,11 @@ class LivingSpec:
     flame_glow: float = 0.08  # relative pulse of a fire's halo
     smoke_sway_px: float = 8.0  # temple units an incense smoke curve sways
     cloth_wave: float = 0.08  # flag-cloth wave height, fraction of the flag's length
+    idle_loop_seconds: float = 4.0  # one breath; an idle character loops this long (M10)
+    breath_scale: float = 0.006  # chest scale at the top of a breath
+    idle_sway_deg: float = 0.6  # largest idle lean of the torso and free arms
+    idle_head_deg: float = 1.0  # largest idle tilt of the head
+    flag_wave_hz: float = 0.5  # waves per second of a held flag
     particle_count: int = 14
     particle_colors: Mapping[str, str] = field(
         default_factory=lambda: _proxy({"petals": "pink", "dust": "gold_lt", "embers": "vermilion"})
@@ -611,6 +616,11 @@ _LIVING_NUMBERS: Final[Mapping[str, tuple[float, float]]] = MappingProxyType(
         "flame_glow": (0, 0.3),
         "smoke_sway_px": (0, 40),
         "cloth_wave": (0, 0.4),
+        "idle_loop_seconds": (1, 12),
+        "breath_scale": (0, 0.03),
+        "idle_sway_deg": (0, 3),
+        "idle_head_deg": (0, 4),
+        "flag_wave_hz": (0, 2),
     }
 )
 
