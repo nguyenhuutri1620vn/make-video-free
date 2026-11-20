@@ -52,6 +52,10 @@ FIST_SHOW_DEG: Final = 60.0  # shoulder angle above which the fist shows
 FIST_AT: Final[Mapping[str, Point]] = MappingProxyType(
     {"near": (16.0, -39.8), "far": (-16.0, -39.8)}  # fist centre in the sleeve's frame
 )
+# Kneeling and sitting (FR-50): the skirt squashes toward the feet and widens while the
+# upper body drops by the same amount, so the waist stays joined; the feet do not move.
+CROUCH_DROP: Final = 22.0  # units the waist and everything above it drop at crouch 1
+CROUCH_SPREAD: Final = 9.0  # units the hem widens on each side at crouch 1
 CLIP_REACH: Final = 400.0  # half size of the half-plane clip rectangles
 
 HEAD_SEGMENT_PARTS: Final = ("hair_back", "face", "features", "hair_front", "bun", "headwrap",
@@ -77,9 +81,15 @@ def free_arm(style: CharacterStyle) -> str:
 
 def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
     """Every segment's transform in the local frame for ``pose``."""
-    torso = about(WAIST, rotate(pose.torso_lean) @ scale(1.0, 1.0 + pose.breath))
-    drop = translate(HEAD_DROP_FORWARD * pose.head_drop, pose.head_drop)
-    head = torso @ drop @ about(NECK, rotate(-pose.head_tilt))
+    drop = pose.crouch * CROUCH_DROP
+    bottom = af.BODY_BOTTOM
+    squash = (bottom - af.WAIST_Y - drop) / (bottom - af.WAIST_Y)
+    widen = 1.0 + pose.crouch * CROUCH_SPREAD / af.HEM_HALF_WIDTH
+    skirt = about((0.0, bottom), scale(widen, squash))
+    lean = rotate(pose.torso_lean - pose.lean_back) @ scale(1.0, 1.0 + pose.breath)
+    torso = translate(0.0, drop) @ about(WAIST, lean)
+    bow = translate(HEAD_DROP_FORWARD * pose.head_drop, pose.head_drop)
+    head = torso @ bow @ about(NECK, rotate(-pose.head_tilt))
     near = torso @ about(SHOULDERS["near"], rotate(-pose.near_shoulder))
     far = torso @ about(SHOULDERS["far"], rotate(pose.far_shoulder))
     dx = near.apply(af.HAND_CENTER)[0] - af.HAND_CENTER[0]
@@ -88,6 +98,7 @@ def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
     hand = translate(dx, dy) if held else IDENTITY
     prop = translate(dx, min(dy, 0.0)) if held else IDENTITY
     return {
+        "skirt": skirt,
         "torso": torso,
         "head": head,
         "near_arm": near,
@@ -117,10 +128,11 @@ def _pose(style: CharacterStyle) -> Pose:
 
 
 def robe(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
-    """The skirt in place, the upper robe under the torso joint; the cut is under the belt."""
+    """The skirt (squashed when kneeling), the upper robe under the torso joint; the cut is
+    under the belt."""
     m = joints(style, _pose(style))
     waist = af.WAIST_Y
-    with _frame(cv, IDENTITY, (waist, CLIP_REACH)):
+    with _frame(cv, m["skirt"], (waist, CLIP_REACH)):
         af.robe(cv, style, palette)
     with _frame(cv, m["torso"], (-CLIP_REACH, waist)):
         af.robe(cv, style, palette)

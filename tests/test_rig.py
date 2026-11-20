@@ -178,3 +178,48 @@ def test_raised_arm_shows_fist(palette: Any) -> None:
     count, dist = _fist_pixels(_style(palette, "spear", Pose(far_shoulder=120.0)), palette)
     assert count > 2 * SCALE * SCALE and dist < 2.5
     assert _fist_pixels(_style(palette, "spear", Pose(far_shoulder=20.0)), palette)[0] == 0
+
+
+def _rows(style: Any, palette: Any) -> tuple[float, float]:
+    """Top and bottom (local units) of the drawn figure."""
+    alpha = _render(style, palette)[..., 3]
+    rows = np.nonzero(alpha.max(axis=1) > 0.5)[0]
+    return rows.min() / SCALE - 150, (rows.max() + 1) / SCALE - 150
+
+
+def test_crouch_drops_head_keeps_feet(palette: Any) -> None:
+    from history_shorts.characters.kits.ancient_female_rig import CROUCH_DROP
+
+    stand = _rows(_style(palette, "none"), palette)
+    kneel = _rows(_style(palette, "none", Pose(crouch=1.0)), palette)
+    assert kneel[0] - stand[0] == pytest.approx(CROUCH_DROP, abs=0.5)
+    assert kneel[1] == pytest.approx(stand[1], abs=0.25)
+
+
+def test_crouch_continuous(palette: Any) -> None:
+    style = _style(palette, "none")
+    heads = []
+    for k in range(11):
+        pose = Pose(crouch=k / 10)
+        m = kit_for(style).rig.joints(style, pose)  # type: ignore[union-attr]
+        heads.append(m["head"].apply((0.0, -95.0))[1])
+    steps = np.diff(heads)
+    assert (steps > 0).all() and steps.max() - steps.min() < 1e-6
+
+
+def test_crouch_widens_skirt(palette: Any) -> None:
+    stand = _render(_style(palette, "none"), palette)[..., 3]
+    kneel = _render(_style(palette, "none", Pose(crouch=1.0)), palette)[..., 3]
+    row = _px((0, -3))[0]
+    assert (kneel[row] > 0.5).sum() > (stand[row] > 0.5).sum() + 4 * SCALE
+
+
+@pytest.mark.parametrize("pose", [Pose(crouch=1.0), Pose(crouch=1.0, lean_back=6.0)])
+def test_kneel_waist_closed(pose: Pose, palette: Any) -> None:
+    from history_shorts.characters.kits.ancient_female_rig import CROUCH_DROP
+
+    alpha = _render(_style(palette, "none", pose), palette, names=("robe", "belt"))[..., 3]
+    waist_y = -55 + CROUCH_DROP * pose.crouch
+    for x in (-8.0, -4.0, 0.0, 4.0, 8.0):
+        for dy in (-1.0, 0.0, 1.0):
+            assert alpha[_px((x, waist_y + dy))] > 0.95

@@ -23,7 +23,7 @@ class Pose:
     far_shoulder: float = 0.0
     far_elbow: float = 0.0
     crouch: float = 0.0  # 0 standing .. 1 kneeling
-    lean_back: float = 0.0  # deg, seated only
+    lean_back: float = 0.0  # deg the upper body leans back, seated
     flag_wave: float = 0.0  # loop phase of a held flag's cloth
 
 
