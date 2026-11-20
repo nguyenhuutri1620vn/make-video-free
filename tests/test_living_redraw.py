@@ -42,7 +42,12 @@ def _still_with_square(img: FloatImage, layer: Any, ctx: DrawContext, index: int
 
 @pytest.fixture
 def fake_redraw(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(planes_mod, "PHASE_DRAWERS", {MountainsLayer: _fake_at})
+    real = planes_mod.redraws
+    drawers_at = {**planes_mod.PHASE_DRAWERS, MountainsLayer: _fake_at}
+    monkeypatch.setattr(planes_mod, "PHASE_DRAWERS", drawers_at)
+    monkeypatch.setattr(
+        planes_mod, "redraws", lambda layer: isinstance(layer, MountainsLayer) or real(layer)
+    )
     drawers = dict(planes_mod.LAYER_DRAWERS)
     drawers[MountainsLayer] = _still_with_square
     monkeypatch.setattr(planes_mod, "LAYER_DRAWERS", drawers)
@@ -51,7 +56,9 @@ def fake_redraw(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def fast(theme: Any) -> Any:
     """The default theme with the shortest allowed loop, so tests draw few phases."""
-    return dataclasses.replace(theme, living=dataclasses.replace(theme.living, loop_seconds=0.5))
+    return dataclasses.replace(
+        theme, living=dataclasses.replace(theme.living, loop_seconds=0.5, idle_loop_seconds=1.0)
+    )
 
 
 def _script() -> Any:

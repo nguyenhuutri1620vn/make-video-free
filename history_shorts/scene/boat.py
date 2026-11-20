@@ -8,13 +8,14 @@ from typing import Final
 from history_shorts.canvas import Canvas
 from history_shorts.characters.figure import Placement
 from history_shorts.characters.formations import PlacedCharacter
+from history_shorts.characters.pose import Pose
 from history_shorts.compose import DrawContext, over
 from history_shorts.config import BoatLayer, CharacterSpec
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 
-from .people import draw_figures
-from .registry import LayerDrawer, entry
+from .people import draw_figures, idle_poses
+from .registry import LayerDrawer, PhaseDrawer, entry, phase_entry
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,8 +92,21 @@ def _draw_hull(cv: Canvas, ctx: DrawContext) -> None:
 
 def draw_boat(img: FloatImage, layer: BoatLayer, ctx: DrawContext, index: int) -> FloatImage:
     """Crew first, then the hull on top of their feet, all on one canvas."""
+    return _draw(img, layer, ctx, None)
+
+
+def draw_boat_at(
+    img: FloatImage, layer: BoatLayer, ctx: DrawContext, index: int, phase: float
+) -> FloatImage:
+    """The boat with its crew at idle loop ``phase`` (M10); the hull still covers their feet."""
+    return _draw(img, layer, ctx, idle_poses(ctx, index, len(layer.crew), phase))
+
+
+def _draw(
+    img: FloatImage, layer: BoatLayer, ctx: DrawContext, poses: list[Pose] | None
+) -> FloatImage:
     cv = Canvas(CANVAS_W, CANVAS_H)
-    draw_figures(cv, crew_placements(layer), ctx.palette)
+    draw_figures(cv, crew_placements(layer), ctx.palette, poses)
     cv.save()
     cv.translate(layer.x, layer.y)
     cv.scale(layer.scale, layer.scale)
@@ -102,3 +116,4 @@ def draw_boat(img: FloatImage, layer: BoatLayer, ctx: DrawContext, index: int) -
 
 
 DRAWERS: dict[type, LayerDrawer] = dict([entry(BoatLayer, draw_boat)])
+PHASE_DRAWERS: dict[type, PhaseDrawer] = dict([phase_entry(BoatLayer, draw_boat_at)])

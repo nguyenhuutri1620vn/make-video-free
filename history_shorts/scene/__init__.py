@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 
 from history_shorts.compose import GROUND_LAYER, DrawContext
-from history_shorts.config import Layer
+from history_shorts.config import BoatLayer, CharactersLayer, Layer, LivingSpec
 from history_shorts.primitives import FloatImage
 
 from . import (
@@ -38,7 +38,15 @@ from . import (
 )
 from .registry import LayerDrawer, PhaseDrawer, merge
 
-__all__ = ["LAYER_DRAWERS", "PHASE_DRAWERS", "LayerDrawer", "PhaseDrawer", "draw_layers"]
+__all__ = [
+    "LAYER_DRAWERS",
+    "PHASE_DRAWERS",
+    "LayerDrawer",
+    "PhaseDrawer",
+    "draw_layers",
+    "phase_loop_seconds",
+    "redraws",
+]
 
 # Each layer module registers its own drawers; this read-only view is the single lookup table.
 LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
@@ -79,8 +87,24 @@ PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType(
         temple.PHASE_DRAWERS,
         banners.PHASE_DRAWERS,
         elephant.PHASE_DRAWERS,
+        people.PHASE_DRAWERS,
+        boat.PHASE_DRAWERS,
     )
 )
+# Layers whose loop is a character's idle breath rather than the ambient loop.
+IDLE_LOOP_LAYERS: frozenset[type] = frozenset({CharactersLayer, BoatLayer})
+
+
+def redraws(layer: Layer) -> bool:
+    """Whether a 2.3 living slide redraws ``layer`` per frame (a crewless boat only bobs)."""
+    if isinstance(layer, BoatLayer):
+        return bool(layer.crew)
+    return type(layer) in PHASE_DRAWERS
+
+
+def phase_loop_seconds(layer: Layer, spec: LivingSpec) -> float:
+    """Length of ``layer``'s redrawn loop."""
+    return spec.idle_loop_seconds if type(layer) in IDLE_LOOP_LAYERS else spec.loop_seconds
 
 
 def draw_layers(img: FloatImage, layers: Sequence[Layer], ctx: DrawContext) -> FloatImage:

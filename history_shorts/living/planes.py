@@ -38,7 +38,7 @@ from history_shorts.living.animate import Motion, animate_crop, motion_margin, t
 from history_shorts.living.particles import particle_sprite
 from history_shorts.living.types import AnyPlane, DriftPlane, FloatRGBA, ScenePlane, SpritePlane
 from history_shorts.primitives import FloatImage, FloatMask
-from history_shorts.scene import LAYER_DRAWERS, PHASE_DRAWERS
+from history_shorts.scene import LAYER_DRAWERS, PHASE_DRAWERS, phase_loop_seconds, redraws
 from history_shorts.scene_config import (
     BirdsLayer,
     BoatLayer,
@@ -144,7 +144,7 @@ class _Finish:
 
 
 def _is_moving(layer: Layer, animated: bool, redraw: bool) -> bool:
-    return animated and (type(layer) in ANIMATED or (redraw and type(layer) in PHASE_DRAWERS))
+    return animated and (type(layer) in ANIMATED or (redraw and redraws(layer)))
 
 
 def _groups(
@@ -184,30 +184,57 @@ class _Animator:
         render = partial(_frame_at, crop, anchored, self.spec)
         return SpritePlane(depth, origin, (h, w), self.frames, render, (k,))
 
-    def _redrawn(self, k: int, layer: Layer, depth: Depth) -> SpritePlane:
-        """Every loop phase drawn by the layer's phase drawer, cropped to their union box."""
+    def _redrawn(self, k: int, layer: Layer, depth: Depth, sign: float) -> SpritePlane:
+        """Every loop phase drawn by the layer's phase drawer, cropped to their union box.
+
+        A layer that also has an M9 ambient motion (a boat's bob) gets it on top, at as many
+        whole cycles as fit its loop, so the crew moves with the hull."""
         drawer = PHASE_DRAWERS[type(layer)]
         reach = math.ceil(self.spec.travel_px[depth] + self.spec.shake_px + EDGE_SLACK)
         edge = (reach, math.ceil(reach * CANVAS_H / CANVAS_W))
         index = k + GROUND_LAYER + 1
+        seconds = phase_loop_seconds(layer, self.spec)
+        count = max(round(seconds * self.ctx.theme.video.fps), 2)
         crops: list[tuple[FloatRGBA, tuple[int, int]]] = []
-        for i in range(self.frames):
-            phase = i / self.frames
+        for i in range(count):
+            phase = i / count
 
             def draw(base: FloatImage, phase: float = phase) -> FloatImage:
                 return drawer(base, layer, self.dctx, index, phase)
 
             crops.append(animate_crop(self.fin.plane(matte(draw, CANVAS_H, CANVAS_W)), 0, edge))
         frames, origin = union_frames(crops)
+        kind = SPRITE_KINDS.get(type(layer))
+        if kind is not None:
+            frames, origin = self._with_motion(frames, origin, kind, seconds, sign)
         h, w = frames[0].shape[:2]
         render = partial(_loop_frame, tuple(frames))
-        return SpritePlane(depth, origin, (h, w), self.frames, render, (k,))
+        return SpritePlane(depth, origin, (h, w), count, render, (k,))
+
+    def _with_motion(
+        self,
+        frames: list[FloatRGBA],
+        origin: tuple[int, int],
+        kind: str,
+        seconds: float,
+        sign: float,
+    ) -> tuple[list[FloatRGBA], tuple[int, int]]:
+        h, w = frames[0].shape[:2]
+        margin = motion_margin(min(h, 600), min(w, 600), self.spec)
+        pad = ((margin, margin), (margin, margin), (0, 0))
+        cycles = max(1, round(seconds / self.spec.loop_seconds))
+        motion = Motion(kind, (w / 2 + margin, h - 1.0 + margin), cycles, sign)
+        moved = [
+            transform_frame(np.pad(f, pad), i / len(frames), motion, self.spec)
+            for i, f in enumerate(frames)
+        ]
+        return moved, (origin[0] - margin, origin[1] - margin)
 
     def planes(self, k: int, layer: Layer, depth: Depth) -> list[AnyPlane]:
-        if self.redraw and type(layer) in PHASE_DRAWERS:
-            return [self._redrawn(k, layer, depth)]
         rng = rng_for(self.ctx.style.seed, self.ctx.slide_index, k + GROUND_LAYER + 1 + ANIM_KEY)
         sign = 1.0 if rng.random() < 0.5 else -1.0
+        if self.redraw and redraws(layer):
+            return [self._redrawn(k, layer, depth, sign)]
         drift = DRIFT_KINDS.get(type(layer))
         if drift is not None:
             speed = self.spec.cloud_drift_px_s if drift == "cloud" else self.spec.bird_drift_px_s
