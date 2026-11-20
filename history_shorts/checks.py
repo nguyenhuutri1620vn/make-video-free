@@ -48,6 +48,7 @@ from history_shorts.config import (
 )
 from history_shorts.errors import Issue, Issues
 from history_shorts.layout import CANVAS_H, CANVAS_W
+from history_shorts.living.depth import scene_layers
 from history_shorts.primitives import Box, FloatMask
 from history_shorts.scene.boat import CREW_COUNT_ERROR, MAX_CREW, crew_placements
 from history_shorts.scene.people import placed_characters
@@ -427,6 +428,12 @@ def check_overlaps(
         boxes = figure_boxes(style, item.placement)
         if motions and path in motions:
             moving = pose_union_boxes(style, item.placement, motions[path])
+            if boxes.head.inside(FRAME_INNER) and not moving.head.inside(FRAME_INNER):
+                msg = (
+                    f"head box {_fmt(moving.head)} is outside the frame {_fmt(FRAME_INNER)} "
+                    "while moving"
+                )
+                issues.append(Issue(file, path, msg, "error"))
             still = {label for label, _, _ in _figure_overlaps(boxes, targets)}
             for label, mine, other in _figure_overlaps(moving, targets):
                 if label not in still:
@@ -448,6 +455,8 @@ def check_overlaps(
             msg = f"overlaps {label} (character box {_fmt(mine)}, {label} box {_fmt(other)})"
             issues.append(Issue(file, path, msg, "error"))
     issues.extend(_head_cover_issues(placed, palette, file))
+    if motions:
+        issues.extend(_moving_head_cover(placed, motions, file))
     log.debug("slide %d: %d overlap issue(s)", slide_index, len(issues))
     return issues
 
@@ -514,7 +523,7 @@ def _slide_motions(
         for action in mine:
             length = action_seconds(action)
             times += [action.at + length * k / 10 for k in range(11)]
-        out[path] = [at(min(t, seconds)) for t in times]
+        out[path] = [at(t) for t in times]
     return out
 
 
@@ -532,6 +541,8 @@ def _check_actions(script: Script, theme: Theme, issues: Issues) -> None:
                 seen[cid] = path
         if isinstance(slide.scene, LayerScene):
             _check_carriers(name, f"{base}.scene", slide.scene, issues)
+            if slide.living:
+                _check_carrier_planes(name, f"{base}.scene", slide, theme, issues)
         if not slide.actions:
             continue
         if not slide.living:
@@ -560,8 +571,6 @@ def _check_action_list(
             issues.error(name, f"{where}.who", f"unknown character '{action.who}'; known: {known}")
             continue
         end = action.at + action_seconds(action)
-        if end > seconds + 1e-6:
-            issues.error(name, where, f"ends after the slide ({end:.2f} s > {seconds:.2f} s)")
         prev = last_end.get(action.who)
         if prev is not None and action.at < prev[0]:
             issues.error(name, where, f"overlaps actions[{prev[1]}] of '{action.who}'")
@@ -599,3 +608,65 @@ def _check_carriers(name: str, base: str, scene: LayerScene, issues: Issues) -> 
                     f"{where}.items[{n}].on",
                     "every character of a layer must stand on the same boat",
                 )
+
+
+def _check_carrier_planes(name: str, base: str, slide: Slide, theme: Theme, issues: Issues) -> None:
+    """Riders must end on their boat's plane; a nearer layer between them pushes them off."""
+    assert isinstance(slide.scene, LayerScene)
+    layers, depths = scene_layers(slide, theme)
+    for k, layer in enumerate(layers):
+        if not isinstance(layer, CharactersLayer):
+            continue
+        for n, spec in enumerate(layer.items):
+            on = spec.on
+            if on is None or on >= len(layers) or not isinstance(layers[on], BoatLayer):
+                continue
+            if depths[k] != depths[on]:
+                issues.error(
+                    name,
+                    f"{base}.layers[{k}].items[{n}].on",
+                    f"must be on the boat's plane ({depths[on]}), but a nearer layer between "
+                    f"them puts it on {depths[k]}; move the characters right after the boat",
+                )
+
+
+def _moving_head_cover(
+    placed: list[Styled], motions: Mapping[str, Sequence[Pose]], file: str
+) -> list[Issue]:
+    """A later character whose body or prop, while moving, reaches an earlier head it does
+    not touch at rest (boxes over the motion; at rest the pixel check above decides)."""
+    rest = [figure_boxes(style, item.placement) for item, style, _ in placed]
+    moving = [
+        pose_union_boxes(style, item.placement, motions[path]) if path in motions else rest[k]
+        for k, (item, style, path) in enumerate(placed)
+    ]
+    issues: list[Issue] = []
+    for j, (_, _, path) in enumerate(placed):
+        for i in range(j):
+            if placed[i][2] not in motions and path not in motions:
+                continue
+            reach = [b for b in (moving[j].body, moving[j].prop) if b is not None]
+            before = [b for b in (rest[j].body, rest[j].prop) if b is not None]
+            hits_now = any(b.intersects(moving[i].head) for b in reach)
+            hit_rest = any(b.intersects(rest[i].head) for b in before)
+            if hits_now and not hit_rest:
+                msg = f"covers the head of {placed[i][2]} while moving"
+                issues.append(Issue(file, path, msg, "error"))
+    return issues
+
+
+def action_timing_problems(script: Script, durations: Sequence[float]) -> list[Issue]:
+    """Actions that end after their slide; ``durations`` are the final slide lengths
+    (voice-fitted with ``--audio``), as for sound cues."""
+    issues: list[Issue] = []
+    for index, slide in enumerate(script.slides):
+        seconds = durations[index]
+        for k, action in enumerate(slide.actions):
+            if action.do not in ACTIONS:
+                continue
+            end = action.at + action_seconds(action)
+            if end > seconds + 1e-6:
+                where = f"slides[{index}].actions[{k}]"
+                msg = f"ends after the slide ({end:.2f} s > {seconds:.2f} s)"
+                issues.append(Issue(script.path.name, where, msg, "error"))
+    return issues

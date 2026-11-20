@@ -89,19 +89,30 @@ def effective_depths(
     layers: Sequence[Layer], overrides: Sequence[Depth | None]
 ) -> tuple[tuple[Depth, ...], tuple[int, ...]]:
     """Each layer's plane, never nearer-to-farther down the list, so the living stack keeps
-    the still slide's drawing order. Also returns the indices whose plane was raised."""
+    the still slide's drawing order. Also returns the indices whose plane was raised.
+
+    Characters standing ``on`` an earlier boat take that boat's plane (M10), so the camera
+    moves them with its hull."""
     depths: list[Depth] = []
     raised: list[int] = []
     floor = 0
     for index, layer in enumerate(layers):
         override = overrides[index] if index < len(overrides) else None
-        wanted = override or DEFAULT_DEPTH[type(layer)]
+        wanted = override or carrier_depth(layer, depths) or DEFAULT_DEPTH[type(layer)]
         level = max(ORDER[wanted], floor)
         if level > ORDER[wanted]:
             raised.append(index)
         floor = level
         depths.append(LEVELS[level])
     return tuple(depths), tuple(raised)
+
+
+def carrier_depth(layer: Layer, earlier: Sequence[Depth]) -> Depth | None:
+    """The plane of the earlier layer a characters layer's riders stand ``on``, if any."""
+    if not isinstance(layer, CharactersLayer):
+        return None
+    carrier = next((c.on for c in layer.items if c.on is not None), None)
+    return earlier[carrier] if carrier is not None and carrier < len(earlier) else None
 
 
 def scene_layers(slide: Slide, theme: Theme) -> tuple[tuple[Layer, ...], tuple[Depth, ...]]:

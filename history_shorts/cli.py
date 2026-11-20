@@ -150,15 +150,18 @@ def _durations(script: Script, theme: Theme, plan: AudioPlan | None) -> list[flo
 
 
 def _check_cues(script: Script, theme: Theme, plan: AudioPlan | None) -> list[Issue]:
-    """Sound-effect and music-cut timing, and an audio stream in every effect file (A.2.1)."""
-    from history_shorts import cues
+    """Sound-effect, music-cut and character-action timing, and an audio stream in every
+    effect file (A.2.1, A.5)."""
+    from history_shorts import checks, cues
     from history_shorts import ffmpeg as ff
 
     has_audio = None
     if any(cue.path is not None for slide in script.slides for cue in slide.sfx):
         info = ff.find_ffmpeg()  # probing the effects needs ffprobe: exit 4 when missing
         has_audio = lambda path: ff.has_audio(info, path)  # noqa: E731
-    return cues.cue_problems(script, _durations(script, theme, plan), has_audio)
+    durations = _durations(script, theme, plan)
+    problems = cues.cue_problems(script, durations, has_audio)
+    return [*problems, *checks.action_timing_problems(script, durations)]
 
 
 def _plan_audio(

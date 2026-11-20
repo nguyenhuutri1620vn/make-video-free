@@ -126,3 +126,34 @@ def test_on_must_name_a_boat(tmp_script: ScriptFactory, theme: Any) -> None:
     script = load_script(tmp_script(slides=[slide], extra={"schema_version": "2.3"}))[0]
     messages = [f"{i.path}: {i.message}" for i in check_all(script, theme)]
     assert any(".on" in m and "boat" in m for m in messages), messages
+
+
+def test_rider_shares_the_boat_plane() -> None:  # final review 1
+    from history_shorts.living.depth import effective_depths
+    from history_shorts.scene_config import BoatLayer, CharactersLayer, CharacterSpec
+
+    boat = BoatLayer(540, 1060, 1.5, ())
+    riders = CharactersLayer(None, 1100, (CharacterSpec("boat_crew", x=540, on=0),))
+    walkers = CharactersLayer(None, 1100, (CharacterSpec("boat_crew", x=300),))
+    depths, _ = effective_depths([boat, riders, walkers], [None, None, None])
+    assert depths == ("mid", "mid", "near")
+
+
+def test_rider_plane_mismatch_is_an_error(tmp_script: ScriptFactory, theme: Any) -> None:
+    from history_shorts.checks import check_all
+
+    rider = {"role": "boat_crew", "id": "r", "x": 540, "height": 200, "on": 0}
+    slide = {
+        "title": "A",
+        "living": True,
+        "scene": {
+            "layers": [
+                {"type": "boat", "x": 540, "y": 1060, "scale": 1.5},
+                {"type": "lotus", "x": 860, "y": 1080, "scale": 1.0},
+                {"type": "characters", "items": [rider]},
+            ]
+        },
+    }
+    script = load_script(tmp_script(slides=[slide], extra={"schema_version": "2.3"}))[0]
+    messages = [f"{i.path}: {i.message}" for i in check_all(script, theme)]
+    assert any(".on" in m and "plane" in m for m in messages), messages

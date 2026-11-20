@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from history_shorts.characters.actions import ACTIONS, POSES
-from history_shorts.checks import check_all
+from history_shorts.checks import action_timing_problems, check_all
 from history_shorts.config import load_script
 from history_shorts.errors import ValidationFailed
 from history_shorts.scene_config import POSE_NAMES
@@ -33,13 +33,23 @@ def _slide(actions: list[dict[str, Any]], *items: dict[str, Any], **kw: Any) -> 
     return slide
 
 
+def _auto(script: Any, theme: Any) -> list[float]:
+    from history_shorts.script_config import slide_duration
+
+    return [slide_duration(s, theme.video.fps) for s in script.slides]
+
+
 def _messages(tmp_script: ScriptFactory, theme: Any, slide: dict[str, Any]) -> list[str]:
     path = tmp_script(slides=[slide], extra=V23)
     try:
         script, issues = load_script(path)
     except ValidationFailed as exc:
         return [f"{i.path}: {i.message}" for i in exc.issues.items]
-    issues = [*issues, *check_all(script, theme)]
+    issues = [
+        *issues,
+        *check_all(script, theme),
+        *action_timing_problems(script, _auto(script, theme)),
+    ]
     # a one-slide test script is shorter than a video may be; that warning is not under test
     return [f"{i.path}: {i.message}" for i in issues if "total duration" not in i.message]
 
@@ -169,3 +179,30 @@ def test_template_characters_have_ids(theme: Any) -> None:
 
     ids = [c.id for c in GROUP_CHARACTERS] + [c.id for b in LANDSCAPE_BOATS for c in b.crew]
     assert all(ids) and len(set(ids)) == len(ids)
+
+
+def test_bow_out_of_the_frame(tmp_script: ScriptFactory, theme: Any) -> None:  # final review 2
+    edge = {"role": "leader", "prop": "none", "id": "a", "x": 992, "height": 400}
+    assert not _messages(tmp_script, theme, _slide([], edge))
+    msgs = _messages(tmp_script, theme, _slide([{"who": "a", "do": "bow", "at": 1}], edge))
+    assert any("head box" in m and "outside the frame" in m and "while moving" in m for m in msgs)
+
+
+def test_rally_over_a_back_head(tmp_script: ScriptFactory, theme: Any) -> None:
+    back = {"role": "leader", "id": "back", "x": 540, "baseline": 1000, "height": 300}
+    front = {"role": "general", "id": "front", "x": 480, "height": 400, "facing": -1}
+    assert not _messages(tmp_script, theme, _slide([], back, front))
+    msgs = _messages(
+        tmp_script, theme, _slide([{"who": "front", "do": "rally", "at": 1}], back, front)
+    )
+    assert any("covers the head" in m and "while moving" in m for m in msgs), msgs
+
+
+def test_action_timing_uses_the_voice_length(tmp_script: ScriptFactory, theme: Any) -> None:
+    """A narrated slide is as long as its voice: a rally at 4 s fits a 7 s voice (review 3)."""
+    slide = _slide([{"who": "ba_trac", "do": "rally", "at": 4.0}])
+    del slide["duration"]
+    script = load_script(tmp_script(slides=[slide], extra=V23))[0]
+    assert action_timing_problems(script, [7.0]) == []
+    (issue,) = action_timing_problems(script, [3.0])
+    assert issue.path.endswith("actions[0]") and "ends after the slide" in issue.message
