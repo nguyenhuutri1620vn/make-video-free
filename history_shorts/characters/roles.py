@@ -13,6 +13,7 @@ from types import MappingProxyType
 from typing import Final
 
 from history_shorts.characters.kits.base import Variation, variation_for
+from history_shorts.characters.pose import Pose
 from history_shorts.config import CharacterSpec, Palette
 from history_shorts.primitives import RGB
 
@@ -45,6 +46,7 @@ class CharacterStyle:
     prop: str
     kit: str = DEFAULT_KIT
     variation: Variation = Variation(1.0, 1.0, 1.0)
+    pose: Pose | None = None  # None: the still drawing; a Pose: jointed parts (M10)
 
 
 ROLES: Mapping[str, RolePreset] = MappingProxyType(
