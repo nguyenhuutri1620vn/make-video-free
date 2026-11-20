@@ -54,6 +54,10 @@ class Canvas:
         self._cr.rotate(angle)
 
     # paths
+    def transform(self, xx: float, yx: float, xy: float, yy: float, x0: float, y0: float) -> None:
+        """Multiply the current transform by the affine matrix (Cairo's argument order)."""
+        self._cr.transform(cairo.Matrix(xx, yx, xy, yy, x0, y0))
+
     def M(self, x: float, y: float) -> Canvas:
         self._cr.move_to(x, y)
         return self

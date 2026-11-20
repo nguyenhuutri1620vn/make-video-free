@@ -7,11 +7,12 @@ A role preset names its kit; ``figure.py`` draws, boxes and masks any character 
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from history_shorts.characters.kits import ancient_female
+from history_shorts.characters.kits import ancient_female, ancient_female_rig
 from history_shorts.characters.kits.base import (
     Kit,
     KitExtents,
@@ -25,7 +26,9 @@ from history_shorts.characters.kits.base import (
 if TYPE_CHECKING:
     from history_shorts.characters.roles import CharacterStyle
 
-KITS: Mapping[str, Kit] = MappingProxyType({kit.name: kit for kit in (ancient_female.KIT,)})
+# Kits with their rigs attached (M10); a kit without a rig still draws still figures.
+_ANCIENT_FEMALE = dataclasses.replace(ancient_female.KIT, rig=ancient_female_rig.RIG)
+KITS: Mapping[str, Kit] = MappingProxyType({kit.name: kit for kit in (_ANCIENT_FEMALE,)})
 
 
 def kit_named(name: str) -> Kit:

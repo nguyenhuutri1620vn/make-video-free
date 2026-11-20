@@ -2,13 +2,14 @@
 
 This module knows the placement transform and nothing about how a character looks: part
 names, drawing order, head parts and local extents all come from ``kits.kit_for(style)``.
-A new era adds a kit module and role data; this file does not change.
+A new era adds a kit module and role data; this file does not change. A style with a
+``pose`` is drawn through the kit's rig, part by part under its joint transform (M10).
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -16,6 +17,8 @@ import numpy as np
 
 from history_shorts.canvas import Canvas
 from history_shorts.characters.kits import KITS, LocalBox, kit_for
+from history_shorts.characters.kits.base import KitRig, PartFn
+from history_shorts.characters.rig import apply_to
 from history_shorts.characters.roles import DEFAULT_KIT, CharacterStyle
 from history_shorts.config import Palette
 from history_shorts.layout import CANVAS_H, CANVAS_W
@@ -25,6 +28,7 @@ LOCAL_HEIGHT: Final = 100.0  # the shared local frame: feet at (0, 0), 100 units
 
 # Compatibility alias: the default kit's FR-41 order. Drawing uses the style's own kit.
 DRAW_ORDER: Final[tuple[str, ...]] = KITS[DEFAULT_KIT].draw_order
+ROOT: Final = "root"  # rig segment of parts drawn in the plain local frame
 MASK_MARGIN: Final = 4  # px around a box so anti-aliased edges and strokes are inside
 
 
@@ -88,9 +92,33 @@ def draw_figure(
     cv.save()
     cv.translate(placement.x, placement.baseline)
     cv.scale(placement.facing * unit, unit)
-    for name in kit.draw_order if names is None else names:
-        kit.parts[name](cv, style, palette)
+    order = kit.draw_order if names is None else names
+    if style.pose is None or kit.rig is None:
+        for name in order:
+            kit.parts[name](cv, style, palette)
+    else:
+        _draw_posed(cv, kit.rig, kit.parts, style, palette, order)
     cv.restore()
+
+
+def _draw_posed(
+    cv: Canvas,
+    rig: KitRig,
+    parts: Mapping[str, PartFn],
+    style: CharacterStyle,
+    palette: Palette,
+    order: Iterable[str],
+) -> None:
+    """Each part under its segment's joint transform (M10); split parts place themselves."""
+    assert style.pose is not None
+    joints = rig.joints(style, style.pose)
+    for name in order:
+        segment = rig.segments[name]
+        cv.save()
+        if segment != ROOT:
+            apply_to(cv, joints[segment])
+        rig.parts.get(name, parts[name])(cv, style, palette)
+        cv.restore()
 
 
 def _render_mask(

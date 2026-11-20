@@ -19,6 +19,8 @@ from history_shorts.config import Palette
 from history_shorts.primitives import Point
 
 if TYPE_CHECKING:
+    from history_shorts.characters.pose import Pose
+    from history_shorts.characters.rig import Affine
     from history_shorts.characters.roles import CharacterStyle
 
 VARIATION_STREAM: Final = 49  # second RNG word, so a character seed never collides with others
@@ -76,6 +78,22 @@ class KitExtents:
         return (-self.head_half_width, top, self.head_half_width, self.chin_y)
 
 
+JointsFn = Callable[["CharacterStyle", "Pose"], Mapping[str, "Affine"]]
+
+
+@dataclass(frozen=True, slots=True)
+class KitRig:
+    """How a kit draws a posed figure (M10).
+
+    ``segments`` names, for every part in the draw order, the joint transform it is drawn
+    under (a key of ``joints(style, pose)``), or ``"root"`` for none; ``parts`` replaces the
+    drawing of parts that split across joints themselves (they read ``style.pose``)."""
+
+    segments: Mapping[str, str]
+    joints: JointsFn
+    parts: Mapping[str, PartFn]
+
+
 @dataclass(frozen=True, slots=True)
 class Kit:
     """A pluggable part set. ``figure.py`` resolves everything through one of these."""
@@ -88,6 +106,7 @@ class Kit:
     hand_center: Point
     shaft_segment: ShaftFn
     extents: KitExtents
+    rig: KitRig | None = None
 
     def __post_init__(self) -> None:
         for name in self.draw_order:
@@ -99,6 +118,10 @@ class Kit:
         for prop in sorted(self.extents.props):
             if prop not in self.props:
                 raise ValueError(f"kit '{self.name}': extent for prop '{prop}' not in props")
+        if self.rig is not None:
+            for name in self.draw_order:
+                if name not in self.rig.segments:
+                    raise ValueError(f"kit '{self.name}': rig has no segment for part '{name}'")
 
     @property
     def head_order(self) -> tuple[str, ...]:
