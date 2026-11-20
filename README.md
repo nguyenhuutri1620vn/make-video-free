@@ -274,6 +274,14 @@ Living slides (M9), measured 2026-11-13 on the same machine with `examples/hai_b
 
 AC-31 (≤ 3x) is met. NFR-03 (1.5 GB) is **not** met when a script has living slides: one living clip's FFmpeg graph peaks near 1.9 GB (a dozen full-frame planes at 2x), so a render with living slides encodes at most 2 clips at once (`video.LIVING_MAX_JOBS`). Scripts without living slides are unchanged.
 
+Character and scene animation (M10), measured 2026-11-20 on the same machine with `examples/hai_ba_trung` (10 slides, 6 living, 37.7 s, `--jobs 2`), the same script at 2.2 against 2.3:
+
+| Measurement | 2.2 (M9) | 2.3 (M10) | Peak RSS 2.2 / 2.3 |
+|---|---|---|---|
+| `render`, `--jobs 2` | 212 s | 260 s | 1.63 GB / 1.94 GB |
+
+AC-38 (≤ 1.5x) is met at 1.23x. Characters are drawn frame by frame on demand, so memory does not grow with the clip length; the NFR-03 note above still applies to living renders.
+
 All targets are met with wide margins. The targets name a 4-core laptop; this machine has 8 cores, and the parallel clip encode accounts for part of the 10-slide video time.
 
 ## Acceptance
