@@ -28,10 +28,12 @@ from history_shorts.living.types import (
     LivingClip,
     PlaneFile,
     SpritePlane,
+    frame_name,
 )
 from history_shorts.primitives import FloatImage
 from history_shorts.render import scene_expander
 from history_shorts.scene_config import Depth
+from history_shorts.script_config import ANIMATED_SCHEMA_VERSION
 from history_shorts.textures import tone_matrix
 
 PNG_LEVEL: Final = 1  # fast: these files are read once by FFmpeg and then deleted
@@ -74,9 +76,9 @@ def _write_plane(
         frames_dir = directory / f"sprite_{index:02d}"
         frames_dir.mkdir(parents=True, exist_ok=True)
         for i in range(plane.frames):
-            write_png_rgba(plane.frame(i / plane.frames), frames_dir / f"{i:03d}.png")
+            write_png_rgba(plane.frame(i / plane.frames), frames_dir / frame_name(plane.frames, i))
         origin = (plane.origin[0] + pad[0], plane.origin[1] + pad[1])
-        first = frames_dir / "000.png"
+        first = frames_dir / frame_name(plane.frames, 0)
         return PlaneFile(
             "sprite", plane.depth, first, plane.frames, origin, (0.0, 0.0), pad, plane.size
         )
@@ -138,7 +140,8 @@ def render_living(
         style, draw = scene_expander(slide, theme)
         ctx = SlideContext(script, theme, index, style, draw, False, cache)
         layers, depths = scene_layers(slide, theme)
-        stack = build_stack(ctx, layers, depths)
+        redraw = script.schema_version == ANIMATED_SCHEMA_VERSION
+        stack = build_stack(ctx, layers, depths, redraw=redraw)
         duration = durations[index] + theme.transition.duration
         target = root / f"{index + 1:02d}"
         clips.append(write_living(stack, target, theme.living, duration, cues.shake_times(slide)))

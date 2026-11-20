@@ -36,9 +36,9 @@ from . import (
     temple,
     terrain,
 )
-from .registry import LayerDrawer, merge
+from .registry import LayerDrawer, PhaseDrawer, merge
 
-__all__ = ["LAYER_DRAWERS", "LayerDrawer", "draw_layers"]
+__all__ = ["LAYER_DRAWERS", "PHASE_DRAWERS", "LayerDrawer", "PhaseDrawer", "draw_layers"]
 
 # Each layer module registers its own drawers; this read-only view is the single lookup table.
 LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
@@ -70,6 +70,10 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         plinth.DRAWERS,
     )
 )
+
+
+# Layers that move on 2.3 living slides by being redrawn at a loop phase (M10).
+PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType({})
 
 
 def draw_layers(img: FloatImage, layers: Sequence[Layer], ctx: DrawContext) -> FloatImage:

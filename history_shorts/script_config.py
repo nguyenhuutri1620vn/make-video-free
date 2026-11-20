@@ -22,10 +22,12 @@ from history_shorts.validation import Ctx, is_int, read_json_object
 SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
 NARRATED_SCHEMA_VERSION = "2.1"  # adds slide ``id`` and ``narration`` (spec A.1.2)
 LIVING_SCHEMA_VERSION = "2.2"  # adds living slides and synthesized sound cues (M9)
+ANIMATED_SCHEMA_VERSION = "2.3"  # adds redrawn scene motion and character animation (M10)
 SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (
     SCRIPT_SCHEMA_VERSION,
     NARRATED_SCHEMA_VERSION,
     LIVING_SCHEMA_VERSION,
+    ANIMATED_SCHEMA_VERSION,
 )
 SCHEMA_LEVELS: Mapping[str, int] = {v: n for n, v in enumerate(SUPPORTED_SCHEMA_VERSIONS)}
 NARRATED_LEVEL = 1

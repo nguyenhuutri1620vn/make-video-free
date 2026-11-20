@@ -38,7 +38,7 @@ from history_shorts.living.animate import Motion, animate_crop, motion_margin, t
 from history_shorts.living.particles import particle_sprite
 from history_shorts.living.types import AnyPlane, DriftPlane, FloatRGBA, ScenePlane, SpritePlane
 from history_shorts.primitives import FloatImage, FloatMask
-from history_shorts.scene import LAYER_DRAWERS
+from history_shorts.scene import LAYER_DRAWERS, PHASE_DRAWERS
 from history_shorts.scene_config import (
     BirdsLayer,
     BoatLayer,
@@ -143,13 +143,17 @@ class _Finish:
         return _rgba(np.asarray(rgba[..., :3] * self.grain, dtype=np.float32), rgba[..., 3])
 
 
+def _is_moving(layer: Layer, animated: bool, redraw: bool) -> bool:
+    return animated and (type(layer) in ANIMATED or (redraw and type(layer) in PHASE_DRAWERS))
+
+
 def _groups(
-    layers: Sequence[Layer], depths: Sequence[Depth], animated: bool
+    layers: Sequence[Layer], depths: Sequence[Depth], animated: bool, redraw: bool = False
 ) -> list[tuple[Depth, list[int], bool]]:
     """Runs of still layers of one depth; an animated layer is a run of its own."""
     groups: list[tuple[Depth, list[int], bool]] = []
     for k, depth in enumerate(depths):
-        moving = animated and type(layers[k]) in ANIMATED
+        moving = _is_moving(layers[k], animated, redraw)
         if groups and groups[-1][0] == depth and not moving and not groups[-1][2]:
             groups[-1][1].append(k)
         else:
@@ -160,8 +164,8 @@ def _groups(
 class _Animator:
     """Turns one animated layer into drift or sprite planes."""
 
-    def __init__(self, ctx: SlideContext, fin: _Finish) -> None:
-        self.ctx, self.fin, self.dctx = ctx, fin, _draw_ctx(ctx)
+    def __init__(self, ctx: SlideContext, fin: _Finish, redraw: bool = False) -> None:
+        self.ctx, self.fin, self.dctx, self.redraw = ctx, fin, _draw_ctx(ctx), redraw
         self.spec = ctx.theme.living
         self.frames = max(round(self.spec.loop_seconds * ctx.theme.video.fps), 2)
 
@@ -180,7 +184,28 @@ class _Animator:
         render = partial(_frame_at, crop, anchored, self.spec)
         return SpritePlane(depth, origin, (h, w), self.frames, render, (k,))
 
+    def _redrawn(self, k: int, layer: Layer, depth: Depth) -> SpritePlane:
+        """Every loop phase drawn by the layer's phase drawer, cropped to their union box."""
+        drawer = PHASE_DRAWERS[type(layer)]
+        reach = math.ceil(self.spec.travel_px[depth] + self.spec.shake_px + EDGE_SLACK)
+        edge = (reach, math.ceil(reach * CANVAS_H / CANVAS_W))
+        index = k + GROUND_LAYER + 1
+        crops: list[tuple[FloatRGBA, tuple[int, int]]] = []
+        for i in range(self.frames):
+            phase = i / self.frames
+
+            def draw(base: FloatImage, phase: float = phase) -> FloatImage:
+                return drawer(base, layer, self.dctx, index, phase)
+
+            crops.append(animate_crop(self.fin.plane(matte(draw, CANVAS_H, CANVAS_W)), 0, edge))
+        frames, origin = union_frames(crops)
+        h, w = frames[0].shape[:2]
+        render = partial(_loop_frame, tuple(frames))
+        return SpritePlane(depth, origin, (h, w), self.frames, render, (k,))
+
     def planes(self, k: int, layer: Layer, depth: Depth) -> list[AnyPlane]:
+        if self.redraw and type(layer) in PHASE_DRAWERS:
+            return [self._redrawn(k, layer, depth)]
         rng = rng_for(self.ctx.style.seed, self.ctx.slide_index, k + GROUND_LAYER + 1 + ANIM_KEY)
         sign = 1.0 if rng.random() < 0.5 else -1.0
         drift = DRIFT_KINDS.get(type(layer))
@@ -200,6 +225,26 @@ class _Animator:
         return [self._sprite(k, depth, self._render(k, layer), Motion(kind, (0.0, 0.0), 1, sign))]
 
 
+def union_frames(
+    crops: Sequence[tuple[FloatRGBA, tuple[int, int]]],
+) -> tuple[list[FloatRGBA], tuple[int, int]]:
+    """Paste crops with their own (x, y) origins into frames of their common box."""
+    x0 = min(o[0] for _, o in crops)
+    y0 = min(o[1] for _, o in crops)
+    x1 = max(o[0] + c.shape[1] for c, o in crops)
+    y1 = max(o[1] + c.shape[0] for c, o in crops)
+    frames: list[FloatRGBA] = []
+    for crop, (x, y) in crops:
+        frame = np.zeros((y1 - y0, x1 - x0, 4), dtype=np.float32)
+        frame[y - y0 : y - y0 + crop.shape[0], x - x0 : x - x0 + crop.shape[1]] = crop
+        frames.append(frame)
+    return frames, (x0, y0)
+
+
+def _loop_frame(frames: tuple[FloatRGBA, ...], p: float) -> FloatRGBA:
+    return frames[round(p * len(frames)) % len(frames)]
+
+
 ANIM_KEY: Final = 500  # RNG key offset for a layer's motion, apart from its drawing RNG
 
 
@@ -213,9 +258,10 @@ def _scene_planes(
     depths: Sequence[Depth],
     fin: _Finish,
     animated: bool,
+    redraw: bool = False,
 ) -> list[AnyPlane]:
     dctx = _draw_ctx(ctx)
-    groups = _groups(layers, depths, animated)
+    groups = _groups(layers, depths, animated, redraw)
     top, mid, bottom = ctx.style.ground
     rng = rng_for(ctx.style.seed, ctx.slide_index, GROUND_LAYER)
     ground = lacquer_ground(
@@ -228,7 +274,7 @@ def _scene_planes(
     planes: list[AnyPlane] = [
         ScenePlane("far", fin.plane(_rgba(back, alpha)), tuple(first), opaque=True)
     ]
-    animator = _Animator(ctx, fin)
+    animator = _Animator(ctx, fin, redraw)
     for depth, indices, moving in groups:
         if moving:
             planes += animator.planes(indices[0], layers[indices[0]], depth)
@@ -303,11 +349,13 @@ def build_stack(
     depths: Sequence[Depth],
     *,
     animated: bool = True,
+    redraw: bool = False,
 ) -> LivingStack:
     """The planes of slide ``ctx.slide_index``; ``depths`` from ``effective_depths``.
-    With ``animated``, moving layers become drift or sprite planes and particles are added."""
+    With ``animated``, moving layers become drift or sprite planes and particles are added;
+    with ``redraw`` (schema 2.3), layers with a phase drawer are redrawn per loop frame."""
     fin = _Finish(ctx)
-    scene = _scene_planes(ctx, layers, depths, fin, animated)
+    scene = _scene_planes(ctx, layers, depths, fin, animated, redraw)
     return LivingStack(tuple(scene), _top_planes(ctx, fin))
 
 

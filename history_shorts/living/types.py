@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Final, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -60,8 +60,9 @@ AnyPlane = ScenePlane | DriftPlane | SpritePlane
 @dataclass(frozen=True, slots=True)
 class PlaneFile:
     """One scene plane on disk. ``path`` is a PNG, or a frame of a sprite whose frames are
-    ``path.parent/%03d.png``. ``pad`` (px, py) is the edge padding of the plane's depth;
-    ``size`` (h, w) the image size; ``origin`` the sprite's top-left in padded pixels."""
+    ``path.parent / frame_pattern(frames)``. ``pad`` (px, py) is the edge padding of the
+    plane's depth; ``size`` (h, w) the image size; ``origin`` the sprite's top-left in
+    padded pixels."""
 
     kind: Literal["static", "drift", "sprite"]
     depth: Depth
@@ -83,3 +84,20 @@ class LivingClip:
     shakes: tuple[float, ...]
     frame: Path | None = None  # the gold frame, overlaid before the tone
     tone: ToneMatrix | None = None  # applied once to the composite, as on the still
+
+
+FRAME_DIGITS: Final = 3  # sprite frame names are zero-padded to at least this many digits
+
+
+def _digits(frames: int) -> int:
+    return max(FRAME_DIGITS, len(str(frames - 1)))
+
+
+def frame_pattern(frames: int) -> str:
+    """FFmpeg image-sequence pattern of a sprite with ``frames`` frames (``%03d.png``)."""
+    return f"%0{_digits(frames)}d.png"
+
+
+def frame_name(frames: int, index: int) -> str:
+    """File name of frame ``index`` of a sprite with ``frames`` frames."""
+    return f"{index:0{_digits(frames)}d}.png"

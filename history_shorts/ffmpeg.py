@@ -22,7 +22,7 @@ from .config import AudioSpec, LivingSpec
 from .errors import FfmpegFailed, FfmpegMissing, FfmpegTooOld
 from .layout import CANVAS_H, CANVAS_W
 from .living.motion import group_graph, plane_groups, still_loop
-from .living.types import SHEEN_PNG_GAIN, LivingClip
+from .living.types import SHEEN_PNG_GAIN, LivingClip, frame_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +285,7 @@ def _living_inputs(clip: LivingClip, fps: int, duration: float) -> list[str]:
     args: list[str] = []
     for plane in clip.planes:
         if plane.kind == "sprite":
-            pattern = plane.path.parent / "%03d.png"
+            pattern = plane.path.parent / frame_pattern(plane.frames)
             args += ["-stream_loop", "-1", "-t", _secs(duration)]
             args += ["-framerate", str(fps), "-i", str(pattern)]
         else:

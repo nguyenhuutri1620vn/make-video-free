@@ -12,6 +12,10 @@ from history_shorts.primitives import FloatImage
 # (image, layer, context, layer index) -> image. The index feeds the RNG derivation.
 LayerDrawer = Callable[[FloatImage, Layer, DrawContext, int], FloatImage]
 
+# The same plus the loop phase in [0, 1): a drawer for layers that move by being redrawn (M10).
+# Phase 0 must draw exactly what the still drawer draws, and phase 1 must equal phase 0.
+PhaseDrawer = Callable[[FloatImage, Layer, DrawContext, int, float], FloatImage]
+
 L = TypeVar("L")
 
 WHITE: Final = (255, 255, 255)  # mask colour: only the alpha channel of a mask canvas is used
@@ -26,6 +30,13 @@ def entry(
     exact layer class before calling.
     """
     return layer_type, cast(Callable[[FloatImage, Any, DrawContext, int], FloatImage], fn)
+
+
+def phase_entry(
+    layer_type: type[L], fn: Callable[[FloatImage, L, DrawContext, int, float], FloatImage]
+) -> tuple[type, PhaseDrawer]:
+    """``entry`` for a phase drawer."""
+    return layer_type, cast(Callable[[FloatImage, Any, DrawContext, int, float], FloatImage], fn)
 
 
 def merge(*tables: Mapping[type, LayerDrawer]) -> dict[type, LayerDrawer]:
