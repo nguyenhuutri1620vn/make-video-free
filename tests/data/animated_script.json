@@ -1,0 +1,206 @@
+{
+  "schema_version": "2.3",
+  "title": "Animated test",
+  "sources": [
+    "Test fixture"
+  ],
+  "slides": [
+    {
+      "title": "VÀO LÒ",
+      "scene": {
+        "layers": [
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "furnace",
+            "x": 640,
+            "y": 1095,
+            "scale": 1.35
+          },
+          {
+            "type": "drum",
+            "x": 175,
+            "y": 1010,
+            "r": 82,
+            "birds": 0
+          },
+          {
+            "type": "drum",
+            "x": 335,
+            "y": 1010,
+            "r": 82,
+            "birds": 0
+          },
+          {
+            "type": "drum",
+            "x": 255,
+            "y": 868,
+            "r": 82,
+            "birds": 0
+          }
+        ]
+      },
+      "tone": "warm",
+      "living": true,
+      "duration": 4
+    },
+    {
+      "title": "Linh vật · Quyền lực\nNiềm tự hào",
+      "scene": {
+        "layers": [
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "banners",
+            "y": 1080,
+            "rows": 3
+          },
+          {
+            "type": "drum",
+            "x": 540,
+            "y": 690,
+            "r": 250,
+            "birds": 8
+          }
+        ]
+      },
+      "tone": "warm",
+      "living": true,
+      "duration": 4
+    },
+    {
+      "title": "Có thứ không\nnấu chảy được",
+      "subtitle": "Đền thờ hai bà ở Hát Môn",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 680,
+            "r": 280,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 180,
+                "y": 420,
+                "scale": 0.8
+              },
+              {
+                "x": 900,
+                "y": 440,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 930
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 950
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "temple",
+            "x": 540,
+            "y": 1100,
+            "scale": 1.55
+          }
+        ]
+      },
+      "tone": "warm",
+      "living": true,
+      "duration": 4
+    },
+    {
+      "title": "3 năm → 900 năm",
+      "subtitle": "Vì sao?",
+      "scene": {
+        "layers": [
+          {
+            "type": "sun",
+            "x": 540,
+            "y": 640,
+            "r": 300,
+            "rings": 2
+          },
+          {
+            "type": "clouds",
+            "outline": "gold",
+            "items": [
+              {
+                "x": 200,
+                "y": 360,
+                "scale": 0.8
+              },
+              {
+                "x": 880,
+                "y": 380,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "elephant",
+            "x": 520,
+            "y": 1100,
+            "scale": 2.1,
+            "facing": 1
+          }
+        ]
+      },
+      "living": true,
+      "duration": 4
+    }
+  ]
+}
