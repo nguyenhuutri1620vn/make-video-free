@@ -73,7 +73,7 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
 
 
 # Layers that move on 2.3 living slides by being redrawn at a loop phase (M10).
-PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType({})
+PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType(merge(furnace.PHASE_DRAWERS))
 
 
 def draw_layers(img: FloatImage, layers: Sequence[Layer], ctx: DrawContext) -> FloatImage:

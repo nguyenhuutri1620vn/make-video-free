@@ -17,6 +17,7 @@ LayerDrawer = Callable[[FloatImage, Layer, DrawContext, int], FloatImage]
 PhaseDrawer = Callable[[FloatImage, Layer, DrawContext, int, float], FloatImage]
 
 L = TypeVar("L")
+D = TypeVar("D")
 
 WHITE: Final = (255, 255, 255)  # mask colour: only the alpha channel of a mask canvas is used
 
@@ -39,9 +40,9 @@ def phase_entry(
     return layer_type, cast(Callable[[FloatImage, Any, DrawContext, int, float], FloatImage], fn)
 
 
-def merge(*tables: Mapping[type, LayerDrawer]) -> dict[type, LayerDrawer]:
+def merge(*tables: Mapping[type, D]) -> dict[type, D]:
     """Combine drawer tables; two modules claiming one layer class is a bug."""
-    merged: dict[type, LayerDrawer] = {}
+    merged: dict[type, D] = {}
     for table in tables:
         for layer_type, drawer in table.items():
             if layer_type in merged:
