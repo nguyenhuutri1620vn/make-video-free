@@ -141,3 +141,36 @@ def test_draw_figure_restores_state_with_pose(palette: Any) -> None:
     cv = Canvas(200, 300)
     draw_figure(cv, _style(palette, "flag", SAMPLE_POSES[2]), Placement(100, 250, 200, 1), palette)
     assert cv._cr.get_matrix() == Canvas(200, 300)._cr.get_matrix()  # noqa: SLF001
+
+
+@pytest.mark.parametrize("facing", [1, -1])
+@pytest.mark.parametrize("prop", ["spear", "none"])
+def test_free_arm_raise(facing: int, prop: str, palette: Any) -> None:
+    from history_shorts.characters.kits.ancient_female_rig import free_arm
+
+    side = free_arm(_style(palette, prop))
+    assert side == ("far" if prop != "none" else "near")
+    pose = Pose(**{f"{side}_shoulder": 160.0, f"{side}_elbow": 20.0})
+    style = _style(palette, prop, pose)
+    alpha = _render(style, palette, facing, names=("sleeves",))[..., 3]
+    top_row = int(np.nonzero(alpha.max(axis=1) > 0.5)[0].min())
+    assert top_row / SCALE - 150 < -102.3  # above the bun
+    if prop != "none":
+        joints = kit_for(style).rig.joints(style, pose)  # type: ignore[union-attr]
+        assert joints["hand"].apply(HAND_CENTER) == pytest.approx(HAND_CENTER)
+
+
+def _fist_pixel(style: Any, palette: Any) -> Any:
+    from history_shorts.characters.kits.ancient_female_rig import FIST_AT
+
+    side = "far"
+    m = kit_for(style).rig.joints(style, style.pose)  # type: ignore[union-attr]
+    return _render(style, palette, names=("sleeves",))[_px(m[f"{side}_fore"].apply(FIST_AT[side]))]
+
+
+def test_raised_arm_shows_fist(palette: Any) -> None:
+    egg = np.array(palette["egg"]) / 255
+    raised = _fist_pixel(_style(palette, "spear", Pose(far_shoulder=120.0)), palette)
+    assert raised[3] > 0.99 and np.abs(raised[:3] - egg).max() < 0.03
+    low = _fist_pixel(_style(palette, "spear", Pose(far_shoulder=20.0)), palette)
+    assert low[3] < 0.01

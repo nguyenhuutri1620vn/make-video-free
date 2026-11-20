@@ -47,6 +47,11 @@ ELBOWS: Final[Mapping[str, Point]] = MappingProxyType(
 )
 ELBOW_PATCH_R: Final = 4.4  # inside the sleeve at rest (half width 4.7-5.5 there)
 HEAD_DROP_FORWARD: Final = 0.3  # a bow moves the head this far forward per unit down
+# A raised sleeve shows the kit's closed fist just beyond its cuff (owner call, 2026-11-20).
+FIST_SHOW_DEG: Final = 60.0  # shoulder angle above which the fist shows
+FIST_AT: Final[Mapping[str, Point]] = MappingProxyType(
+    {"near": (16.0, -39.8), "far": (-16.0, -39.8)}  # fist centre in the sleeve's frame
+)
 CLIP_REACH: Final = 400.0  # half size of the half-plane clip rectangles
 
 HEAD_SEGMENT_PARTS: Final = ("hair_back", "face", "features", "hair_front", "bun", "headwrap",
@@ -63,6 +68,11 @@ SEGMENTS: Final[Mapping[str, str]] = MappingProxyType(
         "neck": "torso",
     }
 )
+
+
+def free_arm(style: CharacterStyle) -> str:
+    """The arm that can gesture: the far one when the near hand holds a prop."""
+    return "far" if style.prop != "none" else "near"
 
 
 def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
@@ -127,9 +137,13 @@ def _jointed_sleeve(
     paint: Paint,
     cuff: Paint | None,
     gold: RGB,
+    fist: Paint | None = None,
 ) -> None:
     upper, fore = m[f"{side}_arm"], m[f"{side}_fore"]
     above, below = (-CLIP_REACH, ELBOW_Y), (ELBOW_Y, CLIP_REACH)
+    if fist is not None:
+        with _frame(cv, fore):
+            fist(cv)
     with _frame(cv, fore, below):
         path(cv)
         paint(cv)
@@ -149,6 +163,26 @@ def _jointed_sleeve(
             cv.color(gold).stroke(0.5)
 
 
+def _fist(side: str, style: CharacterStyle, palette: Palette) -> Paint | None:
+    """The kit's fist drawn at the cuff of a raised sleeve, else None."""
+    if getattr(_pose(style), f"{side}_shoulder") <= FIST_SHOW_DEG:
+        return None
+    hx, hy = af.HAND_CENTER
+    fx, fy = FIST_AT[side]
+
+    def draw(c: Canvas) -> None:
+        c.translate(fx, fy)
+        if side == "far":
+            c.scale(-1, 1)  # mirroring only through scale(-1, 1)
+        c.translate(-hx, -hy)
+        af._fist(c)  # noqa: SLF001
+        c.color(palette["egg"]).fill()
+        af._fist(c)  # noqa: SLF001
+        c.color(palette["skin_line"], 0.55).stroke(0.18)
+
+    return draw
+
+
 def sleeves(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     """Far sleeve, then the near one: jointed when hanging, rigid when holding the prop."""
     m = joints(style, _pose(style))
@@ -160,13 +194,24 @@ def sleeves(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     def far_cuff(c: Canvas) -> None:
         c.color(style.trim).M(-21.5, -44).C(-19, -41.2, -13.5, -41.2, -10.5, -44.5).stroke(1.4)
 
-    _jointed_sleeve(cv, m, "far", af._far_arm, far_paint, far_cuff, gold)  # noqa: SLF001
+    far_fist = _fist("far", style, palette)
+    _jointed_sleeve(cv, m, "far", af._far_arm, far_paint, far_cuff, gold, far_fist)  # noqa: SLF001
     if style.prop == "none":
 
         def near_paint(c: Canvas) -> None:
             c.color(style.robe).fill()
 
-        _jointed_sleeve(cv, m, "near", af._hanging_arm, near_paint, None, gold)  # noqa: SLF001
+        near_fist = _fist("near", style, palette)
+        _jointed_sleeve(
+            cv,
+            m,
+            "near",
+            af._hanging_arm,
+            near_paint,
+            None,
+            gold,
+            near_fist,  # noqa: SLF001
+        )
         return
     with _frame(cv, m["near_arm"]):
         af._holding_arm(cv)  # noqa: SLF001
