@@ -269,8 +269,21 @@ def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     _waved_flag(cv, palette, _pose(style).flag_wave)
 
 
+# The body extent split by joint, for posed FR-48 boxes; at rest the union is the kit's body.
+BODY_BOXES: Final[Mapping[str, tuple[float, float, float, float]]] = MappingProxyType(
+    {
+        "skirt": (-af.BODY_HALF_WIDTH, af.WAIST_Y, af.BODY_HALF_WIDTH, af.BODY_BOTTOM),
+        "torso": (-14.0, af.BODY_TOP, 14.0, af.WAIST_Y),
+        "far_arm": (-22.5, -78.0, -8.0, ELBOW_Y),
+        "far_fore": (-22.5, ELBOW_Y, -8.0, -35.0),
+        "near_arm": (8.0, -78.0, 22.5, -54.0),
+        "near_fore": (8.0, ELBOW_Y, 22.5, -35.0),
+    }
+)
+
 RIG: Final = KitRig(
     segments=SEGMENTS,
     joints=joints,
     parts=MappingProxyType({"robe": robe, "sleeves": sleeves, "prop_back": prop_back}),
+    body_boxes=BODY_BOXES,
 )

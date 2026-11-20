@@ -92,6 +92,7 @@ class KitRig:
     segments: Mapping[str, str]
     joints: JointsFn
     parts: Mapping[str, PartFn]
+    body_boxes: Mapping[str, LocalBox]  # joint name -> local box of the body under it
 
 
 @dataclass(frozen=True, slots=True)

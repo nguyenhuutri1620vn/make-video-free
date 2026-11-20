@@ -8,6 +8,7 @@ A new era adds a kit module and role data; this file does not change. A style wi
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -17,8 +18,9 @@ import numpy as np
 
 from history_shorts.canvas import Canvas
 from history_shorts.characters.kits import KITS, LocalBox, kit_for
-from history_shorts.characters.kits.base import KitRig, PartFn
-from history_shorts.characters.rig import apply_to
+from history_shorts.characters.kits.base import Kit, KitRig, PartFn
+from history_shorts.characters.pose import Pose
+from history_shorts.characters.rig import Affine, apply_to
 from history_shorts.characters.roles import DEFAULT_KIT, CharacterStyle
 from history_shorts.config import Palette
 from history_shorts.layout import CANVAS_H, CANVAS_W
@@ -66,9 +68,53 @@ def _transform_box(local: LocalBox, placement: Placement) -> Box:
     return Box(xs[0], ys[0], xs[1], ys[1])
 
 
+def _posed_box(local: LocalBox, m: Affine, placement: Placement) -> Box:
+    """``local`` moved by joint ``m``, then mapped through the placement."""
+    lx0, ly0, lx1, ly1 = local
+    corners = [m.apply((x, y)) for x in (lx0, lx1) for y in (ly0, ly1)]
+    xs = [c[0] for c in corners]
+    ys = [c[1] for c in corners]
+    return _transform_box((min(xs), min(ys), max(xs), max(ys)), placement)
+
+
+def _union(boxes: Iterable[Box]) -> Box:
+    items = list(boxes)
+    out = items[0]
+    for box in items[1:]:
+        out = out.union(box)
+    return out
+
+
+def _posed_boxes(style: CharacterStyle, placement: Placement, kit: Kit) -> FigureBoxes:
+    assert style.pose is not None and kit.rig is not None
+    m = kit.rig.joints(style, style.pose)
+    head = _posed_box(kit.extents.head_box(style.crest), m["head"], placement)
+    body = _union(_posed_box(b, m[j], placement) for j, b in kit.rig.body_boxes.items())
+    extent = kit.extents.props.get(style.prop)
+    prop = None if extent is None else _posed_box(extent, m["prop"], placement)
+    return FigureBoxes(head, body, prop)
+
+
+def pose_union_boxes(
+    style: CharacterStyle, placement: Placement, poses: Iterable[Pose]
+) -> FigureBoxes:
+    """Boxes that hold the figure in every one of ``poses`` (FR-48 over a motion)."""
+    each = [figure_boxes(dataclasses.replace(style, pose=pose), placement) for pose in poses]
+    props = [b.prop for b in each if b.prop is not None]
+    return FigureBoxes(
+        _union(b.head for b in each),
+        _union(b.body for b in each),
+        _union(props) if props else None,
+    )
+
+
 def figure_boxes(style: CharacterStyle, placement: Placement) -> FigureBoxes:
-    """Head, body and prop boxes from the kit's extents; nothing is rendered."""
-    extents = kit_for(style).extents
+    """Head, body and prop boxes from the kit's extents; nothing is rendered. A posed style
+    gets the boxes of its pose (M10)."""
+    kit = kit_for(style)
+    if style.pose is not None and kit.rig is not None:
+        return _posed_boxes(style, placement, kit)
+    extents = kit.extents
     head = _transform_box(extents.head_box(style.crest), placement)
     body = _transform_box(extents.body, placement)
     extent = extents.props.get(style.prop)
