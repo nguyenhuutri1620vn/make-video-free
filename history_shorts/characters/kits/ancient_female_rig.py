@@ -30,6 +30,7 @@ from history_shorts.characters.rig import (
     scale,
     translate,
 )
+from history_shorts.cloth import ClothWave
 from history_shorts.config import Palette
 from history_shorts.primitives import RGB, Point
 
@@ -56,6 +57,9 @@ FIST_AT: Final[Mapping[str, Point]] = MappingProxyType(
 # upper body drops by the same amount, so the waist stays joined; the feet do not move.
 CROUCH_DROP: Final = 22.0  # units the waist and everything above it drop at crouch 1
 CROUCH_SPREAD: Final = 9.0  # units the hem widens on each side at crouch 1
+# A held flag waves (M10): the M10 cloth wave from the pole at PROP_X out to the flag tip.
+FLAG_WAVE_AMP: Final = 0.08  # wave height as a fraction of the flag's length
+FLAG_LENGTH: Final = 33.0  # pole to the flag's free edge
 CLIP_REACH: Final = 400.0  # half size of the half-plane clip rectangles
 
 HEAD_SEGMENT_PARTS: Final = ("hair_back", "face", "features", "hair_front", "bun", "headwrap",
@@ -233,8 +237,40 @@ def sleeves(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
         cv.color(gold).stroke(0.5)
 
 
+def _waved_flag(cv: Canvas, palette: Palette, phase: float) -> None:
+    """``ancient_female._flag`` with every point passed through the cloth wave."""
+    w = ClothWave(af.PROP_X, FLAG_LENGTH, phase, FLAG_WAVE_AMP, 0.0).pt
+    gold = palette["gold"]
+    cv.color(gold).ellipse(17, -137.5, 1.5, 1.5).fill()
+
+    def cloth(c: Canvas) -> None:
+        c.M(*w(17, -135)).C(*w(28, -134), *w(38, -131), *w(50, -127))
+        c.C(*w(45, -124), *w(42, -121), *w(47, -116)).C(*w(37, -116), *w(27, -112), *w(17, -107))
+        c.Z()
+
+    cloth(cv)
+    cv.color(palette["vermilion"]).fill()
+    cloth(cv)
+    cv.color(gold).stroke(0.7)
+    cv.color(gold).M(*w(20, -131)).C(*w(28, -129.5), *w(35, -127.5), *w(41, -125.5)).stroke(0.35)
+    cv.M(*w(20, -112)).C(*w(27, -114.5), *w(33, -116), *w(39, -117)).stroke(0.35)
+    cv.color(gold).ellipse(*w(29, -121.5), 2.6, 2.6).stroke(0.5)
+
+
+def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
+    """``ancient_female.prop_back`` with a waving flag."""
+    if style.prop != "flag":
+        af.prop_back(cv, style, palette)
+        return
+    segment = af.shaft_segment(style.prop)
+    assert segment is not None
+    (x0, y0), (x1, y1) = segment
+    cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
+    _waved_flag(cv, palette, _pose(style).flag_wave)
+
+
 RIG: Final = KitRig(
     segments=SEGMENTS,
     joints=joints,
-    parts=MappingProxyType({"robe": robe, "sleeves": sleeves}),
+    parts=MappingProxyType({"robe": robe, "sleeves": sleeves, "prop_back": prop_back}),
 )

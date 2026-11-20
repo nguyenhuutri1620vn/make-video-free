@@ -223,3 +223,16 @@ def test_kneel_waist_closed(pose: Pose, palette: Any) -> None:
     for x in (-8.0, -4.0, 0.0, 4.0, 8.0):
         for dy in (-1.0, 0.0, 1.0):
             assert alpha[_px((x, waist_y + dy))] > 0.95
+
+
+def test_character_flag_waves(palette: Any) -> None:
+    still = _render(_style(palette, "flag", REST), palette, names=("prop_back",))
+    wave = _render(_style(palette, "flag", Pose(flag_wave=0.25)), palette, names=("prop_back",))
+    loop = _render(_style(palette, "flag", Pose(flag_wave=1.0)), palette, names=("prop_back",))
+    diff = np.abs(still - wave).max(axis=2)
+    ys, xs = np.nonzero(diff > 0.1)
+    assert len(ys) > 0
+    assert xs.min() / SCALE - 40 > 17.5  # the pole column never changes
+    assert np.abs(loop - still).max() < 0.02
+    pole_rows = slice(*(_px((17, -100))[:1] + _px((17, 0))[:1]))
+    assert np.abs(still[pole_rows] - wave[pole_rows]).max() == 0

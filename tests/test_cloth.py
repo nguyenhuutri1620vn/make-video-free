@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from history_shorts.scene.cloth import ClothWave, wave_point
+from history_shorts.cloth import ClothWave, wave_point
 
 POLE, WIDTH, AMP = 100.0, 80.0, 0.12
 

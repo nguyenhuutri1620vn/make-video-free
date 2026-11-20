@@ -11,12 +11,12 @@ import math
 from typing import Final
 
 from history_shorts.canvas import Canvas
+from history_shorts.cloth import ClothWave
 from history_shorts.compose import DrawContext, over
 from history_shorts.config import ElephantLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 
-from .cloth import ClothWave
 from .registry import LayerDrawer, PhaseDrawer, entry, phase_entry
 
 OUTLINE: Final = "gold"
