@@ -12,9 +12,10 @@ checked to be strings here; they are cross-checked against the theme later.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, fields
-from typing import Any, Literal, TypeVar, cast
+from typing import Any, Final, Literal, TypeVar, cast
 
 from history_shorts.validation import Ctx, is_int, is_number
 
@@ -36,6 +37,9 @@ T = TypeVar("T")
 
 Prop = Literal["flag", "spear", "oar", "none"]
 Depth = Literal["far", "mid", "near"]
+POSE_NAMES: tuple[str, ...] = ("standing", "kneeling", "seated")  # characters.actions.POSES
+CHARACTER_ID_RE: Final = re.compile(r"[a-z0-9_]{1,32}")
+V23_CHARACTER_KEYS: tuple[str, ...] = ("id", "pose", "on", "idle")
 DEPTH_NAMES: tuple[str, ...] = ("far", "mid", "near")  # living-slide planes, back to front
 # JSON key of a layer's depth override; not ``depth``, which ``lone_path`` already uses.
 PLANE_KEY = "plane"
@@ -63,6 +67,10 @@ class CharacterSpec:
     baseline: float | None = None
     height: float | None = None
     seed: int | None = None
+    id: str | None = None  # name an action's ``who`` refers to (2.3)
+    pose: str = "standing"  # pose at the start of the slide (2.3)
+    on: int | None = None  # index of the boat layer the character stands on (2.3)
+    idle: bool = True  # breathes and sways on a living slide (2.3)
 
 
 @dataclass(frozen=True, slots=True)
@@ -529,7 +537,20 @@ def parse_character(ctx: Ctx, raw: object) -> CharacterSpec:
         baseline=_opt_num(ctx, obj, "baseline", lo=0, hi=CANVAS_HEIGHT),
         height=_opt_num(ctx, obj, "height", positive=True),
         seed=_opt_int(ctx, obj, "seed", lo=0),
+        id=_character_id(ctx, obj),
+        pose=ctx.choice(obj, "pose", POSE_NAMES, default="standing"),
+        on=_opt_int(ctx, obj, "on", lo=0),
+        idle=ctx.bool_(obj, "idle", default=True),
     )
+
+
+def _character_id(ctx: Ctx, obj: Mapping[str, Any]) -> str | None:
+    if "id" not in obj:
+        return None
+    value = ctx.str_(obj, "id")
+    if not CHARACTER_ID_RE.fullmatch(value):
+        ctx.at("id").error("must match [a-z0-9_]{1,32}")
+    return value
 
 
 def _parse_characters(ctx: Ctx, value: object) -> tuple[CharacterSpec, ...]:

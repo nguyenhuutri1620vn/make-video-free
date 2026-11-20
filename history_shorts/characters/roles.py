@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Final
 
+from history_shorts.characters.actions import POSES
 from history_shorts.characters.kits.base import Variation, variation_for
 from history_shorts.characters.pose import Pose
 from history_shorts.config import CharacterSpec, Palette
@@ -93,6 +94,7 @@ def resolve_style(
         prop=resolved_prop(spec, preset),
         kit=preset.kit,
         variation=variation_for(spec.seed),
+        pose=None if spec.pose == "standing" else POSES[spec.pose],
     )
 
 

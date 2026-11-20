@@ -10,21 +10,30 @@ tag and text, and pixel masks for "no character covers another character's head"
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
 import numpy as np
 
-from history_shorts.characters.figure import FigureBoxes, figure_boxes, figure_mask, head_mask
+from history_shorts.characters.actions import ACTIONS
+from history_shorts.characters.figure import (
+    FigureBoxes,
+    figure_boxes,
+    figure_mask,
+    head_mask,
+    pose_union_boxes,
+)
 from history_shorts.characters.formations import PlacedCharacter, count_error
 from history_shorts.characters.kits import kit_named
+from history_shorts.characters.pose import Pose
 from history_shorts.characters.roles import (
     CharacterStyle,
     preset_for,
     resolve_style,
     resolved_prop,
 )
+from history_shorts.characters.timeline import action_seconds, timeline
 from history_shorts.chrome import FRAME_INNER_INSET, seal_box, tag_box, tag_too_wide
 from history_shorts.config import (
     BoatLayer,
@@ -43,6 +52,7 @@ from history_shorts.primitives import Box, FloatMask
 from history_shorts.scene.boat import CREW_COUNT_ERROR, MAX_CREW, crew_placements
 from history_shorts.scene.people import placed_characters
 from history_shorts.scene.templates import expand
+from history_shorts.script_config import SlideAction, slide_duration
 from history_shorts.text import (
     VIETNAMESE_CHARSET,
     TextFitError,
@@ -79,6 +89,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     _check_palette_refs(script, theme, issues)
     _check_kits(script, issues)
     _check_characters(script, theme, issues)
+    _check_actions(script, theme, issues)
     return issues.items
 
 
@@ -285,8 +296,11 @@ def _check_characters(script: Script, theme: Theme, issues: Issues) -> None:
             text = plan_text(slide, theme)
         except TextFitError:
             continue  # reported by the text-fit check
+        motions = _slide_motions(script, index, placed, theme)
         issues.items.extend(
-            check_overlaps(index, placed, text, theme, theme.palette, tag=slide.tag, file=name)
+            check_overlaps(
+                index, placed, text, theme, theme.palette, tag=slide.tag, file=name, motions=motions
+            )
         )
 
 
@@ -391,6 +405,7 @@ def check_overlaps(
     *,
     tag: str,
     file: str,
+    motions: Mapping[str, Sequence[Pose]] | None = None,
 ) -> list[Issue]:
     """FR-48 for one slide. ``placed`` is in draw order; each ``str`` is the JSON path.
 
@@ -410,6 +425,16 @@ def check_overlaps(
     issues: list[Issue] = []
     for item, style, path in placed:
         boxes = figure_boxes(style, item.placement)
+        if motions and path in motions:
+            moving = pose_union_boxes(style, item.placement, motions[path])
+            still = {label for label, _, _ in _figure_overlaps(boxes, targets)}
+            for label, mine, other in _figure_overlaps(moving, targets):
+                if label not in still:
+                    msg = (
+                        f"overlaps {label} while moving (character box {_fmt(mine)}, "
+                        f"{label} box {_fmt(other)})"
+                    )
+                    issues.append(Issue(file, path, msg, "error"))
         if not boxes.head.inside(FRAME_INNER):
             issues.append(
                 Issue(
@@ -452,3 +477,97 @@ def _head_cover_issues(placed: list[Styled], palette: Palette, file: str) -> lis
                 msg = f"covers the head of {placed[lower][2]} ({count} px)"
                 issues.append(Issue(file, placed[upper][2], msg, "error"))
     return issues
+
+
+# --------------------------------------------------------------------------------------
+# Character actions (M10, schema 2.3)
+# --------------------------------------------------------------------------------------
+
+MOTION_SAMPLES: Final = 25  # poses sampled over a slide for the FR-48 check while moving
+
+
+def _slide_ids(script: Script, index: int, theme: Theme) -> tuple[list[Styled], dict[str, str]]:
+    """Placed characters of slide ``index`` and their ids -> JSON path (problems ignored:
+    the character checks report them)."""
+    scene = script.slides[index].scene
+    if scene is None:
+        return [], {}
+    placed = _slide_placed(script.path.name, index, scene, theme, Issues())
+    return placed, {item.spec.id: path for item, _, path in placed if item.spec.id}
+
+
+def _slide_motions(
+    script: Script, index: int, placed: list[Styled], theme: Theme
+) -> dict[str, list[Pose]]:
+    """Sampled poses of each character that has actions on a living slide."""
+    slide = script.slides[index]
+    if not slide.actions or not slide.living:
+        return {}
+    seconds = slide_duration(slide, theme.video.fps)
+    out: dict[str, list[Pose]] = {}
+    for item, style, path in placed:
+        mine = [a for a in slide.actions if a.who == item.spec.id]
+        if not mine or any(a.do not in ACTIONS for a in mine):
+            continue
+        at = timeline(item.spec.pose, style.prop, mine, None, theme.living)
+        times = [seconds * k / (MOTION_SAMPLES - 1) for k in range(MOTION_SAMPLES)]
+        for action in mine:
+            length = action_seconds(action)
+            times += [action.at + length * k / 10 for k in range(11)]
+        out[path] = [at(min(t, seconds)) for t in times]
+    return out
+
+
+def _check_actions(script: Script, theme: Theme, issues: Issues) -> None:
+    name = script.path.name
+    for index, slide in enumerate(script.slides):
+        base = f"slides[{index}]"
+        placed, ids = _slide_ids(script, index, theme)
+        seen: dict[str, str] = {}
+        for item, _, path in placed:
+            cid = item.spec.id
+            if cid and cid in seen:
+                issues.error(name, f"{path}.id", f"duplicate character id '{cid}'")
+            if cid:
+                seen[cid] = path
+        if not slide.actions:
+            continue
+        if not slide.living:
+            issues.warning(name, f"{base}.actions", "actions only move on a living slide")
+        styles = {item.spec.id: (item.spec, style) for item, style, _ in placed if item.spec.id}
+        seconds = slide_duration(slide, theme.video.fps)
+        _check_action_list(name, base, slide.actions, styles, ids, seconds, issues)
+
+
+def _check_action_list(
+    name: str,
+    base: str,
+    actions: Sequence[SlideAction],
+    styles: Mapping[str, tuple[CharacterSpec, CharacterStyle]],
+    ids: Mapping[str, str],
+    seconds: float,
+    issues: Issues,
+) -> None:
+    known = ", ".join(sorted(ids)) or "none"
+    last_end: dict[str, tuple[float, int]] = {}
+    crouched = {cid: spec.pose != "standing" for cid, (spec, _) in styles.items()}
+    order = sorted(range(len(actions)), key=lambda k: actions[k].at)
+    for k in order:
+        action, where = actions[k], f"{base}.actions[{k}]"
+        if action.who not in ids:
+            issues.error(name, f"{where}.who", f"unknown character '{action.who}'; known: {known}")
+            continue
+        end = action.at + action_seconds(action)
+        if end > seconds + 1e-6:
+            issues.error(name, where, f"ends after the slide ({end:.2f} s > {seconds:.2f} s)")
+        prev = last_end.get(action.who)
+        if prev is not None and action.at < prev[0]:
+            issues.error(name, where, f"overlaps actions[{prev[1]}] of '{action.who}'")
+        last_end[action.who] = (end, k)
+        _, style = styles[action.who]
+        if action.do == "raise_flag" and style.prop != "flag":
+            issues.error(name, f"{where}.do", "raise_flag needs a character holding a flag")
+        if action.do == "stand_up" and not crouched[action.who]:
+            issues.error(name, f"{where}.do", "stand_up needs a kneeling or seated character")
+        if action.do in ("kneel", "sit", "stand_up"):
+            crouched[action.who] = action.do != "stand_up"

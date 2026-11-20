@@ -16,7 +16,13 @@ from typing import Any, Literal, cast
 
 from history_shorts.errors import Issue, Issues
 from history_shorts.narration import MAX_NARRATION_CHARS, normalise, pause_problems
-from history_shorts.scene_config import PLANE_KEY, LayerScene, TemplateScene, parse_scene
+from history_shorts.scene_config import (
+    PLANE_KEY,
+    V23_CHARACTER_KEYS,
+    LayerScene,
+    TemplateScene,
+    parse_scene,
+)
 from history_shorts.validation import Ctx, is_int, read_json_object
 
 SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
@@ -32,6 +38,7 @@ SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (
 SCHEMA_LEVELS: Mapping[str, int] = {v: n for n, v in enumerate(SUPPORTED_SCHEMA_VERSIONS)}
 NARRATED_LEVEL = 1
 LIVING_LEVEL = 2
+ANIMATED_LEVEL = 3
 SLIDE_ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 
 MAX_TAG_CHARS = 28
@@ -72,6 +79,11 @@ A2_KEYS: tuple[str, ...] = ("transition", "tone", "text_in", "sfx", "music_cut")
 
 # M9 (2.2): living slides and synthesized sound cues.
 V22_KEYS: tuple[str, ...] = ("living", "particles", "auto_sfx")
+V23_KEYS: tuple[str, ...] = ("actions",)
+# characters.actions.ACTIONS; kept here so the script parser does not import drawing code
+ACTION_NAMES: tuple[str, ...] = ("rally", "bow", "kneel", "sit", "stand_up", "raise_flag", "look")
+_ACTION_KEYS = ("who", "do", "at", "duration")
+ACTION_SECONDS: tuple[float, float] = (0.3, 10.0)
 SOUND_NAMES: tuple[str, ...] = ("gong", "drum", "bell", "whoosh", "wind", "water")
 BED_SOUNDS: tuple[str, ...] = ("wind", "water")  # need a ``duration``
 HIT_SOUNDS: tuple[str, ...] = ("gong", "drum")  # may ``shake`` the scene
@@ -105,6 +117,7 @@ _SLIDE_KEYS = (
     "narration",
     *A2_KEYS,
     *V22_KEYS,
+    *V23_KEYS,
 )
 _SFX_KEYS = ("file", "at", "gain_db", *V22_CUE_KEYS)
 _MUSIC_CUT_KEYS = ("at", "duration")
@@ -143,6 +156,16 @@ class MusicCut:
 
 
 @dataclass(frozen=True, slots=True)
+class SlideAction:
+    """Character ``who`` performs action ``do`` from ``at`` seconds into the slide (2.3)."""
+
+    who: str
+    do: str
+    at: float
+    duration: float | None = None  # None: the action's default length
+
+
+@dataclass(frozen=True, slots=True)
 class Slide:
     tag: str
     title: str
@@ -162,6 +185,7 @@ class Slide:
     living: bool = False  # parallax planes and ambient motion (2.2)
     particles: str = "none"
     auto_sfx: bool = True  # a whoosh on moving transitions into this slide (2.2)
+    actions: tuple[SlideAction, ...] = ()  # timed character actions (2.3)
 
 
 @dataclass(frozen=True, slots=True)
@@ -407,6 +431,66 @@ def _check_layer_depths(ctx: Ctx, obj: Mapping[str, Any]) -> None:
             where.error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
 
 
+def _scene_character_objects(
+    obj: Mapping[str, Any],
+) -> list[tuple[tuple[str | int, ...], dict[str, Any]]]:
+    """(JSON path parts, raw character object) for every character in a raw slide scene."""
+    scene = obj.get("scene")
+    if not isinstance(scene, dict):
+        return []
+    found: list[tuple[tuple[str | int, ...], dict[str, Any]]] = []
+
+    def collect(path: tuple[str | int, ...], items: object) -> None:
+        if isinstance(items, list):
+            for k, item in enumerate(items):
+                if isinstance(item, dict):
+                    found.append(((*path, k), item))
+
+    collect(("characters",), scene.get("characters"))
+    for b, boat in enumerate(scene.get("boats") or []):
+        if isinstance(boat, dict):
+            collect(("boats", b, "crew"), boat.get("crew"))
+    for n, layer in enumerate(scene.get("layers") or []):
+        if isinstance(layer, dict):
+            collect(("layers", n, "items"), layer.get("items"))
+            collect(("layers", n, "crew"), layer.get("crew"))
+    return found
+
+
+def _check_v23_keys(ctx: Ctx, obj: Mapping[str, Any]) -> None:
+    message = f'requires schema_version "{ANIMATED_SCHEMA_VERSION}"'
+    for key in V23_KEYS:
+        if key in obj:
+            ctx.at(key).error(message)
+    for path, item in _scene_character_objects(obj):
+        where = ctx.at("scene")
+        for part in path:
+            where = where.idx(part) if isinstance(part, int) else where.at(part)
+        for key in V23_CHARACTER_KEYS:
+            if key in item:
+                where.at(key).error(message)
+
+
+def _parse_action(ctx: Ctx, raw: object) -> SlideAction | None:
+    obj = ctx.mapping(raw, _ACTION_KEYS)
+    if not obj:
+        return None
+    errors = len(ctx.issues.errors)
+    who = ctx.str_(obj, "who")
+    do = ctx.choice(obj, "do", ACTION_NAMES)
+    at = ctx.num(obj, "at", default=0.0, lo=0, hi=MAX_SLIDE_SECONDS)
+    lo, hi = ACTION_SECONDS
+    duration = ctx.num(obj, "duration", lo=lo, hi=hi) if "duration" in obj else None
+    return SlideAction(who, do, at, duration) if len(ctx.issues.errors) == errors else None
+
+
+def _parse_actions(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[SlideAction, ...]:
+    if "actions" not in obj:
+        return ()
+    parsed = (_parse_action(c, raw) for c, raw in ctx.at("actions").items(obj["actions"]))
+    return tuple(a for a in parsed if a is not None)
+
+
 def _check_version_keys(ctx: Ctx, obj: Mapping[str, Any], level: int) -> None:
     if level < NARRATED_LEVEL:
         for key in ("id", "narration", *A2_KEYS):
@@ -417,6 +501,8 @@ def _check_version_keys(ctx: Ctx, obj: Mapping[str, Any], level: int) -> None:
             if key in obj:
                 ctx.at(key).error(f'requires schema_version "{LIVING_SCHEMA_VERSION}"')
         _check_layer_depths(ctx, obj)
+    if level < ANIMATED_LEVEL:
+        _check_v23_keys(ctx, obj)
 
 
 def _parse_slide(
@@ -456,6 +542,7 @@ def _parse_slide(
         living=ctx.bool_(obj, "living", default=False),
         particles=ctx.choice(obj, "particles", PARTICLE_NAMES, default="none"),
         auto_sfx=ctx.bool_(obj, "auto_sfx", default=True),
+        actions=_parse_actions(ctx, obj),
     )
 
 

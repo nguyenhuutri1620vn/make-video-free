@@ -53,7 +53,12 @@ GROUP_FORMATION: Final = "centre_pair"
 GROUP_BASELINE: Final = 1100.0
 # front tier first, as the centre_pair formation expects (leaders, then generals, then outer)
 GROUP_ROLES: Final = ("leader", "leader", "general_alt", "general_alt", "general", "general")
-GROUP_CHARACTERS: Final = tuple(CharacterSpec(role=role) for role in GROUP_ROLES)
+# Default ids (2.3) let a script's actions name template characters: role plus 1 or 2.
+GROUP_IDS: Final = ("leader_1", "leader_2", "general_alt_1", "general_alt_2", "general_1",
+                    "general_2")  # fmt: skip
+GROUP_CHARACTERS: Final = tuple(
+    CharacterSpec(role=role, id=cid) for role, cid in zip(GROUP_ROLES, GROUP_IDS, strict=True)
+)
 GROUP_GROUND_COLORS: Final = ("black", "deep", "black")
 GROUP_SHEEN: Final = SheenSpec(x=360, y=700, r=640, strength=0.10)
 
@@ -103,8 +108,8 @@ LANDSCAPE_BOATS: Final = (
         y=1056,
         scale=1.5,
         crew=(
-            CharacterSpec("leader", facing=1, x=300, baseline=1048, height=150),
-            CharacterSpec("boat_crew", facing=-1, x=250, baseline=1050, height=120),
+            CharacterSpec("leader", facing=1, x=300, baseline=1048, height=150, id="crew_1"),
+            CharacterSpec("boat_crew", facing=-1, x=250, baseline=1050, height=120, id="crew_2"),
         ),
     ),
     BoatLayer(
@@ -112,8 +117,8 @@ LANDSCAPE_BOATS: Final = (
         y=1104,
         scale=1.25,
         crew=(
-            CharacterSpec("general", facing=1, x=760, baseline=1098, height=125),
-            CharacterSpec("boat_crew", facing=1, x=815, baseline=1100, height=110),
+            CharacterSpec("general", facing=1, x=760, baseline=1098, height=125, id="crew_3"),
+            CharacterSpec("boat_crew", facing=1, x=815, baseline=1100, height=110, id="crew_4"),
         ),
     ),
 )
