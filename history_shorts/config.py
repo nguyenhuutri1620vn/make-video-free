@@ -303,6 +303,7 @@ class LivingSpec:
     glow_pulse: float = 0.03
     flame_px: float = 10.0  # furnace units a flame tip moves (M10)
     flame_glow: float = 0.08  # relative pulse of a fire's halo
+    smoke_sway_px: float = 8.0  # temple units an incense smoke curve sways
     particle_count: int = 14
     particle_colors: Mapping[str, str] = field(
         default_factory=lambda: _proxy({"petals": "pink", "dust": "gold_lt", "embers": "vermilion"})
@@ -607,6 +608,7 @@ _LIVING_NUMBERS: Final[Mapping[str, tuple[float, float]]] = MappingProxyType(
         "glow_pulse": (0, 0.3),
         "flame_px": (0, 40),
         "flame_glow": (0, 0.3),
+        "smoke_sway_px": (0, 40),
     }
 )
 

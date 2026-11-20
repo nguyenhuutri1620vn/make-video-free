@@ -7,6 +7,7 @@ under ``translate(x, y)`` and ``scale(scale)``: ``y`` is the ground line, the ga
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Final
 
@@ -16,7 +17,7 @@ from history_shorts.config import TempleLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import FloatImage
 
-from .registry import LayerDrawer, entry
+from .registry import LayerDrawer, PhaseDrawer, entry, phase_entry
 
 OUTLINE: Final = "gold"
 OUTLINE_WIDTH: Final = 1.4
@@ -61,6 +62,9 @@ SMOKE_COLOR: Final = "gold_lt"
 SMOKE_ALPHA: Final = 0.45
 SMOKE_WIDTH: Final = 1.5
 SMOKE_HEIGHT: Final = 110.0
+# M10: a sway wave travels up each smoke curve; each control point lags the one below it
+SMOKE_LAG: Final = (0.0, math.pi / 2, math.pi)  # first control, second control, top
+SMOKE_STICK_SHIFT: Final = 0.37  # loop fraction between neighbouring sticks, so they differ
 
 
 def _roof_path(cv: Canvas, cx: float, half: float, eave: float, ridge: float) -> None:
@@ -136,20 +140,43 @@ def _steps(cv: Canvas, ctx: DrawContext) -> None:
         bottom = top
 
 
-def _burners(cv: Canvas, ctx: DrawContext) -> None:
+def _smoke_shift(ctx: DrawContext, phase: float, stick: int) -> tuple[float, float, float]:
+    """x offsets of a smoke curve's two controls and top; zero at phase 0."""
+    amp = ctx.theme.living.smoke_sway_px
+    turn = 2 * math.pi * phase
+    shift = 2 * math.pi * SMOKE_STICK_SHIFT * stick
+
+    def at(lag: float) -> float:
+        return amp * (math.sin(turn - lag + shift) - math.sin(shift - lag))
+
+    first, second, top = SMOKE_LAG
+    return at(first), at(second), at(top)
+
+
+def _burners(cv: Canvas, ctx: DrawContext, phase: float) -> None:
     pal = ctx.palette
-    for x in BURNER_X:
+    for b, x in enumerate(BURNER_X):
         cv.M(x - 16, -2).L(x - 20, -26).C(x - 20, -34, x + 20, -34, x + 20, -26).L(x + 16, -2)
         cv.Z().color(pal[BURNER_FILL]).fill(keep=True).color(pal[OUTLINE]).stroke(OUTLINE_THIN)
         cv.M(x - 26, -30).L(x + 26, -30).color(pal[OUTLINE]).stroke(OUTLINE_WIDTH * 1.6)
         for k, dx in enumerate((-6.0, 6.0)):
             sway = 10.0 if k else -10.0
             top = -34 - SMOKE_HEIGHT
-            cv.M(x + dx, -34).C(x + dx + sway, -64, x + dx - sway, -94, x + dx + sway * 0.6, top)
+            c1, c2, c3 = _smoke_shift(ctx, phase, 2 * b + k)
+            cv.M(x + dx, -34).C(
+                x + dx + sway + c1, -64, x + dx - sway + c2, -94, x + dx + sway * 0.6 + c3, top
+            )
             cv.color(pal[SMOKE_COLOR], SMOKE_ALPHA).stroke(SMOKE_WIDTH)
 
 
 def draw_temple(img: FloatImage, layer: TempleLayer, ctx: DrawContext, index: int) -> FloatImage:
+    return draw_temple_at(img, layer, ctx, index, 0.0)
+
+
+def draw_temple_at(
+    img: FloatImage, layer: TempleLayer, ctx: DrawContext, index: int, phase: float
+) -> FloatImage:
+    """The temple at loop ``phase``: only the incense smoke sways (M10)."""
     cv = Canvas(CANVAS_W, CANVAS_H)
     cv.save()
     cv.translate(layer.x, layer.y)
@@ -159,9 +186,10 @@ def draw_temple(img: FloatImage, layer: TempleLayer, ctx: DrawContext, index: in
         _side_bay(cv, ctx, bay)
     _centre_bay(cv, ctx)
     if layer.incense:
-        _burners(cv, ctx)
+        _burners(cv, ctx, phase)
     cv.restore()
     return over(img, cv)
 
 
 DRAWERS: dict[type, LayerDrawer] = dict([entry(TempleLayer, draw_temple)])
+PHASE_DRAWERS: dict[type, PhaseDrawer] = dict([phase_entry(TempleLayer, draw_temple_at)])

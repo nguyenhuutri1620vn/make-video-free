@@ -9,7 +9,8 @@ from helpers.phase import check_phase_drawer, draw_at, moved_box
 
 from history_shorts.scene import PHASE_DRAWERS
 from history_shorts.scene.furnace import draw_furnace_at
-from history_shorts.scene_config import FurnaceLayer
+from history_shorts.scene.temple import draw_temple_at
+from history_shorts.scene_config import FurnaceLayer, TempleLayer
 
 FURNACE = FurnaceLayer(540, 1300, 1.4)
 
@@ -32,3 +33,28 @@ def test_furnace_flames_move_kiln_still(flat_base: Callable[[], Any], ctx: Any) 
     kiln = draw_at(base, FURNACE, ctx, 0.0)[rim_y:mouth_y, 470:610]
     moved = draw_at(base, FURNACE, ctx, 0.4)[rim_y:mouth_y, 470:610]
     assert (abs(kiln - moved) <= 1 / 255).all()
+
+
+TEMPLE = TempleLayer(540, 1200, 1.5, True)
+
+
+def test_temple_registered() -> None:
+    assert PHASE_DRAWERS[TempleLayer] is draw_temple_at
+
+
+def test_temple_phase_drawer(flat_base: Callable[[], Any], ctx: Any) -> None:
+    check_phase_drawer(flat_base(), TEMPLE, ctx)
+
+
+def test_temple_only_smoke_moves(flat_base: Callable[[], Any], ctx: Any) -> None:
+    base = flat_base()
+    box = moved_box(draw_at(base, TEMPLE, ctx, 0.0), draw_at(base, TEMPLE, ctx, 0.3))
+    assert box is not None
+    burner_top = TEMPLE.y + TEMPLE.scale * -34
+    assert box[3] <= burner_top + 3  # nothing below the incense sticks moves
+
+
+def test_temple_without_incense_is_still(flat_base: Callable[[], Any], ctx: Any) -> None:
+    bare = TempleLayer(540, 1200, 1.5, False)
+    base = flat_base()
+    assert moved_box(draw_at(base, bare, ctx, 0.0), draw_at(base, bare, ctx, 0.3)) is None
