@@ -1,0 +1,104 @@
+{
+  "schema_version": "2.3",
+  "title": "Animated people test",
+  "sources": [
+    "Test fixture"
+  ],
+  "slides": [
+    {
+      "title": "Mê Linh, năm 40",
+      "subtitle": "Nơi cuộc khởi nghĩa bắt đầu",
+      "scene": {
+        "template": "landscape"
+      },
+      "living": true,
+      "duration": 5
+    },
+    {
+      "title": "Trưng Vương",
+      "subtitle": "Trưng Trắc lên ngôi vua, đóng đô ở Mê Linh.",
+      "scene": {
+        "template": "group",
+        "characters": [
+          {
+            "role": "leader"
+          },
+          {
+            "role": "leader"
+          }
+        ]
+      },
+      "living": true,
+      "duration": 5
+    },
+    {
+      "title": "Hai Bà Trưng",
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 880,
+            "amp": 1.0
+          },
+          {
+            "type": "clouds",
+            "items": [
+              {
+                "x": 270,
+                "y": 330,
+                "scale": 0.8
+              },
+              {
+                "x": 860,
+                "y": 330,
+                "scale": 0.8,
+                "flip": -1
+              }
+            ]
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "hills",
+            "side": "right",
+            "base": 1100,
+            "top": 920
+          },
+          {
+            "type": "ground",
+            "y": 1092,
+            "height": 52
+          },
+          {
+            "type": "characters",
+            "baseline": 1100,
+            "formation": "line",
+            "items": [
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              },
+              {
+                "role": "general_alt"
+              },
+              {
+                "role": "general"
+              }
+            ]
+          }
+        ]
+      },
+      "living": true,
+      "duration": 5
+    }
+  ]
+}
