@@ -22,13 +22,14 @@ from history_shorts.canvas import Canvas, ColorStop
 from history_shorts.compose import DrawContext, fill_mask, over
 from history_shorts.config import ArtworkLayer
 from history_shorts.layout import CANVAS_H, CANVAS_W
-from history_shorts.primitives import FloatImage
+from history_shorts.primitives import FloatImage, FloatMask
 from history_shorts.textures import gold_leaf
 
-from .inlay import cell_and_gap, inlay_fill
+from .inlay import cell_and_gap, eggshell_texture
 from .registry import WHITE, LayerDrawer, PhaseDrawer, entry, phase_entry
 
 MIN_TEXTURE_PX = 2  # smallest gold-leaf tile / eggshell cell after scaling
+MIN_GAP_PX = 0.5  # thinnest eggshell gap after scaling
 
 
 def _place(cv: Canvas, layer: ArtworkLayer) -> None:
@@ -86,6 +87,13 @@ def _shape_mask(layer: ArtworkLayer, shapes: Mapping[str, Part], part: Part) -> 
     return shape
 
 
+def _window(mask: FloatMask) -> tuple[slice, slice] | None:
+    ys, xs = np.nonzero(mask > 0)
+    if not len(ys):
+        return None
+    return slice(int(ys.min()), int(ys.max()) + 1), slice(int(xs.min()), int(xs.max()) + 1)
+
+
 def _texture(
     img: FloatImage,
     ctx: DrawContext,
@@ -94,28 +102,33 @@ def _texture(
     shapes: Mapping[str, Part],
     part: Part,
 ) -> FloatImage:
-    """A gold-leaf or eggshell part: texture inside its mask only; sizes in artwork units."""
+    """A gold-leaf or eggshell part: texture inside its mask only, faded by the part's
+    alpha; sizes (tile, cell, gap) are artwork units scaled with the layer."""
     fill = part.fill
     assert isinstance(fill, Texture)
+    mask = _shape_mask(layer, shapes, part).mask()
+    window = _window(mask)
+    if window is None:
+        return img
+    rows, cols = window
     if fill.kind == "gold_leaf":
         spec = ctx.theme.textures.gold_leaf
         tile = max(MIN_TEXTURE_PX, round((fill.tile or spec.tile) * layer.scale))
         worn = spec.worn if fill.worn is None else fill.worn
-        mask = _shape_mask(layer, shapes, part).mask() * _alpha(part.alpha)
-        tex = gold_leaf(ctx.rng(index), ctx.palette, tile, worn, width=CANVAS_W, height=CANVAS_H)
-        return fill_mask(img, tex, mask)
-    cell, gap = cell_and_gap(ctx, None, fill.gap)
-    cell = max(MIN_TEXTURE_PX, round((fill.cell or cell) * layer.scale))
-
-    def paint(cv: Canvas) -> None:
-        cv.save()
-        _place(cv, layer)
-        _clip(cv, shapes, part)
-        trace(cv, part.ops)
-        cv.fill()
-        cv.restore()
-
-    return inlay_fill(img, ctx, index, paint, cell, gap)
+        h, w = rows.stop - rows.start, cols.stop - cols.start
+        tex = gold_leaf(ctx.rng(index), ctx.palette, tile, worn, width=w, height=h)
+    else:
+        cell, gap = cell_and_gap(ctx, None, None)
+        cell = max(MIN_TEXTURE_PX, round((fill.cell or cell) * layer.scale))
+        gap = max(MIN_GAP_PX, (gap if fill.gap is None else fill.gap) * layer.scale)
+        crop, (y0, x0) = eggshell_texture(ctx, index, mask, cell, gap)
+        tex = np.zeros((*mask.shape, 3), dtype=np.float32)
+        tex[y0 : y0 + crop.shape[0], x0 : x0 + crop.shape[1]] = crop
+        tex = tex[rows, cols]
+    out = np.asarray(img, dtype=np.float32).copy()
+    faded = mask[rows, cols] * _alpha(part.alpha)
+    out[rows, cols] = fill_mask(out[rows, cols], tex, faded)
+    return out
 
 
 def draw_parts(

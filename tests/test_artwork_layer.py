@@ -167,3 +167,50 @@ def test_default_plane_from_file(art_theme: Any, tmp_script: ScriptFactory) -> N
     one = {"title": "A", "living": True, "scene": {"layers": [layers[1] | {"plane": "far"}]}}
     script = load_script(tmp_script(slides=[one], extra={"schema_version": "2.3"}))[0]
     assert scene_layers(script.slides[0], art_theme)[1] == ("far",)
+
+
+@pytest.fixture
+def faint_theme(art_theme: Any) -> Any:
+    folder = art_theme.path.parent / "artwork"
+    for kind, extra in (("gold_leaf", {"tile": 20}), ("eggshell", {"cell": 12})):
+        for alpha in (1.0, 0.2):
+            part = {"id": "disc", "ellipse": [0, -60, 60, 60], "alpha": alpha,
+                    "fill": {"texture": kind, **extra}}  # fmt: skip
+            name = f"{kind}_{int(alpha * 10)}"
+            data = {"artwork": "1", "parts": [part]}
+            (folder / f"{name}.json").write_text(json.dumps(data), encoding="utf-8")
+    return art_theme
+
+
+@pytest.mark.parametrize("kind", ["gold_leaf", "eggshell"])
+def test_texture_honours_part_alpha(kind: str, faint_theme: Any) -> None:  # review 1
+    full = _draw(faint_theme, f"{kind}_10")[930:950, 530:550].mean()
+    faint = _draw(faint_theme, f"{kind}_2")[930:950, 530:550].mean()
+    assert faint == pytest.approx(full * 0.2, rel=0.15)
+
+
+def test_eggshell_gap_scales_with_layer(art_theme: Any) -> None:  # review 2
+    def gap_share(scale: float) -> float:
+        img = _draw(art_theme, "shell", y=1500, scale=scale)
+        r = 60 * scale * 0.6
+        yy, xx = np.mgrid[0:1920, 0:1080]
+        inside = (xx - 540) ** 2 + (yy - (1500 - 60 * scale)) ** 2 <= r * r
+        lum = img[inside].mean(axis=1)
+        return float((lum < 0.45).mean())
+
+    assert gap_share(1.0) == pytest.approx(gap_share(3.0), abs=0.08)
+
+
+def test_gold_leaf_drawn_in_its_box_only(art_theme: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    from history_shorts.scene import artwork as mod
+
+    sizes: list[tuple[int, int]] = []
+    real = mod.gold_leaf
+
+    def spy(*args: Any, **kw: Any) -> Any:
+        sizes.append((kw["width"], kw["height"]))
+        return real(*args, **kw)
+
+    monkeypatch.setattr(mod, "gold_leaf", spy)
+    _draw(art_theme, "leaf")
+    assert sizes and all(w <= 130 and h <= 130 for w, h in sizes)  # review 5

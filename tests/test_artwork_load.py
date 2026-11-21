@@ -186,3 +186,23 @@ def test_library_reloads_changed_file(tmp_path: Path, palette: Any) -> None:  # 
 
 def test_library_missing_dir(tmp_path: Path) -> None:
     assert ArtworkLibrary(tmp_path / "none").names() == []
+
+
+@pytest.mark.parametrize(
+    ("fill", "message"),
+    [
+        ({"texture": "eggshell", "alpha": 0.3}, "'alpha' does not apply to a texture fill"),
+        (
+            {"color": "gold", "gradient": ["gold", "gold_dk"]},
+            "give one of color, gradient, stops, texture",
+        ),
+        ({"color": "gold", "tile": 3}, "'tile' does not apply to a color fill"),
+        ({"stops": [["gold", 1, 0], ["gold", 0, 1]], "radial": [0, 0, 0]}, "radius must be > 0"),
+        ({"stops": [["gold", True, 0], ["gold", 0, 1]]}, "alpha and offset must be 0 to 1"),
+    ],
+)
+def test_fill_keys_and_radius(
+    fill: dict[str, Any], message: str, tmp_path: Path, palette: Any
+) -> None:
+    errors = _errors(tmp_path, palette, _with(d="M 0 0 L 1 1", fill=fill))  # review 3, 4
+    assert any("parts[5].fill" in e and message in e for e in errors), errors

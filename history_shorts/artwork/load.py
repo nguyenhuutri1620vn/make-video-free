@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import Any, Final, Literal, cast
 
 from history_shorts.artwork.model import (
     Artwork,
@@ -142,7 +142,10 @@ def _stops(
             continue
         key = _palette_key(here, stop[0], palette)
         alpha, offset = stop[1], stop[2]
-        if not all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in (alpha, offset)):
+        numeric = all(
+            isinstance(v, (int, float)) and not isinstance(v, bool) for v in (alpha, offset)
+        )
+        if not numeric or not all(0 <= v <= 1 for v in (alpha, offset)):
             here.error("alpha and offset must be 0 to 1")
             continue
         out.append((key, float(alpha), float(offset)))
@@ -152,35 +155,67 @@ def _stops(
     return tuple(out)
 
 
+FILL_KINDS: Final = ("color", "gradient", "stops", "texture")
+FILL_KEYS: Final[Mapping[str, tuple[str, ...]]] = {
+    "color": ("color", "alpha"),
+    "gradient": ("gradient", "dir", "radial"),
+    "stops": ("stops", "dir", "radial"),
+    "texture": ("texture", "tile", "worn", "cell", "gap"),
+}
+
+
+def _fill_kind(ctx: Ctx, obj: Mapping[str, Any]) -> str | None:
+    """The one fill kind ``obj`` gives; every other key must belong to that kind."""
+    kinds = [k for k in FILL_KINDS if k in obj]
+    if len(kinds) != 1:
+        ctx.error(f"give one of {', '.join(FILL_KINDS)}")
+        return None
+    kind = kinds[0]
+    for key in obj:
+        if key not in FILL_KEYS[kind]:
+            ctx.at(key).error(f"'{key}' does not apply to a {kind} fill")
+    return kind
+
+
+def _radial(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[float, float, float] | None:
+    if "radial" not in obj:
+        return None
+    n = _numbers(ctx, obj, "radial", (3,))
+    if not n:
+        return None
+    if n[2] <= 0:
+        ctx.at("radial").error("radius must be > 0")
+        return None
+    return (n[0], n[1], n[2])
+
+
 def _fill(ctx: Ctx, raw: object, palette: Palette) -> Fill | None:
-    obj = ctx.mapping(raw, ("color", "alpha", "gradient", "dir", "stops", "radial", "texture",
-                            "tile", "worn", "cell", "gap"))  # fmt: skip
+    obj = ctx.mapping(raw, tuple(k for keys in FILL_KEYS.values() for k in keys))
     if not obj:
         return None
-    if "texture" in obj:
-        kind = cast(TextureKind, ctx.choice(obj, "texture", TEXTURE_KINDS))
+    kind = _fill_kind(ctx, obj)
+    if kind == "texture":
+        texture = cast(TextureKind, ctx.choice(obj, "texture", TEXTURE_KINDS))
         opt = {k: ctx.num(obj, k, positive=True) if k in obj else None for k in ("tile", "cell")}
         worn = ctx.num(obj, "worn", lo=0, hi=1) if "worn" in obj else None
         gap = ctx.num(obj, "gap", lo=0, hi=10) if "gap" in obj else None
-        return Texture(kind, opt["tile"], worn, opt["cell"], gap)
-    radial = None
-    if "radial" in obj:
-        n = _numbers(ctx, obj, "radial", (3,))
-        radial = (n[0], n[1], n[2]) if n else None
-    direction = ctx.choice(obj, "dir", ("v", "h"), default="v")
-    if "stops" in obj:
-        return Gradient(_stops(ctx, obj, palette), None if radial else direction, radial)  # type: ignore[arg-type]
-    if "gradient" in obj:
+        return Texture(texture, opt["tile"], worn, opt["cell"], gap)
+    if kind in ("gradient", "stops"):
+        radial = _radial(ctx, obj)
+        direction = cast(Literal["v", "h"], ctx.choice(obj, "dir", ("v", "h"), default="v"))
+        if kind == "stops":
+            return Gradient(_stops(ctx, obj, palette), None if radial else direction, radial)
         pair = obj["gradient"]
         gc = ctx.at("gradient")
         if not (isinstance(pair, list) and len(pair) == 2):
             gc.error("must be [palette key, palette key]")
             return None
         a, b = (_palette_key(gc.idx(k), pair[k], palette) for k in (0, 1))
-        stops = ((a, 1.0, 0.0), (b, 1.0, 1.0))
-        return Gradient(stops, None if radial else direction, radial)  # type: ignore[arg-type]
-    color = _palette_key(ctx.at("color"), obj.get("color"), palette)
-    return Solid(color, ctx.num(obj, "alpha", default=1.0, lo=0, hi=1))
+        return Gradient(((a, 1.0, 0.0), (b, 1.0, 1.0)), None if radial else direction, radial)
+    if kind == "color":
+        color = _palette_key(ctx.at("color"), obj.get("color"), palette)
+        return Solid(color, ctx.num(obj, "alpha", default=1.0, lo=0, hi=1))
+    return None
 
 
 def _stroke(ctx: Ctx, raw: object, palette: Palette) -> Stroke | None:
