@@ -59,8 +59,10 @@ def test_defaults_resolve_to_preset_colours(role: str, palette: Any) -> None:
         palette[preset.trim] == palette["gold"],
         preset.crest,
         preset.prop,
+        kit=preset.kit,
         armour=palette[preset.armour],
         banner=palette[preset.banner],
+        variant=preset.variant,
     )
 
 
