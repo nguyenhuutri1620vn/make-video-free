@@ -1,0 +1,27 @@
+{
+ "artwork": "1",
+ "title": "Đuốc",
+ "description": "A bamboo torch with a bound head and a three-layer flame under a soft halo. Original artwork.",
+ "plane": "near",
+ "parts": [
+  {"id": "halo", "ellipse": [0, -205, 62, 62],
+   "fill": {"stops": [["gold_lt", 0.32, 0], ["vermilion", 0.12, 0.55], ["vermilion", 0, 1]], "radial": [0, -205, 62]},
+   "motion": {"kind": "pulse", "amp": 0.25}},
+  {"id": "pole", "d": "M -4 0 L -3.4 -150 L 3.4 -150 L 4 0 Z",
+   "fill": {"gradient": ["brown_lt", "brown"], "dir": "h"},
+   "stroke": {"color": "gold_dk", "width": 1}},
+  {"id": "nodes", "d": "M -4 -40 L 4 -40 M -3.8 -85 L 3.8 -85 M -3.6 -125 L 3.6 -125",
+   "stroke": {"color": "gold_dk", "width": 1.4}},
+  {"id": "binding", "rect": [-8, -172, 16, 24, 3],
+   "fill": {"gradient": ["vermilion_dk", "brown"], "dir": "v"},
+   "stroke": {"color": "gold_dk", "width": 1}},
+  {"id": "wraps", "d": "M -8 -165 L 8 -161 M -8 -158 L 8 -154", "clip": "binding",
+   "stroke": {"color": "gold", "width": 1}},
+  {"id": "flame_outer", "d": "M -13 -170 C -19 -196 -6 -216 0 -242 C 6 -216 19 -196 13 -170 Z",
+   "fill": {"color": "vermilion"}, "motion": {"kind": "flicker", "amp": 6}},
+  {"id": "flame_inner", "d": "M -8 -170 C -11 -189 -3 -204 0 -222 C 3 -204 11 -189 8 -170 Z",
+   "fill": {"color": "gold"}, "motion": {"kind": "flicker", "amp": 4}},
+  {"id": "flame_core", "d": "M -4 -170 C -5 -181 -1 -191 0 -200 C 1 -191 5 -181 4 -170 Z",
+   "fill": {"color": "gold_lt"}, "motion": {"kind": "flicker", "amp": 2}}
+ ]
+}

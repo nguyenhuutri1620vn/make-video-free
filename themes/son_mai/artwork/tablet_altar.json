@@ -1,0 +1,334 @@
+{
+ "artwork": "1",
+ "title": "Bàn thờ bài vị",
+ "description": "A blank memorial tablet on an altar with candles and incense; the file form of the Python tablet layer. Original artwork.",
+ "plane": "near",
+ "parts": [
+  {
+   "id": "altar_body",
+   "d": "M -122.0 -114.0 H 122.0 V 0.0 H -122.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "altar_panel",
+   "d": "M -108.0 -100.0 H 108.0 V -14.0 H -108.0 Z",
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "altar_top",
+   "d": "M -140.0 -130.0 H 140.0 V -114.0 H -140.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "pedestal",
+   "d": "M -52.0 -160.0 H 52.0 V -130.0 H -52.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "tablet",
+   "d": "M -36.0 -160.0 L -36.0 -320.0 C -36.0 -342.0 -14.4 -348.0 0.0 -342.0 C 14.4 -348.0 36.0 -342.0 36.0 -320.0 L 36.0 -160.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "plaque",
+   "d": "M -22.0 -300.0 H 22.0 V -176.0 H -22.0 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "candle_0",
+   "d": "M -109.0 -176.0 H -91.0 V -130.0 H -109.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "glow_0",
+   "ellipse": [
+    -100.0,
+    -188.0,
+    26,
+    26
+   ],
+   "fill": {
+    "stops": [
+     [
+      "gold_lt",
+      0.3,
+      0
+     ],
+     [
+      "gold_lt",
+      0,
+      1
+     ]
+    ],
+    "radial": [
+     -100.0,
+     -188.0,
+     26
+    ]
+   },
+   "motion": {
+    "kind": "pulse",
+    "amp": 0.15
+   }
+  },
+  {
+   "id": "flame_0",
+   "d": "M -100.0 -198.0 C -94.0 -188.0 -95.0 -180.0 -100.0 -180.0 C -105.0 -180.0 -106.0 -188.0 -100.0 -198.0 Z",
+   "fill": {
+    "color": "gold_lt"
+   },
+   "motion": {
+    "kind": "flicker",
+    "amp": 2
+   }
+  },
+  {
+   "id": "candle_1",
+   "d": "M 91.0 -176.0 H 109.0 V -130.0 H 91.0 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "glow_1",
+   "ellipse": [
+    100.0,
+    -188.0,
+    26,
+    26
+   ],
+   "fill": {
+    "stops": [
+     [
+      "gold_lt",
+      0.3,
+      0
+     ],
+     [
+      "gold_lt",
+      0,
+      1
+     ]
+    ],
+    "radial": [
+     100.0,
+     -188.0,
+     26
+    ]
+   },
+   "motion": {
+    "kind": "pulse",
+    "amp": 0.15
+   }
+  },
+  {
+   "id": "flame_1",
+   "d": "M 100.0 -198.0 C 106.0 -188.0 105.0 -180.0 100.0 -180.0 C 95.0 -180.0 94.0 -188.0 100.0 -198.0 Z",
+   "fill": {
+    "color": "gold_lt"
+   },
+   "motion": {
+    "kind": "flicker",
+    "amp": 2
+   }
+  },
+  {
+   "id": "stick_0",
+   "d": "M -10.0 -146.0 L -14.0 -216.0",
+   "stroke": {
+    "color": "vermilion_dk",
+    "width": 2.0
+   }
+  },
+  {
+   "id": "ember_0",
+   "ellipse": [
+    -14.0,
+    -216.0,
+    2.2,
+    2.2
+   ],
+   "fill": {
+    "color": "gold_lt"
+   }
+  },
+  {
+   "id": "smoke_0",
+   "d": "M -14.0 -216.0 C -22.0 -240.0 -4.0 -260.0 -12.0 -286.0",
+   "stroke": {
+    "color": "egg_tone",
+    "width": 1.4,
+    "alpha": 0.35
+   },
+   "motion": {
+    "kind": "rise",
+    "amp": 4
+   }
+  },
+  {
+   "id": "stick_1",
+   "d": "M 0.0 -146.0 L 0.0 -216.0",
+   "stroke": {
+    "color": "vermilion_dk",
+    "width": 2.0
+   }
+  },
+  {
+   "id": "ember_1",
+   "ellipse": [
+    0.0,
+    -216.0,
+    2.2,
+    2.2
+   ],
+   "fill": {
+    "color": "gold_lt"
+   }
+  },
+  {
+   "id": "smoke_1",
+   "d": "M 0.0 -216.0 C -8.0 -240.0 10.0 -260.0 2.0 -286.0",
+   "stroke": {
+    "color": "egg_tone",
+    "width": 1.4,
+    "alpha": 0.35
+   },
+   "motion": {
+    "kind": "rise",
+    "amp": 4
+   }
+  },
+  {
+   "id": "stick_2",
+   "d": "M 10.0 -146.0 L 14.0 -216.0",
+   "stroke": {
+    "color": "vermilion_dk",
+    "width": 2.0
+   }
+  },
+  {
+   "id": "ember_2",
+   "ellipse": [
+    14.0,
+    -216.0,
+    2.2,
+    2.2
+   ],
+   "fill": {
+    "color": "gold_lt"
+   }
+  },
+  {
+   "id": "smoke_2",
+   "d": "M 14.0 -216.0 C 6.0 -240.0 24.0 -260.0 16.0 -286.0",
+   "stroke": {
+    "color": "egg_tone",
+    "width": 1.4,
+    "alpha": 0.35
+   },
+   "motion": {
+    "kind": "rise",
+    "amp": 4
+   }
+  },
+  {
+   "id": "bowl",
+   "d": "M -30.0 -146.0 C -30.0 -125.2 30.0 -125.2 30.0 -146.0 Z",
+   "fill": {
+    "gradient": [
+     "gold",
+     "gold_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "bowl_rim",
+   "ellipse": [
+    0.0,
+    -146.0,
+    30.0,
+    4
+   ],
+   "stroke": {
+    "color": "gold",
+    "width": 0.9
+   }
+  }
+ ]
+}

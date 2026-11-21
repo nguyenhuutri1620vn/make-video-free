@@ -185,7 +185,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-48 | No character or prop overlaps the seal, the tag pill, a text box, or another character's head.                                     | M   |
 | FR-49 | Character variety: per-character `seed` that varies hair bun size, sash length, and hem dot spacing within ±10 %.                  | S   |
 | FR-50 | Poses `kneeling`, `seated`, `riding_elephant`; props `sword`, `drum`.                                                               | C   |
-| FR-51 | Character parts may be authored as SVG in Inkscape and loaded instead of procedural parts (requires an SVG renderer approved under C-03). | C |
+| FR-51 | Character parts may be authored as SVG in Inkscape and loaded instead of procedural parts (requires an SVG renderer approved under C-03). Scene objects use artwork files instead (A.6). | C |
 
 ### 5.6 Lacquer textures and finish
 
@@ -948,6 +948,33 @@ On a 2.3 living slide, without any new field: furnace flames flicker, temple inc
 | AC-36 | A carried character moves with its boat within 1 px. |
 | AC-37 | Every 2.3 validation rule has a test; FR-48 uses the motion's union boxes. |
 | AC-38 | Render time of the updated `hai_ba_trung` example is reported against 2.2. |
+
+**A.6 Artwork files.** Milestone M11, owner-approved 2026-11-21 (design: `docs/superpowers/specs/2026-11-21-artwork-files-design.md`, guide: `docs/artwork-guide.md`). New scene objects are JSON files in `themes/<theme>/artwork/`, drawn by one layer; no Python per object. For scene objects this replaces FR-51's SVG authoring (no SVG renderer is added). Part of schema `"2.3"`.
+
+#### A.6.1 Layer and file
+
+- Layer: `{"type": "artwork", "name": "<file stem>", "x", "y", "scale" (1), "flip" (1 or -1), "plane"?}`; `name` matches `[a-z0-9_]{1,40}`. The plane defaults to the file's `plane`.
+- File: `{"artwork": "1", "title", "description"?, "plane"?, "parts": [...]}`. A part has one geometry (`d` SVG path string, `ellipse`, `rect`), optional `fill` (`color` + `alpha`; `gradient` [key, key] + `dir`; `stops` [[key, alpha, offset], …] + `dir` or `radial` [cx, cy, r]; `texture` `gold_leaf`/`eggshell` with `tile`/`worn`/`cell`/`gap` in units), `stroke` (`color`, `width` 0.2–20, `alpha`), `alpha`, `clip` (an earlier part id), `motion`.
+- Limits: 300 parts, 20 000 path numbers, coordinates within ±2000.
+
+#### A.6.2 Motion
+
+`flicker` (`amp`), `wave` (`amp`, `pole`), `sway` (`deg`, `pivot`), `rise` (`amp`), `pulse` (`amp`); each × theme `living.artwork_motion` (default 1, range 0–3). Phase 0 is the still drawing and every motion is periodic. Textured parts, parts clipped to them, and textured parts clipped to moving parts may not move.
+
+#### A.6.3 Commands
+
+`validate` checks every artwork a script names (unknown names suggest close ones; file problems are reported at `artwork/<name>.json › <path>`). `artwork check [--name N]` validates the library; `artwork preview --name N --out PNG [--phases 4]` writes phases side by side; `gallery` also writes `<out>_artwork.png`.
+
+#### A.6.4 Acceptance (M11)
+
+| ID | Criterion |
+|----|-----------|
+| AC-39 | The path parser handles every command, absolute and relative, arcs and exponents, and reports the character position of a mistake. |
+| AC-40 | `tablet_altar` renders within mean ΔE ≤ 3 of the Python `tablet` layer in the visual region. |
+| AC-41 | Textures stay inside their part's mask and are deterministic. |
+| AC-42 | Phase 0 equals the still drawing, phase 1 equals phase 0, only moving parts change. |
+| AC-43 | Every artwork validation rule has a test; a 2.2 script with `artwork` fails. |
+| AC-44 | `artwork check`, `artwork preview` and the gallery sheet are tested. |
 
 ---
 
