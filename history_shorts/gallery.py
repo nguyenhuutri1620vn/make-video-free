@@ -12,8 +12,9 @@ fixed crop of that render (``crop``, a 3:4 box in canvas pixels) is scaled into 
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Final
 
 import numpy as np
@@ -69,7 +70,15 @@ from history_shorts.scene_config import Prop
 from history_shorts.text import font
 from history_shorts.textures import lacquer_ground
 
-PROPS: Final[tuple[Prop, ...]] = ("flag", "spear", "oar", "none")  # the columns
+PROPS: Final[tuple[Prop, ...]] = ("flag", "spear", "oar", "none")  # ancient_female columns
+PROP_LABELS: Final[Mapping[str, str]] = MappingProxyType({"sword_sheathed": "sword"})  # fit a cell
+# Column order of each kit's props (at most four columns fit the sheet width).
+KIT_PROPS: Final[Mapping[str, tuple[Prop, ...]]] = MappingProxyType(
+    {
+        "ancient_female": PROPS,
+        "warrior_male": ("flag", "spear", "sword_sheathed", "shield"),
+    }
+)
 FACINGS: Final[tuple[int, ...]] = (1, -1)  # per role, in this order: the rows
 
 CELL_W: Final = 270
@@ -214,10 +223,11 @@ def grid_cells() -> list[GalleryCell]:
     cells: list[GalleryCell] = []
     for role_index, role in enumerate(ROLES):
         drawable = kit_named(ROLES[role].kit).props
+        columns = KIT_PROPS.get(ROLES[role].kit, PROPS)
         for facing_index, facing in enumerate(FACINGS):
             row = role_index * len(FACINGS) + facing_index
             y0 = HEADER_H + row * CELL_H
-            for column, prop in enumerate(PROPS):
+            for column, prop in enumerate(columns):
                 if prop not in drawable:
                     continue
                 x0 = column * CELL_W
@@ -230,7 +240,7 @@ def grid_cells() -> list[GalleryCell]:
 def cell_label(cell: GalleryCell | LayerCell) -> str:
     if isinstance(cell, LayerCell):
         return cell.label
-    return f"{cell.role} · {cell.facing:+d} · {cell.prop}"
+    return f"{cell.role} · {cell.facing:+d} · {PROP_LABELS.get(cell.prop, cell.prop)}"
 
 
 def _draw_separators(cv: Canvas, theme: Theme) -> None:

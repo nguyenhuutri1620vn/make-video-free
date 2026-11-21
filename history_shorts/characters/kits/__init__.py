@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from history_shorts.characters.kits import ancient_female, ancient_female_rig
+from history_shorts.characters.kits import ancient_female, ancient_female_rig, warrior_male
 from history_shorts.characters.kits.base import (
     Kit,
     KitExtents,
@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 
 # Kits with their rigs attached (M10); a kit without a rig still draws still figures.
 _ANCIENT_FEMALE = dataclasses.replace(ancient_female.KIT, rig=ancient_female_rig.RIG)
-KITS: Mapping[str, Kit] = MappingProxyType({kit.name: kit for kit in (_ANCIENT_FEMALE,)})
+KITS: Mapping[str, Kit] = MappingProxyType(
+    {kit.name: kit for kit in (_ANCIENT_FEMALE, warrior_male.KIT)}
+)
 
 
 def kit_named(name: str) -> Kit:

@@ -21,6 +21,7 @@ from history_shorts.scene_config import (
     V23_CHARACTER_KEYS,
     V24_CHARACTER_KEYS,
     V24_PROPS,
+    V24_ROLES,
     LayerScene,
     TemplateScene,
     parse_scene,
@@ -493,6 +494,8 @@ def _check_v24_keys(ctx: Ctx, obj: Mapping[str, Any]) -> None:
                 where.at(key).error(message)
         if item.get("prop") in V24_PROPS:
             where.at("prop").error(message)
+        if item.get("role") in V24_ROLES:
+            where.at("role").error(message)
 
 
 def _parse_action(ctx: Ctx, raw: object) -> SlideAction | None:

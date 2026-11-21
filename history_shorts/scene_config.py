@@ -25,7 +25,17 @@ DEFAULT_BASELINE = 1100.0
 DEFAULT_RIVER_HEIGHT = 290.0
 DEFAULT_GROUND_HEIGHT = 52.0
 
-ROLE_NAMES: tuple[str, ...] = ("leader", "general", "general_alt", "boat_crew")
+ROLE_NAMES: tuple[str, ...] = (
+    "leader",
+    "general",
+    "general_alt",
+    "boat_crew",
+    "viet_general",
+    "viet_soldier",
+    "northern_general",
+    "northern_soldier",
+)
+V24_ROLES: tuple[str, ...] = ROLE_NAMES[4:]  # the warrior_male roles (M12)
 PROP_NAMES: tuple[str, ...] = ("flag", "spear", "oar", "none", "sword_sheathed", "shield")
 FORMATION_NAMES: tuple[str, ...] = ("centre_pair", "line", "v_shape")
 TEMPLATE_NAMES: tuple[str, ...] = ("group", "landscape")

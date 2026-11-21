@@ -21,7 +21,7 @@ from history_shorts.scene import draw_layers
 from history_shorts.scene_config import LAYER_TYPES
 from history_shorts.textures import lacquer_ground
 
-SHEET_SIZE = (1080, 6600)  # header + 8 character rows + 10 layer rows of 360
+SHEET_SIZE = (1080, 9480)  # header + 16 character rows + 10 layer rows of 360
 PATCH = 6  # half-size of the pixel patch sampled at a cell's body centre
 PATCH_MIN_DIFF = 30  # figure pixels differ from the ground by at least this (0..255)
 
@@ -32,7 +32,7 @@ def sheet_image(theme: Theme) -> Image.Image:
     return gallery.render_gallery(theme)
 
 
-def test_cli_writes_a_1080x6600_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_writes_a_1080x9480_png(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     out = tmp_path / "deep" / "g.png"
     assert main(["gallery", "--out", str(out)]) == 0
     assert out.is_file()
@@ -74,11 +74,11 @@ def test_bad_theme_exits_3(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -
 
 def test_grid_covers_every_role_facing_and_prop() -> None:
     cells = gallery.grid_cells()
-    assert len(cells) == len(ROLES) * 2 * 4 == 32
+    assert len(cells) == len(ROLES) * 2 * 4 == 64
     combos = {(c.role, c.facing, c.prop) for c in cells}
-    assert len(combos) == 32
+    assert len(combos) == 64
     assert {c.role for c in cells} == set(ROLES)
-    assert {c.prop for c in cells} == {"flag", "spear", "oar", "none"}
+    assert {c.prop for c in cells} == {"flag", "spear", "oar", "none", "sword_sheathed", "shield"}
     assert {c.facing for c in cells} == {1, -1}
     assert [c.role for c in cells[::4]] == [
         "leader",
@@ -89,6 +89,14 @@ def test_grid_covers_every_role_facing_and_prop() -> None:
         "general_alt",
         "boat_crew",
         "boat_crew",
+        "viet_general",
+        "viet_general",
+        "viet_soldier",
+        "viet_soldier",
+        "northern_general",
+        "northern_general",
+        "northern_soldier",
+        "northern_soldier",
     ]
 
 
@@ -100,9 +108,10 @@ def test_sheet_width_is_four_cells() -> None:
 def test_columns_are_props_and_rows_alternate_facing() -> None:
     cells = gallery.grid_cells()
     assert [c.prop for c in cells[:4]] == ["flag", "spear", "oar", "none"]
-    for row in range(8):
+    for row in range(16):
         row_cells = cells[row * 4 : row * 4 + 4]
-        assert [c.prop for c in row_cells] == ["flag", "spear", "oar", "none"]
+        kit = gallery.ROLES[row_cells[0].role].kit
+        assert [c.prop for c in row_cells] == list(gallery.KIT_PROPS[kit])
         assert {c.facing for c in row_cells} == {1 if row % 2 == 0 else -1}
         assert {c.role for c in row_cells} == {list(ROLES)[row // 2]}
 
@@ -113,7 +122,7 @@ def test_cells_tile_the_sheet_without_gaps() -> None:
     assert min(c.box.x0 for c in cells) == 0
     assert max(c.box.x1 for c in cells) == SHEET_SIZE[0]
     assert min(c.box.y0 for c in cells) == gallery.HEADER_H
-    assert max(c.box.y1 for c in cells) == gallery.HEADER_H + 8 * gallery.CELL_H
+    assert max(c.box.y1 for c in cells) == gallery.HEADER_H + 16 * gallery.CELL_H
     for a in cells:
         assert sum(a.box.intersects(b.box) for b in cells) == 1  # itself only
 
@@ -341,7 +350,7 @@ LABEL_PAD = 4  # px around the label box that must stay bare ground
 
 def test_sheet_height_adds_eight_layer_rows() -> None:
     assert gallery.LAYER_ROWS == 10
-    assert gallery.SHEET_H == gallery.HEADER_H + (8 + 10) * gallery.CELL_H == 6600
+    assert gallery.SHEET_H == gallery.HEADER_H + (16 + 10) * gallery.CELL_H == 9480
 
 
 def test_layer_cells_label_every_type_once_in_reading_order() -> None:
@@ -358,7 +367,7 @@ def test_layer_cells_label_every_type_once_in_reading_order() -> None:
 
 def test_layer_cells_sit_below_the_characters_four_to_a_row() -> None:
     cells = gallery.layer_cells()
-    first_row_y = gallery.HEADER_H + 8 * gallery.CELL_H
+    first_row_y = gallery.HEADER_H + 16 * gallery.CELL_H
     assert [c.box.y0 for c in cells] == [first_row_y + (k // 4) * gallery.CELL_H for k in range(37)]
     assert [c.box.x0 for c in cells] == [(k % 4) * gallery.CELL_W for k in range(37)]
     assert all(c.box.width == gallery.CELL_W and c.box.height == gallery.CELL_H for c in cells)

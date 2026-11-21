@@ -56,6 +56,8 @@ class CharacterStyle:
     variant: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
 
 
+WARRIOR_KIT: Final = "warrior_male"
+
 ROLES: Mapping[str, RolePreset] = MappingProxyType(
     {
         "leader": RolePreset("vermilion", "vermilion_dk", "gold", "gold", True, "flag"),
@@ -66,6 +68,56 @@ ROLES: Mapping[str, RolePreset] = MappingProxyType(
             "brown", "robe_general_alt_dk", "vermilion", "vermilion", False, "spear"
         ),
         "boat_crew": RolePreset("jade", "robe_crew_dk", "gold_dk", "vermilion", False, "oar"),
+        # warrior_male kit (M12, owner-approved 2026-11-22): sides differ in headwear,
+        # armour, colours and banners only
+        "viet_general": RolePreset(
+            "vermilion",
+            "vermilion_dk",
+            "gold",
+            "vermilion",
+            True,
+            "flag",
+            WARRIOR_KIT,
+            armour="gold_dk",
+            banner="vermilion",
+            variant=MappingProxyType({"helmet": "viet_helmet", "body": "lamellar_cape"}),
+        ),
+        "viet_soldier": RolePreset(
+            "jade",
+            "robe_crew_dk",
+            "gold_dk",
+            "vermilion",
+            False,
+            "spear",
+            WARRIOR_KIT,
+            armour="gold_dk",
+            banner="vermilion",
+            variant=MappingProxyType({"helmet": "topknot_wrap", "body": "tunic"}),
+        ),
+        "northern_general": RolePreset(
+            "indigo",
+            "indigo_dk",
+            "gold_dk",
+            "indigo",
+            True,
+            "sword_sheathed",
+            WARRIOR_KIT,
+            armour="steel",
+            banner="indigo",
+            variant=MappingProxyType({"helmet": "northern_helmet", "body": "lamellar_cape"}),
+        ),
+        "northern_soldier": RolePreset(
+            "indigo",
+            "indigo_dk",
+            "steel_dk",
+            "indigo",
+            True,
+            "spear",
+            WARRIOR_KIT,
+            armour="steel",
+            banner="indigo",
+            variant=MappingProxyType({"helmet": "northern_helmet", "body": "lamellar"}),
+        ),
     }
 )
 
