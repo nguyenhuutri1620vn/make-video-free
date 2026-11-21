@@ -84,3 +84,13 @@ def test_rally_with_flag_raises_the_flag() -> None:
 def test_actions_are_data() -> None:
     wave = Action(keys=((0.0, REST), (0.5, Pose(far_shoulder=40)), (1.0, REST)), duration=1.0)
     assert action_pose(wave, 0.5, REST).far_shoulder == pytest.approx(40, abs=4)
+
+
+@pytest.mark.parametrize(
+    ("prop", "arm"),
+    [("sword_sheathed", "near"), ("shield", "near"), ("spear", "far"), ("flag", "near")],
+)
+def test_rally_arm_by_prop(prop: str, arm: str) -> None:  # M12
+    peak = action_pose(for_prop(ACTIONS["rally"], prop), 0.5, REST)
+    raised = peak.near_shoulder if arm == "near" else peak.far_shoulder
+    assert raised > 30  # (flag raises the flag arm, which is the near one)

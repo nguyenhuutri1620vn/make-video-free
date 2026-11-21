@@ -81,7 +81,9 @@ SEGMENTS: Final[Mapping[str, str]] = MappingProxyType(
 
 def free_arm(style: CharacterStyle) -> str:
     """The arm that can gesture: the far one when the near hand holds a prop."""
-    return "far" if style.prop != "none" else "near"
+    from history_shorts.characters.actions import NEAR_HAND_PROPS
+
+    return "far" if style.prop in NEAR_HAND_PROPS else "near"
 
 
 @dataclass(frozen=True, slots=True)

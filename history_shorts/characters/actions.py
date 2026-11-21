@@ -19,6 +19,9 @@ from typing import Final
 
 from history_shorts.characters.pose import REST, Pose, add, blend
 
+# Props gripped in the near hand: a gesture then uses the far arm (M12: a sheathed sword
+# or a shield on the far forearm leaves the near hand free).
+NEAR_HAND_PROPS: Final = frozenset({"flag", "spear", "oar"})
 FOLLOW_LAG: Final = 0.08  # seconds the head and arms trail the body
 LAGGED: Final = frozenset(
     {"head_tilt", "head_drop", "near_shoulder", "near_elbow", "far_shoulder", "far_elbow"}
@@ -56,7 +59,7 @@ def for_prop(action: Action, prop: str) -> Action:
     """``action`` as performed by a character holding ``prop``."""
     if prop == "flag" and action.with_flag is not None:
         return for_prop(ACTIONS[action.with_flag], prop)
-    if action.gesture and prop != "none":
+    if action.gesture and prop in NEAR_HAND_PROPS:
         keys = tuple((t, _arm_swap(p)) for t, p in action.keys)
         return dataclasses.replace(action, keys=keys, gesture=False)
     return dataclasses.replace(action, gesture=False)

@@ -144,3 +144,33 @@ def test_cape_closed_at_the_waist(lean: float, palette: Any) -> None:
     for x in (15.0, 17.0, 19.0):
         for y in (-53.5, -53.0, -52.5):
             assert alpha[_px((side * x, y))] > 0.95, (x, y)
+
+
+ACTION_NAMES = ("rally", "bow", "kneel", "sit", "raise_flag", "look")
+
+
+@pytest.mark.parametrize("role", WARRIORS)
+@pytest.mark.parametrize("name", ACTION_NAMES)
+def test_actions_run_on_every_role(role: str, name: str, palette: Any) -> None:  # AC-48
+    from history_shorts.characters.actions import ACTIONS, action_pose, for_prop
+
+    prop = "flag" if name == "raise_flag" else resolve_style(CharacterSpec(role=role), palette).prop
+    action = for_prop(ACTIONS[name], prop)
+    for k in range(11):
+        pose = action_pose(action, k / 10, REST)
+        alpha = _render(_style(palette, role, prop, pose), palette)[..., 3]
+        assert alpha.sum() > 1000
+
+
+def test_mirrored_shield_bearer_rally(palette: Any) -> None:  # Review Focus 4
+    from history_shorts.characters.actions import ACTIONS, action_pose, for_prop
+
+    pose = action_pose(for_prop(ACTIONS["rally"], "shield"), 0.5, REST)
+    assert pose.near_shoulder > 90 and pose.far_shoulder == 0
+    style = _style(palette, "northern_soldier", "shield", pose)
+    shield = _render(style, palette, -1, names=("shield",))[..., 3]
+    ys, xs = np.nonzero(shield > 0.5)
+    assert xs.mean() / SCALE - 40 > 0  # mirrored: the far (shield) arm is on the right
+    sleeves = _render(style, palette, -1, names=("near_sleeve",))[..., 3]
+    top = np.nonzero(sleeves.max(axis=1) > 0.5)[0].min() / SCALE - 160
+    assert top < -95  # the near arm is up
