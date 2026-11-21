@@ -448,12 +448,12 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "lone_path": LonePathLayer,
     "lanterns": LanternsLayer,
     "tablet": TabletLayer,
-    "artwork": ArtworkLayer,
     "horse": HorseLayer,
     "citadel": CitadelLayer,
     "bamboo_village": BambooVillageLayer,
     "furnace": FurnaceLayer,
     "plinth": PlinthLayer,
+    "artwork": ArtworkLayer,
 }
 
 

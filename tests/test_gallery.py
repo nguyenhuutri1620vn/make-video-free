@@ -342,8 +342,9 @@ def test_layer_cells_label_every_type_once_in_reading_order() -> None:
     cells = gallery.layer_cells()
     assert [c.label for c in cells] == LAYER_LABELS
     assert len({c.label for c in cells}) == len(cells)
-    # every layer type is drawn: ``characters`` by the grid above, the rest by a cell
-    assert {c.type_name for c in cells} | {"characters"} == set(LAYER_TYPES)
+    # every layer type is drawn: ``characters`` by the grid above, ``artwork`` by the
+    # artwork sheet (one cell per library file, M11), the rest by a cell
+    assert {c.type_name for c in cells} | {"characters", "artwork"} == set(LAYER_TYPES)
     for c in cells:
         assert type(c.layer) is LAYER_TYPES[c.type_name], c.label
     assert [c.type_name for c in cells].count("peaks") == 2  # gradient and eggshell fills
