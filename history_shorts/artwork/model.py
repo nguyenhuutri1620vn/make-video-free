@@ -20,12 +20,13 @@ class Solid:
 
 @dataclass(frozen=True, slots=True)
 class Gradient:
-    """Stops (palette key, alpha, offset); linear along ``direction`` over the part's bounds,
-    or radial around ``radial`` (cx, cy, r) in artwork units."""
+    """Stops (palette key, alpha, offset); linear along ``direction`` over the part's bounds
+    (or over ``span`` when given), or radial around ``radial`` (cx, cy, r) in artwork units."""
 
     stops: tuple[tuple[str, float, float], ...]
     direction: Literal["v", "h"] | None = "v"
     radial: tuple[float, float, float] | None = None
+    span: tuple[float, float] | None = None  # linear: start and end along ``direction``
 
 
 @dataclass(frozen=True, slots=True)

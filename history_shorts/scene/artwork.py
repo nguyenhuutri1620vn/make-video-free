@@ -64,9 +64,9 @@ def _paint_fill(cv: Canvas, ctx: DrawContext, part: Part) -> None:
             x0, y0, x1, y1 = path_bounds(part.ops)
             stops = _stops(ctx, fill, part.alpha)
             if fill.direction == "h":
-                cv.hgrad(x0, x1, stops)
+                cv.hgrad(*(fill.span or (x0, x1)), stops)
             else:
-                cv.vgrad(y0, y1, stops)
+                cv.vgrad(*(fill.span or (y0, y1)), stops)
     trace(cv, part.ops)
     cv.fill()
 

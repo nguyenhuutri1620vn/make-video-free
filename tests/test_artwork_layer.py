@@ -214,3 +214,13 @@ def test_gold_leaf_drawn_in_its_box_only(art_theme: Any, monkeypatch: pytest.Mon
     monkeypatch.setattr(mod, "gold_leaf", spy)
     _draw(art_theme, "leaf")
     assert sizes and all(w <= 130 and h <= 130 for w, h in sizes)  # review 5
+
+
+def test_gradient_span_overrides_bounds(art_theme: Any) -> None:
+    folder = art_theme.path.parent / "artwork"
+    fill = {"stops": [["gold_lt", 1, 0], ["gold_lt", 0, 1]], "dir": "v", "span": [-100, -50]}
+    data = {"artwork": "1", "parts": [_part("band", rect=[0, -100, 100, 100], fill=fill)]}
+    (folder / "span.json").write_text(json.dumps(data), encoding="utf-8")
+    img = _draw(art_theme, "span")
+    assert img[901, 590].max() > 0.8  # y = -99: start of the span, opaque
+    assert img[960, 590].max() < 0.02  # y = -40: past the span's end, fully faded

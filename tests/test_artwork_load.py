@@ -206,3 +206,16 @@ def test_fill_keys_and_radius(
 ) -> None:
     errors = _errors(tmp_path, palette, _with(d="M 0 0 L 1 1", fill=fill))  # review 3, 4
     assert any("parts[5].fill" in e and message in e for e in errors), errors
+
+
+def test_gradient_span(tmp_path: Path, palette: Any) -> None:
+    data = _with(
+        d="M 0 0 L 1 1", fill={"gradient": ["gold", "gold_dk"], "dir": "v", "span": [-50, 10]}
+    )
+    art, _ = load_artwork(_write(tmp_path, data), palette)
+    fill = art.parts[5].fill
+    assert isinstance(fill, Gradient) and fill.span == (-50.0, 10.0)
+    bad = _with(d="M 0 0 L 1 1", fill={"gradient": ["gold", "gold_dk"], "span": [3, 3]})
+    assert any(
+        "fill.span" in e and "two different numbers" in e for e in _errors(tmp_path, palette, bad)
+    )

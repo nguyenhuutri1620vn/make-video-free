@@ -158,8 +158,8 @@ def _stops(
 FILL_KINDS: Final = ("color", "gradient", "stops", "texture")
 FILL_KEYS: Final[Mapping[str, tuple[str, ...]]] = {
     "color": ("color", "alpha"),
-    "gradient": ("gradient", "dir", "radial"),
-    "stops": ("stops", "dir", "radial"),
+    "gradient": ("gradient", "dir", "radial", "span"),
+    "stops": ("stops", "dir", "radial", "span"),
     "texture": ("texture", "tile", "worn", "cell", "gap"),
 }
 
@@ -189,6 +189,18 @@ def _radial(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[float, float, float] | No
     return (n[0], n[1], n[2])
 
 
+def _span(ctx: Ctx, obj: Mapping[str, Any]) -> tuple[float, float] | None:
+    if "span" not in obj:
+        return None
+    n = _numbers(ctx, obj, "span", (2,))
+    if not n:
+        return None
+    if n[0] == n[1]:
+        ctx.at("span").error("must be two different numbers")
+        return None
+    return (n[0], n[1])
+
+
 def _fill(ctx: Ctx, raw: object, palette: Palette) -> Fill | None:
     obj = ctx.mapping(raw, tuple(k for keys in FILL_KEYS.values() for k in keys))
     if not obj:
@@ -202,16 +214,18 @@ def _fill(ctx: Ctx, raw: object, palette: Palette) -> Fill | None:
         return Texture(texture, opt["tile"], worn, opt["cell"], gap)
     if kind in ("gradient", "stops"):
         radial = _radial(ctx, obj)
+        span = _span(ctx, obj)
         direction = cast(Literal["v", "h"], ctx.choice(obj, "dir", ("v", "h"), default="v"))
         if kind == "stops":
-            return Gradient(_stops(ctx, obj, palette), None if radial else direction, radial)
+            return Gradient(_stops(ctx, obj, palette), None if radial else direction, radial, span)
         pair = obj["gradient"]
         gc = ctx.at("gradient")
         if not (isinstance(pair, list) and len(pair) == 2):
             gc.error("must be [palette key, palette key]")
             return None
         a, b = (_palette_key(gc.idx(k), pair[k], palette) for k in (0, 1))
-        return Gradient(((a, 1.0, 0.0), (b, 1.0, 1.0)), None if radial else direction, radial)
+        stops = ((a, 1.0, 0.0), (b, 1.0, 1.0))
+        return Gradient(stops, None if radial else direction, radial, span)
     if kind == "color":
         color = _palette_key(ctx.at("color"), obj.get("color"), palette)
         return Solid(color, ctx.num(obj, "alpha", default=1.0, lo=0, hi=1))
