@@ -954,8 +954,8 @@ On a 2.3 living slide, without any new field: furnace flames flicker, temple inc
 #### A.6.1 Layer and file
 
 - Layer: `{"type": "artwork", "name": "<file stem>", "x", "y", "scale" (1), "flip" (1 or -1), "plane"?}`; `name` matches `[a-z0-9_]{1,40}`. The plane defaults to the file's `plane`.
-- File: `{"artwork": "1", "title", "description"?, "plane"?, "parts": [...]}`. A part has one geometry (`d` SVG path string, `ellipse`, `rect`), optional `fill` (`color` + `alpha`; `gradient` [key, key] + `dir`; `stops` [[key, alpha, offset], …] + `dir` or `radial` [cx, cy, r]; `texture` `gold_leaf`/`eggshell` with `tile`/`worn`/`cell`/`gap` in units), `stroke` (`color`, `width` 0.2–20, `alpha`), `alpha`, `clip` (an earlier part id), `motion`.
-- Limits: 300 parts, 20 000 path numbers, coordinates within ±2000.
+- File: `{"artwork": "1", "title", "description"?, "plane"?, "parts": [...]}`. A part has one geometry (`d` SVG path string, `ellipse`, `rect`), optional `fill` (`color` + `alpha`; `gradient` [key, key] + `dir`; `stops` [[key, alpha, offset], …] + `dir` (optional `span` [start, end], else the part's bounds) or `radial` [cx, cy, r]; `texture` `gold_leaf`/`eggshell` with `tile`/`worn`/`cell`/`gap` in units), `stroke` (`color`, `width` 0.2–20, `alpha`), `alpha`, `clip` (an earlier part id), `motion`.
+- Limits: 1000 parts, 50 000 path numbers, coordinates within ±2000.
 
 #### A.6.2 Motion
 

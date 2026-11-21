@@ -194,7 +194,7 @@ python -m history_shorts artwork check
 python -m history_shorts artwork preview --name torch --out output/torch.png
 ```
 
-How to draw one: `docs/artwork-guide.md`. Shipped: `tablet_altar` (the tablet layer as a file) and `torch`.
+How to draw one: `docs/artwork-guide.md`. Shipped: `tablet_altar` (the tablet layer as a file), `torch`, and the Cổ Loa objects (`dig_site_*`, `crossbow_*`, `arrowheads_*`, `excavation_*`, `mould`, `mould_plain`, `turtle`, `plinth_plain`) used by `examples/co_loa`. A linear gradient may give `"span": [start, end]` instead of running over the part's own bounds.
 
 ### Scene objects without people
 

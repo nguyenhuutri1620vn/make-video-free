@@ -104,7 +104,7 @@ the lacquer style. **Claude authors the files**; the owner looks at preview PNGs
 - `stroke`: `{"color": key, "width": units, "alpha"?}`; width 0.2–20.
 - Path syntax: SVG `d` commands `M L H V C S Q T Z` in absolute and relative forms, and `A`
   (arcs, converted to Béziers). Numbers may use exponents.
-- Limits: ≤ 300 parts, ≤ 20 000 path numbers per file, coordinates within ±2000 units.
+- Limits: ≤ 1000 parts, ≤ 50 000 path numbers per file, coordinates within ±2000 units.
 
 ### 2. Rendering (`scene/artwork.py`, `artwork/` package for parsing)
 

@@ -14,7 +14,11 @@ from history_shorts.layout import REGIONS
 from history_shorts.scene import LAYER_DRAWERS, PHASE_DRAWERS
 from history_shorts.scene_config import ArtworkLayer, TabletLayer
 
-SHIPPED = ("tablet_altar", "torch")
+SHIPPED = ("tablet_altar", "torch", "turtle", "plinth_plain", "mould", "mould_plain",
+           *(f"dig_site_{m}" for m in ("buried", "pit", "hoard", "covered")),
+           *(f"crossbow_{m}" for m in ("claw", "volley", "rack", "missing")),
+           *(f"arrowheads_{m}" for m in ("single", "pair", "quarter", "heap")),
+           *(f"excavation_{m}" for m in ("site", "trench")))  # fmt: skip
 
 
 def _ctx(theme: Any) -> DrawContext:
@@ -54,3 +58,15 @@ def test_torch_moves_above_the_pole(theme: Any) -> None:
     moved = np.abs(later - zero).max(axis=2) > 1 / 255
     assert moved.any()
     assert not moved[1300 - 2 * 100 :].any()  # the lower pole never moves
+
+
+def test_co_loa_example_validates(theme: Any) -> None:
+    from pathlib import Path
+
+    from history_shorts.checks import check_all
+    from history_shorts.config import load_script
+
+    path = Path(__file__).resolve().parents[1] / "examples" / "co_loa" / "script.json"
+    script, warnings = load_script(path)
+    errors = [i for i in check_all(script, theme) if i.severity == "error"]
+    assert errors == [] and script.schema_version == "2.3"

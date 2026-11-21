@@ -27,8 +27,8 @@ from history_shorts.validation import Ctx, read_json_object
 
 FORMAT_VERSION: Final = "1"
 NAME_RE: Final = re.compile(r"[a-z0-9_]{1,40}")
-MAX_PARTS: Final = 300
-MAX_NUMBERS: Final = 20_000
+MAX_PARTS: Final = 1000
+MAX_NUMBERS: Final = 50_000
 MAX_COORD: Final = 2000.0
 STROKE_WIDTH: Final = (0.2, 20.0)
 STOPS: Final = (2, 6)

@@ -26,6 +26,8 @@ any file in `themes/son_mai/artwork/`. The format is specified in
 | altar / tablet (`tablet_altar`) | 280 wide, 340 tall |
 | torch (`torch`) | 16 wide, 240 tall |
 | boat hull | 400 wide |
+| crossbow (`crossbow_claw`) | about 330 wide |
+| arrowhead (`arrowheads_single`) | 270 tall |
 | a building gate | 300–500 wide |
 
 Scripts then scale with `scale` (1.0–2.0 typical) so one file serves near and far.
@@ -37,13 +39,15 @@ Scripts then scale with `scale` (1.0–2.0 typical) so one file serves near and 
 - One geometry per part: `d` (SVG path: `M L H V C S Q T A Z`, absolute or relative),
   `ellipse` `[cx, cy, rx, ry]` or `rect` `[x, y, w, h, r?]`.
 - `clip`: the part is drawn only inside an earlier part's shape (bands on a vase, lines on a
-  plaque). Never post-crop by hand.
+  plaque). Never post-crop by hand. A clip uses only that part's own shape, not the clip
+  that part itself had.
 - No text, no faces, no likeness of a real painting or photo: compose shapes yourself (C-06).
 
 ## Colour and surface (lacquer look)
 
 - Only palette keys from `themes/son_mai/theme.json` (`vermilion`, `vermilion_dk`, `gold`,
   `gold_lt`, `gold_dk`, `egg`, `egg_tone`, `brown`, `brown_lt`, `black`, …).
+- A linear gradient runs over the part's own bounds; give `"span": [start, end]` to pin it to coordinates (useful when several parts share one gradient).
 - Bodies: two-key vertical gradient light-to-dark (`["vermilion", "vermilion_dk"]`), like the
   approved references. Wood: `["brown_lt", "brown"]`.
 - Outlines: `gold` 1.0–1.6 for main shapes, `gold_dk` 0.8–1.2 for inner lines. Never use

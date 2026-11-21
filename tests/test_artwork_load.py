@@ -158,14 +158,14 @@ def test_file_level_rules(tmp_path: Path, palette: Any) -> None:
 
 def test_part_limit(tmp_path: Path, palette: Any) -> None:
     data = copy.deepcopy(VALID)
-    data["parts"] = [{"id": f"p{k}", "d": "M 0 0 L 1 1"} for k in range(301)]
-    assert any("at most 300 parts" in e for e in _errors(tmp_path, palette, data))
+    data["parts"] = [{"id": f"p{k}", "d": "M 0 0 L 1 1"} for k in range(1001)]
+    assert any("at most 1000 parts" in e for e in _errors(tmp_path, palette, data))
 
 
 def test_number_limit(tmp_path: Path, palette: Any) -> None:
     data = copy.deepcopy(VALID)
-    data["parts"] = [{"id": "big", "d": "M 0 0 " + "L 1 1 " * 10_000}]
-    assert any("at most 20000 path numbers" in e for e in _errors(tmp_path, palette, data))
+    data["parts"] = [{"id": "big", "d": "M 0 0 " + "L 1 1 " * 25_000}]
+    assert any("at most 50000 path numbers" in e for e in _errors(tmp_path, palette, data))
 
 
 def test_library_reloads_changed_file(tmp_path: Path, palette: Any) -> None:  # Review Focus 1
