@@ -104,6 +104,12 @@ class Canvas:
         self._cr.set_source(pattern)
         return self
 
+    def hgrad(self, x0: float, x1: float, stops: Sequence[ColorStop]) -> Canvas:
+        pattern = cairo.LinearGradient(x0, 0, x1, 0)
+        _add_stops(pattern, stops)
+        self._cr.set_source(pattern)
+        return self
+
     def rgrad(self, cx: float, cy: float, r: float, stops: Sequence[ColorStop]) -> Canvas:
         pattern = cairo.RadialGradient(cx, cy, 0, cx, cy, r)
         _add_stops(pattern, stops)

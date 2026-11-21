@@ -80,6 +80,7 @@ A2_KEYS: tuple[str, ...] = ("transition", "tone", "text_in", "sfx", "music_cut")
 # M9 (2.2): living slides and synthesized sound cues.
 V22_KEYS: tuple[str, ...] = ("living", "particles", "auto_sfx")
 V23_KEYS: tuple[str, ...] = ("actions",)
+V23_LAYER_TYPES: tuple[str, ...] = ("artwork",)  # layer types new in 2.3 (M11)
 # characters.actions.ACTIONS; kept here so the script parser does not import drawing code
 ACTION_NAMES: tuple[str, ...] = ("rally", "bow", "kneel", "sit", "stand_up", "raise_flag", "look")
 _ACTION_KEYS = ("who", "do", "at", "duration")
@@ -462,6 +463,11 @@ def _check_v23_keys(ctx: Ctx, obj: Mapping[str, Any]) -> None:
     for key in V23_KEYS:
         if key in obj:
             ctx.at(key).error(message)
+    scene = obj.get("scene")
+    layers = scene.get("layers") if isinstance(scene, dict) else None
+    for n, layer in enumerate(layers if isinstance(layers, list) else []):
+        if isinstance(layer, dict) and layer.get("type") in V23_LAYER_TYPES:
+            ctx.at("scene").at("layers").idx(n).at("type").error(message)
     for path, item in _scene_character_objects(obj):
         where = ctx.at("scene")
         for part in path:

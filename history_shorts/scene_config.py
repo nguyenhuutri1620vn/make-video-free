@@ -311,6 +311,17 @@ class LanternsLayer:
 
 
 @dataclass(frozen=True, slots=True)
+class ArtworkLayer:
+    """An artwork file from the theme library (M11): name, ground x and y, scale, flip."""
+
+    name: str
+    x: float
+    y: float
+    scale: float = 1.0
+    flip: int = 1
+
+
+@dataclass(frozen=True, slots=True)
 class TabletLayer:
     """A blank memorial tablet on an altar (backlog #14): x, floor y, scale."""
 
@@ -401,6 +412,7 @@ Layer = (
     | LonePathLayer
     | LanternsLayer
     | TabletLayer
+    | ArtworkLayer
     | HorseLayer
     | CitadelLayer
     | BambooVillageLayer
@@ -436,6 +448,7 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "lone_path": LonePathLayer,
     "lanterns": LanternsLayer,
     "tablet": TabletLayer,
+    "artwork": ArtworkLayer,
     "horse": HorseLayer,
     "citadel": CitadelLayer,
     "bamboo_village": BambooVillageLayer,
@@ -804,6 +817,22 @@ def _parse_lone_path(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     )
 
 
+ARTWORK_NAME_RE: Final = re.compile(r"[a-z0-9_]{1,40}")  # same as artwork.load.NAME_RE
+
+
+def _parse_artwork(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    name = ctx.str_(obj, "name")
+    if name and not ARTWORK_NAME_RE.fullmatch(name):
+        ctx.at("name").error("must match [a-z0-9_]{1,40} (a file name in the artwork library)")
+    return ArtworkLayer(
+        name=name,
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj) if "scale" in obj else 1.0,
+        flip=_sign(ctx, obj, "flip", 1) or 1,
+    )
+
+
 def _parse_tablet(ctx: Ctx, obj: dict[str, Any]) -> Layer:
     return TabletLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
 
@@ -890,6 +919,7 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "lone_path": _parse_lone_path,
     "lanterns": _parse_lanterns,
     "tablet": _parse_tablet,
+    "artwork": _parse_artwork,
     "horse": _parse_horse,
     "citadel": _parse_citadel,
     "bamboo_village": _parse_bamboo_village,

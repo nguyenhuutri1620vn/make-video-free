@@ -22,6 +22,7 @@ from history_shorts.primitives import RGB
 from history_shorts.scene_config import (
     LAYER_TYPES,
     ROLE_NAMES,
+    ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
     BirdItem,
@@ -780,6 +781,7 @@ __all__ = [
     "FurnaceLayer",
     "PlinthLayer",
     "TabletLayer",
+    "ArtworkLayer",
     "HorseLayer",
     "CitadelLayer",
     "BambooVillageLayer",

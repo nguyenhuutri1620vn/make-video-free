@@ -7,10 +7,11 @@ from types import MappingProxyType
 from typing import Final
 
 from history_shorts.config import Script, Slide, Theme
-from history_shorts.errors import Issue
+from history_shorts.errors import Issue, ValidationFailed
 from history_shorts.scene.templates import expand
 from history_shorts.scene_config import (
     PLANE_KEY,
+    ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
     BirdsLayer,
@@ -81,6 +82,7 @@ DEFAULT_DEPTH: Final[Mapping[type, Depth]] = MappingProxyType(
         TabletLayer: "near",
         FurnaceLayer: "mid",
         PlinthLayer: "mid",
+        ArtworkLayer: "mid",  # the file's own plane wins in scene_layers
     }
 )
 
@@ -121,7 +123,25 @@ def scene_layers(slide: Slide, theme: Theme) -> tuple[tuple[Layer, ...], tuple[D
         return (), ()
     layers = expand(slide.scene, theme).layers
     overrides = slide.scene.depths if isinstance(slide.scene, LayerScene) else ()
-    return layers, effective_depths(layers, overrides)[0]
+    return layers, effective_depths(layers, artwork_planes(layers, overrides, theme))[0]
+
+
+def artwork_planes(
+    layers: Sequence[Layer], overrides: Sequence[Depth | None], theme: Theme
+) -> list[Depth | None]:
+    """``overrides`` with each artwork layer's file plane where the script gives none."""
+    from history_shorts.artwork.load import library_for  # artwork imports scene config
+
+    out: list[Depth | None] = [
+        overrides[k] if k < len(overrides) else None for k in range(len(layers))
+    ]
+    for k, layer in enumerate(layers):
+        if isinstance(layer, ArtworkLayer) and out[k] is None:
+            try:
+                out[k] = library_for(theme).get(layer.name, theme.palette).plane
+            except (OSError, ValidationFailed):
+                pass  # reported by validation
+    return out
 
 
 def depth_warnings(script: Script) -> list[Issue]:
