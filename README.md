@@ -74,6 +74,16 @@ python tools/make_video.py --script examples/hai_ba_trung/script.json --music so
 
 PNGs are always written to `<out dir>/slides/` (also without `--preview`), atomically (`NN.png.tmp`, then rename). Existing `NN.png` files numbered beyond the slide count are never deleted; a `WARN` line lists them. `--debug-safe-zone` outlines the safe zone and regions.
 
+### Final videos
+
+`output/` holds drafts. When a video is approved, publish it into the single `final/` folder of the main checkout (also from a worktree):
+
+```bash
+python tools/publish_final.py --video output/co_loa.mp4 --script examples/co_loa/script.json
+```
+
+This writes `final/co_loa/` (`co_loa.mp4`, `co_loa.report.json`, `script.json`, `final.json`) and replaces any earlier final of that name. `final/` is git-ignored; Clip Publisher reads it as the video library.
+
 ### Render report
 
 Next to the video, `render` writes `<video name>.report.json` (UTF-8, indented, sorted keys, written atomically):
