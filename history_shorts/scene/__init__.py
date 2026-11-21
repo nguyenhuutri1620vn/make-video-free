@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 
+from history_shorts.artwork.load import library_for
 from history_shorts.compose import GROUND_LAYER, DrawContext
-from history_shorts.config import BoatLayer, CharactersLayer, Layer, LivingSpec
+from history_shorts.config import ArtworkLayer, BoatLayer, CharactersLayer, Layer, LivingSpec, Theme
+from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 
 from . import (
@@ -91,16 +93,25 @@ PHASE_DRAWERS: Mapping[type, PhaseDrawer] = MappingProxyType(
         elephant.PHASE_DRAWERS,
         people.PHASE_DRAWERS,
         boat.PHASE_DRAWERS,
+        artwork.PHASE_DRAWERS,
     )
 )
 # Layers whose loop is a character's idle breath rather than the ambient loop.
 IDLE_LOOP_LAYERS: frozenset[type] = frozenset({CharactersLayer, BoatLayer})
 
 
-def redraws(layer: Layer) -> bool:
-    """Whether a 2.3 living slide redraws ``layer`` per frame (a crewless boat only bobs)."""
+def redraws(layer: Layer, theme: Theme | None = None) -> bool:
+    """Whether a 2.3 living slide redraws ``layer`` per frame (a crewless boat only bobs; an
+    artwork only when its file declares motion, which needs the ``theme``'s library)."""
     if isinstance(layer, BoatLayer):
         return bool(layer.crew)
+    if isinstance(layer, ArtworkLayer):
+        if theme is None:
+            return False
+        try:
+            return library_for(theme).get(layer.name, theme.palette).moves
+        except (OSError, ValidationFailed):
+            return False
     return type(layer) in PHASE_DRAWERS
 
 

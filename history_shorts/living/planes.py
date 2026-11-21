@@ -32,7 +32,7 @@ from history_shorts.compose import (
     SlideContext,
     rng_for,
 )
-from history_shorts.config import LivingSpec, ToneSpec
+from history_shorts.config import LivingSpec, Theme, ToneSpec
 from history_shorts.layout import CANVAS_H, CANVAS_W, REGIONS
 from history_shorts.living.animate import Motion, animate_crop, motion_margin, transform_frame
 from history_shorts.living.characters import CharacterSprite, carrier_bob
@@ -145,17 +145,21 @@ class _Finish:
         return _rgba(np.asarray(rgba[..., :3] * self.grain, dtype=np.float32), rgba[..., 3])
 
 
-def _is_moving(layer: Layer, animated: bool, redraw: bool) -> bool:
-    return animated and (type(layer) in ANIMATED or (redraw and redraws(layer)))
+def _is_moving(layer: Layer, animated: bool, redraw: bool, theme: Theme | None = None) -> bool:
+    return animated and (type(layer) in ANIMATED or (redraw and redraws(layer, theme)))
 
 
 def _groups(
-    layers: Sequence[Layer], depths: Sequence[Depth], animated: bool, redraw: bool = False
+    layers: Sequence[Layer],
+    depths: Sequence[Depth],
+    animated: bool,
+    redraw: bool = False,
+    theme: Theme | None = None,
 ) -> list[tuple[Depth, list[int], bool]]:
     """Runs of still layers of one depth; an animated layer is a run of its own."""
     groups: list[tuple[Depth, list[int], bool]] = []
     for k, depth in enumerate(depths):
-        moving = _is_moving(layers[k], animated, redraw)
+        moving = _is_moving(layers[k], animated, redraw, theme)
         if groups and groups[-1][0] == depth and not moving and not groups[-1][2]:
             groups[-1][1].append(k)
         else:
@@ -266,7 +270,7 @@ class _Animator:
         people = isinstance(layer, CharactersLayer) or isinstance(layer, BoatLayer) and layer.crew
         if self.redraw and people:
             return [self._people(k, layer, depth)]
-        if self.redraw and redraws(layer):
+        if self.redraw and redraws(layer, self.ctx.theme):
             return [self._redrawn(k, layer, depth, sign)]
         drift = DRIFT_KINDS.get(type(layer))
         if drift is not None:
@@ -329,7 +333,7 @@ def _scene_planes(
     clip_seconds: float | None = None,
 ) -> list[AnyPlane]:
     dctx = _draw_ctx(ctx)
-    groups = _groups(layers, depths, animated, redraw)
+    groups = _groups(layers, depths, animated, redraw, ctx.theme)
     top, mid, bottom = ctx.style.ground
     rng = rng_for(ctx.style.seed, ctx.slide_index, GROUND_LAYER)
     ground = lacquer_ground(

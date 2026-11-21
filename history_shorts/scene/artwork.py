@@ -9,13 +9,14 @@ fresh canvas, so later parts still cover it.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 
 import numpy as np
 
 from history_shorts.artwork.load import library_for
 from history_shorts.artwork.model import Artwork, Gradient, Part, Solid, Stroke, Texture
+from history_shorts.artwork.motion import motion_phases, move_part
 from history_shorts.artwork.path import path_bounds, trace
 from history_shorts.canvas import Canvas, ColorStop
 from history_shorts.compose import DrawContext, fill_mask, over
@@ -25,7 +26,7 @@ from history_shorts.primitives import FloatImage
 from history_shorts.textures import gold_leaf
 
 from .inlay import cell_and_gap, inlay_fill
-from .registry import WHITE, LayerDrawer, entry
+from .registry import WHITE, LayerDrawer, PhaseDrawer, entry, phase_entry
 
 MIN_TEXTURE_PX = 2  # smallest gold-leaf tile / eggshell cell after scaling
 
@@ -35,20 +36,25 @@ def _place(cv: Canvas, layer: ArtworkLayer) -> None:
     cv.scale(layer.flip * layer.scale, layer.scale)
 
 
-def _clip(cv: Canvas, art: Artwork, part: Part) -> None:
+def _clip(cv: Canvas, shapes: Mapping[str, Part], part: Part) -> None:
     if part.clip is not None:
-        trace(cv, art.part(part.clip).ops)
+        trace(cv, shapes[part.clip].ops)
         cv.clip()
 
 
+def _alpha(*factors: float) -> float:
+    """A paint alpha: the product of ``factors``, kept within 0..1 (a pulse may exceed 1)."""
+    return min(max(float(np.prod(factors)), 0.0), 1.0)
+
+
 def _stops(ctx: DrawContext, fill: Gradient, alpha: float) -> list[ColorStop]:
-    return [(offset, ctx.palette[key], a * alpha) for key, a, offset in fill.stops]
+    return [(offset, ctx.palette[key], _alpha(a, alpha)) for key, a, offset in fill.stops]
 
 
 def _paint_fill(cv: Canvas, ctx: DrawContext, part: Part) -> None:
     fill = part.fill
     if isinstance(fill, Solid):
-        cv.color(ctx.palette[fill.color], fill.alpha * part.alpha)
+        cv.color(ctx.palette[fill.color], _alpha(fill.alpha, part.alpha))
     elif isinstance(fill, Gradient):
         if fill.radial is not None:
             cx, cy, r = fill.radial
@@ -66,14 +72,14 @@ def _paint_fill(cv: Canvas, ctx: DrawContext, part: Part) -> None:
 
 def _paint_stroke(cv: Canvas, ctx: DrawContext, part: Part, stroke: Stroke) -> None:
     trace(cv, part.ops)
-    cv.color(ctx.palette[stroke.color], stroke.alpha * part.alpha).stroke(stroke.width)
+    cv.color(ctx.palette[stroke.color], _alpha(stroke.alpha, part.alpha)).stroke(stroke.width)
 
 
-def _shape_mask(layer: ArtworkLayer, art: Artwork, part: Part) -> Canvas:
+def _shape_mask(layer: ArtworkLayer, shapes: Mapping[str, Part], part: Part) -> Canvas:
     shape = Canvas(CANVAS_W, CANVAS_H)
     shape.save()
     _place(shape, layer)
-    _clip(shape, art, part)
+    _clip(shape, shapes, part)
     trace(shape, part.ops)
     shape.color(WHITE).fill()
     shape.restore()
@@ -81,7 +87,12 @@ def _shape_mask(layer: ArtworkLayer, art: Artwork, part: Part) -> Canvas:
 
 
 def _texture(
-    img: FloatImage, ctx: DrawContext, index: int, layer: ArtworkLayer, art: Artwork, part: Part
+    img: FloatImage,
+    ctx: DrawContext,
+    index: int,
+    layer: ArtworkLayer,
+    shapes: Mapping[str, Part],
+    part: Part,
 ) -> FloatImage:
     """A gold-leaf or eggshell part: texture inside its mask only; sizes in artwork units."""
     fill = part.fill
@@ -90,7 +101,7 @@ def _texture(
         spec = ctx.theme.textures.gold_leaf
         tile = max(MIN_TEXTURE_PX, round((fill.tile or spec.tile) * layer.scale))
         worn = spec.worn if fill.worn is None else fill.worn
-        mask = _shape_mask(layer, art, part).mask() * part.alpha
+        mask = _shape_mask(layer, shapes, part).mask() * _alpha(part.alpha)
         tex = gold_leaf(ctx.rng(index), ctx.palette, tile, worn, width=CANVAS_W, height=CANVAS_H)
         return fill_mask(img, tex, mask)
     cell, gap = cell_and_gap(ctx, None, fill.gap)
@@ -99,7 +110,7 @@ def _texture(
     def paint(cv: Canvas) -> None:
         cv.save()
         _place(cv, layer)
-        _clip(cv, art, part)
+        _clip(cv, shapes, part)
         trace(cv, part.ops)
         cv.fill()
         cv.restore()
@@ -115,7 +126,9 @@ def draw_parts(
     index: int,
     parts: Sequence[Part],
 ) -> FloatImage:
-    """Draw ``parts`` (the file's parts, possibly moved) of ``art`` at ``layer``."""
+    """Draw ``parts`` (the file's parts, possibly moved) of ``art`` at ``layer``; a part is
+    clipped to the given version of its clip part."""
+    shapes = {part.id: part for part in parts}
     cv = Canvas(CANVAS_W, CANVAS_H)
     used = False
 
@@ -123,7 +136,7 @@ def draw_parts(
         nonlocal used
         cv.save()
         _place(cv, layer)
-        _clip(cv, art, part)
+        _clip(cv, shapes, part)
         draw(cv)
         cv.restore()
         used = True
@@ -132,7 +145,7 @@ def draw_parts(
         if isinstance(part.fill, Texture):
             if used:
                 img, cv, used = over(img, cv), Canvas(CANVAS_W, CANVAS_H), False
-            img = _texture(img, ctx, index, layer, art, part)
+            img = _texture(img, ctx, index, layer, shapes, part)
         elif part.fill is not None:
             on_canvas(partial(_paint_fill, ctx=ctx, part=part), part)
         if part.stroke is not None:
@@ -145,4 +158,16 @@ def draw_artwork(img: FloatImage, layer: ArtworkLayer, ctx: DrawContext, index: 
     return draw_parts(img, art, layer, ctx, index, art.parts)
 
 
+def draw_artwork_at(
+    img: FloatImage, layer: ArtworkLayer, ctx: DrawContext, index: int, phase: float
+) -> FloatImage:
+    """The artwork at loop ``phase``: parts with ``motion`` moved, the rest as drawn still."""
+    art = library_for(ctx.theme).get(layer.name, ctx.palette)
+    phis = motion_phases(ctx, index, len(art.parts))
+    knob = ctx.theme.living.artwork_motion
+    moved = [move_part(part, phase, phis[k], knob) for k, part in enumerate(art.parts)]
+    return draw_parts(img, art, layer, ctx, index, moved)
+
+
 DRAWERS: dict[type, LayerDrawer] = dict([entry(ArtworkLayer, draw_artwork)])
+PHASE_DRAWERS: dict[type, PhaseDrawer] = dict([phase_entry(ArtworkLayer, draw_artwork_at)])

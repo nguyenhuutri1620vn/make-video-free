@@ -46,7 +46,9 @@ def fake_redraw(monkeypatch: pytest.MonkeyPatch) -> None:
     drawers_at = {**planes_mod.PHASE_DRAWERS, MountainsLayer: _fake_at}
     monkeypatch.setattr(planes_mod, "PHASE_DRAWERS", drawers_at)
     monkeypatch.setattr(
-        planes_mod, "redraws", lambda layer: isinstance(layer, MountainsLayer) or real(layer)
+        planes_mod,
+        "redraws",
+        lambda layer, theme=None: isinstance(layer, MountainsLayer) or real(layer, theme),
     )
     drawers = dict(planes_mod.LAYER_DRAWERS)
     drawers[MountainsLayer] = _still_with_square
