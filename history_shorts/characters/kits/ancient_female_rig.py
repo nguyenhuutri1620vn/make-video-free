@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final
 
@@ -83,22 +84,38 @@ def free_arm(style: CharacterStyle) -> str:
     return "far" if style.prop != "none" else "near"
 
 
-def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
+@dataclass(frozen=True, slots=True)
+class JointGeometry:
+    """Where a kit's joints are (local units) and how it kneels; shared joint maths (M12)."""
+
+    waist: Point
+    neck: Point
+    shoulders: Mapping[str, Point]
+    elbows: Mapping[str, Point]
+    hand_center: Point
+    bottom: float  # lowest y of the skirt; kneeling squashes toward it
+    hem_half: float  # skirt half-width the crouch spread is relative to
+    crouch_drop: float
+    crouch_spread: float
+    held: Callable[[str], bool]  # props gripped in the near hand (they follow the hand)
+
+
+def build_joints(geo: JointGeometry, style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
     """Every segment's transform in the local frame for ``pose``."""
-    drop = pose.crouch * CROUCH_DROP
-    bottom = af.BODY_BOTTOM
-    squash = (bottom - af.WAIST_Y - drop) / (bottom - af.WAIST_Y)
-    widen = 1.0 + pose.crouch * CROUCH_SPREAD / af.HEM_HALF_WIDTH
-    skirt = about((0.0, bottom), scale(widen, squash))
+    drop = pose.crouch * geo.crouch_drop
+    waist_y = geo.waist[1]
+    squash = (geo.bottom - waist_y - drop) / (geo.bottom - waist_y)
+    widen = 1.0 + pose.crouch * geo.crouch_spread / geo.hem_half
+    skirt = about((0.0, geo.bottom), scale(widen, squash))
     lean = rotate(pose.torso_lean - pose.lean_back) @ scale(1.0, 1.0 + pose.breath)
-    torso = translate(0.0, drop) @ about(WAIST, lean)
+    torso = translate(0.0, drop) @ about(geo.waist, lean)
     bow = translate(HEAD_DROP_FORWARD * pose.head_drop, pose.head_drop)
-    head = torso @ bow @ about(NECK, rotate(-pose.head_tilt))
-    near = torso @ about(SHOULDERS["near"], rotate(-pose.near_shoulder))
-    far = torso @ about(SHOULDERS["far"], rotate(pose.far_shoulder))
-    dx = near.apply(af.HAND_CENTER)[0] - af.HAND_CENTER[0]
-    dy = near.apply(af.HAND_CENTER)[1] - af.HAND_CENTER[1]
-    held = style.prop != "none"
+    head = torso @ bow @ about(geo.neck, rotate(-pose.head_tilt))
+    near = torso @ about(geo.shoulders["near"], rotate(-pose.near_shoulder))
+    far = torso @ about(geo.shoulders["far"], rotate(pose.far_shoulder))
+    hx, hy = geo.hand_center
+    dx, dy = near.apply(geo.hand_center)[0] - hx, near.apply(geo.hand_center)[1] - hy
+    held = geo.held(style.prop)
     hand = translate(dx, dy) if held else IDENTITY
     prop = translate(dx, min(dy, 0.0)) if held else IDENTITY
     return {
@@ -107,11 +124,30 @@ def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
         "head": head,
         "near_arm": near,
         "far_arm": far,
-        "near_fore": near @ about(ELBOWS["near"], rotate(-pose.near_elbow)),
-        "far_fore": far @ about(ELBOWS["far"], rotate(pose.far_elbow)),
+        "near_fore": near @ about(geo.elbows["near"], rotate(-pose.near_elbow)),
+        "far_fore": far @ about(geo.elbows["far"], rotate(pose.far_elbow)),
         "hand": hand,
         "prop": prop,
     }
+
+
+GEOMETRY: Final = JointGeometry(
+    waist=WAIST,
+    neck=NECK,
+    shoulders=SHOULDERS,
+    elbows=ELBOWS,
+    hand_center=af.HAND_CENTER,
+    bottom=af.BODY_BOTTOM,
+    hem_half=af.HEM_HALF_WIDTH,
+    crouch_drop=CROUCH_DROP,
+    crouch_spread=CROUCH_SPREAD,
+    held=lambda prop: prop != "none",
+)
+
+
+def joints(style: CharacterStyle, pose: Pose) -> Mapping[str, Affine]:
+    """Every segment's transform in the local frame for ``pose``."""
+    return build_joints(GEOMETRY, style, pose)
 
 
 @contextmanager
@@ -154,9 +190,14 @@ def _jointed_sleeve(
     cuff: Paint | None,
     gold: RGB,
     fist: Paint | None = None,
+    elbow: Point | None = None,
+    patch_r: float = ELBOW_PATCH_R,
+    cuff_last: bool = False,
+    outline: float = 0.5,
 ) -> None:
     upper, fore = m[f"{side}_arm"], m[f"{side}_fore"]
-    above, below = (-CLIP_REACH, ELBOW_Y), (ELBOW_Y, CLIP_REACH)
+    ex, ey = ELBOWS[side] if elbow is None else elbow
+    above, below = (-CLIP_REACH, ey), (ey, CLIP_REACH)
     if fist is not None:
         with _frame(cv, fore):
             fist(cv)
@@ -167,16 +208,18 @@ def _jointed_sleeve(
         path(cv)
         paint(cv)
     with _frame(cv, upper):
-        ex, ey = ELBOWS[side]
-        cv.ellipse(ex, ey, ELBOW_PATCH_R, ELBOW_PATCH_R)
+        cv.ellipse(ex, ey, patch_r, patch_r)
         paint(cv)
-    if cuff is not None:
+    if cuff is not None and not cuff_last:
         with _frame(cv, fore):
             cuff(cv)
     for frame, band in ((fore, below), (upper, above)):
         with _frame(cv, frame, band):
             path(cv)
-            cv.color(gold).stroke(0.5)
+            cv.color(gold).stroke(outline)
+    if cuff is not None and cuff_last:  # a kit whose still sleeve trims over its outline
+        with _frame(cv, fore):
+            cuff(cv)
 
 
 def _fist(side: str, style: CharacterStyle, palette: Palette) -> Paint | None:
