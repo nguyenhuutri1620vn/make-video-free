@@ -110,7 +110,7 @@ The prototype code that produced them lives in `docs/reference/prototype/`. It i
 | Chrome           | Elements shared by every slide: ground, frame, seal, tag pill, wave band, progress bar, footer.           |
 | Scene            | An ordered list of layers drawn in the visual region.                                                      |
 | Template         | A named, parameterised scene (`group`, `landscape`) that expands to layers.                               |
-| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`, `lone_path`, `lanterns`, `tablet`, `horse`, `citadel`, `bamboo_village`, `furnace`, `plinth`. |
+| Layer            | One scene element: `sun`, `moon`, `clouds`, `peaks`, `hills`, `river`, `ground`, `characters`, `boat`, `birds`, `lotus`, `drum`, `gong`, `temple`, `map`, `scroll`, `elephant`, `stilt_house`, `banners`, `regalia`, `fallen_flags`, `sail_boat`, `lone_path`, `lanterns`, `tablet`, `horse`, `citadel`, `bamboo_village`, `furnace`, `plinth`, `arrowheads`, `mould`, `dig_site`, `crossbow`, `turtle`, `excavation`. |
 | Character        | A parametric stylised figure defined by a role preset plus overrides.                                     |
 | Formation        | A placement rule for characters (`centre_pair`, `line`, `v_shape`).                                       |
 | Gold leaf        | Texture of jittered gold squares with thin seams and rare worn spots showing red underlayer.             |
@@ -388,7 +388,13 @@ All coordinates are canvas pixels on 1080×1920 unless stated otherwise.
 | `citadel`    | `x`, `y` (centre), `scale` — concentric earthen ramparts with a moat, a front gate and a central hall, seen from above-front (backlog #17, Appendix B "thành quách") | flat |
 | `bamboo_village` | `x`, `y` (ground line), `scale` — a bamboo hedge behind thatched houses, a banyan and a village gate (backlog #18, Appendix B "làng tre") | flat |
 | `furnace`    | `x`, `y` (floor line), `scale` — a clay-brick bronze-casting furnace, fire in its arched mouth and flame tongues over its open top, a warm halo (about 300 x 400 units) | flat |
-| `plinth`     | `x`, `y` (floor line), `scale` — an empty stepped stone plinth with four faint hoof marks, under a light shaft that fades out upwards, with dust motes (300 x 186 units, beam from 540 units up) | flat |
+| `plinth`     | `x`, `y` (floor line), `scale` — an empty stepped stone plinth with four faint hoof marks (optional `hooves`, default true), under a light shaft that fades out upwards, with dust motes (300 x 186 units, beam from 540 units up) | flat |
+| `arrowheads` | `x`, `y` (floor line), `scale`; optional `arrangement` (`single` default, `pair`, `quarter`, `heap`) — three-bladed bronze arrowheads: one tilted in a light pool, a polished/raw pair, or a mound (about 1 in 4 polished) | flat |
+| `mould`      | `x`, `y` (floor line), `scale`; optional `key` (true) — a three-piece stone arrowhead mould with its cavity and funnel, and a top-view key of the pieces closing into a cylinder (420 x 330 units, key 455 units up) | flat |
+| `dig_site`   | `x`, `y` (ground surface), `scale`; optional `mode` (`buried` default, `pit`, `hoard`, `covered`) — a soil section 860 x 460 units with an arrowhead buried deep, or a 1 m pit (road, hoe, basket, size marks), packed with arrowheads, or filled over | flat |
+| `crossbow`   | `x`, `y` (butt), `scale`; optional `mode` (`claw` default, `volley`, `rack`, `missing`) — a crossbow from above with a golden-claw trigger, a fan of arrows (no target), three racked rows, or an empty trigger slot | flat |
+| `turtle`     | `x`, `y` (water line), `scale`; optional `facing` (1 / -1), `claw` (true) — the legend's golden turtle on the water with ripples, the claw in a halo above it | flat |
+| `excavation` | `x`, `y` (ground), `scale`; optional `mode` (`site` default, `trench`) — a pegged trench grid in perspective, or a find-layer section with an ash band, a furnace base and mould pieces | flat |
 
 **Character**
 
