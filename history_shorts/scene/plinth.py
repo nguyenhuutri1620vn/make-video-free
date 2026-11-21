@@ -93,11 +93,13 @@ def _stone(cv: Canvas, ctx: DrawContext) -> None:
     _block(cv, ctx, CAP)
 
 
-def _top(cv: Canvas, ctx: DrawContext) -> None:
+def _top(cv: Canvas, ctx: DrawContext, hooves: bool) -> None:
     pal = ctx.palette
     cx, cy, rx, ry = POOL
     glow = pal[BEAM_COLOR]
     cv.ellipse(cx, cy, rx, ry).rgrad(cx, cy, rx, [(0, glow, POOL_ALPHA), (1, glow, 0.0)]).fill()
+    if not hooves:
+        return
     y, rx, ry = HOOF
     for x in HOOF_MARKS:
         cv.ellipse(x, y, rx, ry).color(pal[HOOF_COLOR], HOOF_ALPHA).fill()
@@ -111,7 +113,7 @@ def draw_plinth(img: FloatImage, layer: PlinthLayer, ctx: DrawContext, index: in
     cv.scale(layer.scale, layer.scale)
     _beam(cv, ctx, index)
     _stone(cv, ctx)
-    _top(cv, ctx)
+    _top(cv, ctx, layer.hooves)
     cv.restore()
     return over(img, cv)
 

@@ -556,6 +556,12 @@ def test_layer_types_registry() -> None:
         "furnace",
         "plinth",
         "artwork",
+        "arrowheads",
+        "mould",
+        "dig_site",
+        "crossbow",
+        "turtle",
+        "excavation",
     ]
     assert LAYER_TYPES["sun"] is SunLayer and LAYER_TYPES["moon"] is SunLayer
     assert LAYER_TYPES["boat"] is BoatLayer
@@ -569,7 +575,8 @@ def test_unknown_layer_type_lists_allowed(tmp_script: ScriptFactory) -> None:
         "allowed: sun, moon, clouds, mountains, peaks, hills, river, ground, "
         "characters, boat, birds, lotus, drum, gong, temple, map, scroll, elephant, "
         "stilt_house, banners, regalia, fallen_flags, sail_boat, lone_path, lanterns, "
-        "tablet, horse, citadel, bamboo_village, furnace, plinth, artwork"
+        "tablet, horse, citadel, bamboo_village, furnace, plinth, artwork, arrowheads, mould, "
+        "dig_site, crossbow, turtle, excavation"
     )
 
 

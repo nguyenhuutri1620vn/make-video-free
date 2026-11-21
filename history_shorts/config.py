@@ -22,6 +22,7 @@ from history_shorts.primitives import RGB
 from history_shorts.scene_config import (
     LAYER_TYPES,
     ROLE_NAMES,
+    ArrowheadsLayer,
     ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
@@ -33,8 +34,11 @@ from history_shorts.scene_config import (
     CitadelLayer,
     CloudItem,
     CloudsLayer,
+    CrossbowLayer,
+    DigSiteLayer,
     DrumLayer,
     ElephantLayer,
+    ExcavationLayer,
     FallenFlagsLayer,
     FurnaceLayer,
     GongLayer,
@@ -48,6 +52,7 @@ from history_shorts.scene_config import (
     LonePathLayer,
     LotusLayer,
     MapLayer,
+    MouldLayer,
     MountainsLayer,
     PeakItem,
     PeaksLayer,
@@ -61,6 +66,7 @@ from history_shorts.scene_config import (
     TabletLayer,
     TemplateScene,
     TempleLayer,
+    TurtleLayer,
 )
 from history_shorts.script_config import Script, Slide, Source, load_script, slide_duration
 from history_shorts.validation import Ctx, is_int, read_json_object
@@ -782,6 +788,12 @@ __all__ = [
     "LanternsLayer",
     "FurnaceLayer",
     "PlinthLayer",
+    "ArrowheadsLayer",
+    "MouldLayer",
+    "DigSiteLayer",
+    "CrossbowLayer",
+    "TurtleLayer",
+    "ExcavationLayer",
     "TabletLayer",
     "ArtworkLayer",
     "HorseLayer",

@@ -32,6 +32,10 @@ TEMPLATE_NAMES: tuple[str, ...] = ("group", "landscape")
 OUTLINE_NAMES: tuple[str, ...] = ("gold", "gold_dk")
 FILL_NAMES: tuple[str, ...] = ("gradient", "eggshell")
 SIDE_NAMES: tuple[str, ...] = ("left", "right")
+ARRANGEMENT_NAMES: tuple[str, ...] = ("single", "pair", "quarter", "heap")
+DIG_MODES: tuple[str, ...] = ("buried", "pit", "hoard", "covered")
+CROSSBOW_MODES: tuple[str, ...] = ("claw", "volley", "rack", "missing")
+EXCAVATION_MODES: tuple[str, ...] = ("site", "trench")
 
 T = TypeVar("T")
 
@@ -369,11 +373,73 @@ class FurnaceLayer:
 
 @dataclass(frozen=True, slots=True)
 class PlinthLayer:
-    """An empty stone plinth under a shaft of light: x, floor y, scale."""
+    """An empty stone plinth under a shaft of light: x, floor y, scale, optional hoof marks."""
 
     x: float
     y: float
     scale: float
+    hooves: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class ArrowheadsLayer:
+    """Three-bladed bronze arrowheads: x, floor y, scale; one, a pair, one-in-four, or a heap."""
+
+    x: float
+    y: float
+    scale: float
+    arrangement: Literal["single", "pair", "quarter", "heap"] = "single"
+
+
+@dataclass(frozen=True, slots=True)
+class MouldLayer:
+    """A three-piece stone arrowhead mould, optionally with a top-view key: x, floor y, scale."""
+
+    x: float
+    y: float
+    scale: float
+    key: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class DigSiteLayer:
+    """A soil section at a find spot: x, surface y, scale, mode (buried/pit/hoard/covered)."""
+
+    x: float
+    y: float
+    scale: float
+    mode: Literal["buried", "pit", "hoard", "covered"] = "buried"
+
+
+@dataclass(frozen=True, slots=True)
+class CrossbowLayer:
+    """A crossbow, its trigger a golden claw: x, butt y, scale, mode (claw/volley/rack/missing)."""
+
+    x: float
+    y: float
+    scale: float
+    mode: Literal["claw", "volley", "rack", "missing"] = "claw"
+
+
+@dataclass(frozen=True, slots=True)
+class TurtleLayer:
+    """The golden turtle on the water: x, water y, scale, facing, optional claw above it."""
+
+    x: float
+    y: float
+    scale: float
+    facing: int = 1
+    claw: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class ExcavationLayer:
+    """An excavation: x, ground y, scale, mode (site: trench grid; trench: find layers)."""
+
+    x: float
+    y: float
+    scale: float
+    mode: Literal["site", "trench"] = "site"
 
 
 @dataclass(frozen=True, slots=True)
@@ -418,6 +484,12 @@ Layer = (
     | BambooVillageLayer
     | FurnaceLayer
     | PlinthLayer
+    | ArrowheadsLayer
+    | MouldLayer
+    | DigSiteLayer
+    | CrossbowLayer
+    | TurtleLayer
+    | ExcavationLayer
 )
 
 # Layer ``type`` name -> class, in the order shown in error messages.
@@ -454,6 +526,12 @@ LAYER_TYPES: Mapping[str, type[Layer]] = {
     "furnace": FurnaceLayer,
     "plinth": PlinthLayer,
     "artwork": ArtworkLayer,
+    "arrowheads": ArrowheadsLayer,
+    "mould": MouldLayer,
+    "dig_site": DigSiteLayer,
+    "crossbow": CrossbowLayer,
+    "turtle": TurtleLayer,
+    "excavation": ExcavationLayer,
 }
 
 
@@ -859,7 +937,63 @@ def _parse_furnace(ctx: Ctx, obj: dict[str, Any]) -> Layer:
 
 
 def _parse_plinth(ctx: Ctx, obj: dict[str, Any]) -> Layer:
-    return PlinthLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj))
+    hooves = ctx.bool_(obj, "hooves", default=True)
+    return PlinthLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj), hooves=hooves)
+
+
+def _parse_arrowheads(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    arrangement = ctx.choice(obj, "arrangement", ARRANGEMENT_NAMES, default="single")
+    return ArrowheadsLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        arrangement=cast("Literal['single', 'pair', 'quarter', 'heap']", arrangement),
+    )
+
+
+def _parse_mould(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    key = ctx.bool_(obj, "key", default=True)
+    return MouldLayer(x=_x(ctx, obj), y=_y(ctx, obj), scale=_scale(ctx, obj), key=key)
+
+
+def _parse_dig_site(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    mode = ctx.choice(obj, "mode", DIG_MODES, default="buried")
+    return DigSiteLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        mode=cast("Literal['buried', 'pit', 'hoard', 'covered']", mode),
+    )
+
+
+def _parse_crossbow(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    mode = ctx.choice(obj, "mode", CROSSBOW_MODES, default="claw")
+    return CrossbowLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        mode=cast("Literal['claw', 'volley', 'rack', 'missing']", mode),
+    )
+
+
+def _parse_turtle(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    return TurtleLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        facing=_sign(ctx, obj, "facing", 1) or 1,
+        claw=ctx.bool_(obj, "claw", default=True),
+    )
+
+
+def _parse_excavation(ctx: Ctx, obj: dict[str, Any]) -> Layer:
+    mode = ctx.choice(obj, "mode", EXCAVATION_MODES, default="site")
+    return ExcavationLayer(
+        x=_x(ctx, obj),
+        y=_y(ctx, obj),
+        scale=_scale(ctx, obj),
+        mode=cast("Literal['site', 'trench']", mode),
+    )
 
 
 def _parse_temple(ctx: Ctx, obj: dict[str, Any]) -> Layer:
@@ -925,6 +1059,12 @@ _LAYER_PARSERS: dict[str, Callable[[Ctx, dict[str, Any]], Layer]] = {
     "bamboo_village": _parse_bamboo_village,
     "furnace": _parse_furnace,
     "plinth": _parse_plinth,
+    "arrowheads": _parse_arrowheads,
+    "mould": _parse_mould,
+    "dig_site": _parse_dig_site,
+    "crossbow": _parse_crossbow,
+    "turtle": _parse_turtle,
+    "excavation": _parse_excavation,
 }
 
 

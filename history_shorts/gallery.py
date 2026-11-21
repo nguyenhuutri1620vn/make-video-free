@@ -29,13 +29,17 @@ from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import (
+    ArrowheadsLayer,
     ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
     CharacterSpec,
     CitadelLayer,
+    CrossbowLayer,
+    DigSiteLayer,
     DrumLayer,
     ElephantLayer,
+    ExcavationLayer,
     FallenFlagsLayer,
     FurnaceLayer,
     GongLayer,
@@ -46,6 +50,7 @@ from history_shorts.config import (
     LonePathLayer,
     LotusLayer,
     MapLayer,
+    MouldLayer,
     PlinthLayer,
     RegaliaLayer,
     SailBoatLayer,
@@ -54,6 +59,7 @@ from history_shorts.config import (
     TabletLayer,
     TempleLayer,
     Theme,
+    TurtleLayer,
 )
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.primitives import Box, FloatImage
@@ -110,6 +116,12 @@ GALLERY_CITADEL: Final = CitadelLayer(x=540, y=980, scale=0.85)
 GALLERY_BAMBOO_VILLAGE: Final = BambooVillageLayer(x=540, y=1200, scale=1.05)
 GALLERY_FURNACE: Final = FurnaceLayer(x=540, y=1200, scale=1.2)
 GALLERY_PLINTH: Final = PlinthLayer(x=540, y=1200, scale=1.5)
+GALLERY_ARROWHEADS: Final = ArrowheadsLayer(x=540, y=1150, scale=1.6, arrangement="pair")
+GALLERY_MOULD: Final = MouldLayer(x=540, y=1200, scale=1.3)
+GALLERY_DIG_SITE: Final = DigSiteLayer(x=540, y=800, scale=0.8, mode="hoard")
+GALLERY_CROSSBOW: Final = CrossbowLayer(x=540, y=1200, scale=1.6, mode="claw")
+GALLERY_TURTLE: Final = TurtleLayer(x=520, y=1150, scale=1.0)
+GALLERY_EXCAVATION: Final = ExcavationLayer(x=540, y=1150, scale=0.75, mode="site")
 GALLERY_MAP: Final = MapLayer(x=270, y=560, w=540, h=600, dots=((0.36, 0.38),), arrow=True)
 # One entry per cell, in reading order: (label, layer type name, reference layer, crop).
 # The crop is the 3:4 region of the full-canvas render that is scaled into the 270x360 cell. It
@@ -147,6 +159,12 @@ LAYER_SPECS: Final[tuple[tuple[str, str, Layer, Box], ...]] = (
     ("bamboo village", "bamboo_village", GALLERY_BAMBOO_VILLAGE, Box(240, 600, 840, 1400)),
     ("furnace", "furnace", GALLERY_FURNACE, Box(240, 620, 840, 1420)),
     ("plinth", "plinth", GALLERY_PLINTH, Box(240, 560, 840, 1360)),
+    ("arrowheads", "arrowheads", GALLERY_ARROWHEADS, Box(240, 640, 840, 1440)),
+    ("mould", "mould", GALLERY_MOULD, Box(240, 500, 840, 1300)),
+    ("dig site", "dig_site", GALLERY_DIG_SITE, Box(150, 560, 930, 1600)),
+    ("crossbow", "crossbow", GALLERY_CROSSBOW, Box(240, 600, 840, 1400)),
+    ("turtle", "turtle", GALLERY_TURTLE, Box(240, 700, 840, 1500)),
+    ("excavation", "excavation", GALLERY_EXCAVATION, Box(150, 720, 930, 1760)),
 )
 LAYER_ROWS: Final = -(-len(LAYER_SPECS) // COLUMNS)  # ceiling division
 
@@ -293,7 +311,7 @@ def _paste_layer_cells(buffer: FloatImage, theme: Theme) -> None:
 
 
 def render_gallery(theme: Theme) -> Image.Image:
-    """The 1080x5880 contact sheet: layer cells, separators and figures, then the text."""
+    """The 1080x6600 contact sheet: layer cells, separators and figures, then the text."""
     cells = grid_cells()
     ground = lacquer_ground(
         rng_for(theme.seed, 0, GROUND_LAYER), theme.palette, width=SHEET_W, height=SHEET_H

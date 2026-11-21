@@ -12,15 +12,19 @@ from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 
 from . import (
+    arrowheads,
     artwork,
     bamboo_village,
     banners,
     boat,
     citadel,
     clouds,
+    crossbow,
     delta_map,
+    dig_site,
     drum,
     elephant,
+    excavation,
     fallen_flags,
     furnace,
     gong,
@@ -28,6 +32,7 @@ from . import (
     lanterns,
     lone_path,
     lotus,
+    mould,
     people,
     plinth,
     regalia,
@@ -38,6 +43,7 @@ from . import (
     tablet,
     temple,
     terrain,
+    turtle,
 )
 from .registry import LayerDrawer, PhaseDrawer, merge
 
@@ -80,6 +86,12 @@ LAYER_DRAWERS: Mapping[type, LayerDrawer] = MappingProxyType(
         furnace.DRAWERS,
         plinth.DRAWERS,
         artwork.DRAWERS,
+        arrowheads.DRAWERS,
+        mould.DRAWERS,
+        dig_site.DRAWERS,
+        crossbow.DRAWERS,
+        turtle.DRAWERS,
+        excavation.DRAWERS,
     )
 )
 

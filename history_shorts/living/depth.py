@@ -11,6 +11,7 @@ from history_shorts.errors import Issue, ValidationFailed
 from history_shorts.scene.templates import expand
 from history_shorts.scene_config import (
     PLANE_KEY,
+    ArrowheadsLayer,
     ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
@@ -19,9 +20,12 @@ from history_shorts.scene_config import (
     CharactersLayer,
     CitadelLayer,
     CloudsLayer,
+    CrossbowLayer,
     Depth,
+    DigSiteLayer,
     DrumLayer,
     ElephantLayer,
+    ExcavationLayer,
     FallenFlagsLayer,
     FurnaceLayer,
     GongLayer,
@@ -34,6 +38,7 @@ from history_shorts.scene_config import (
     LonePathLayer,
     LotusLayer,
     MapLayer,
+    MouldLayer,
     MountainsLayer,
     PeaksLayer,
     PlinthLayer,
@@ -45,6 +50,7 @@ from history_shorts.scene_config import (
     SunLayer,
     TabletLayer,
     TempleLayer,
+    TurtleLayer,
 )
 
 ORDER: Final[Mapping[str, int]] = MappingProxyType({"far": 0, "mid": 1, "near": 2})
@@ -83,6 +89,12 @@ DEFAULT_DEPTH: Final[Mapping[type, Depth]] = MappingProxyType(
         FurnaceLayer: "mid",
         PlinthLayer: "mid",
         ArtworkLayer: "mid",  # the file's own plane wins in scene_layers
+        ArrowheadsLayer: "mid",
+        MouldLayer: "mid",
+        DigSiteLayer: "mid",
+        CrossbowLayer: "mid",
+        TurtleLayer: "mid",
+        ExcavationLayer: "mid",
     }
 )
 

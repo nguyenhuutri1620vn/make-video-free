@@ -10,11 +10,15 @@ import numpy as np
 import pytest
 
 from history_shorts.config import (
+    ArrowheadsLayer,
     BambooVillageLayer,
     BannersLayer,
     CitadelLayer,
+    CrossbowLayer,
+    DigSiteLayer,
     DrumLayer,
     ElephantLayer,
+    ExcavationLayer,
     FallenFlagsLayer,
     FurnaceLayer,
     GongLayer,
@@ -23,6 +27,7 @@ from history_shorts.config import (
     LanternsLayer,
     LonePathLayer,
     MapLayer,
+    MouldLayer,
     PlinthLayer,
     RegaliaLayer,
     SailBoatLayer,
@@ -30,23 +35,29 @@ from history_shorts.config import (
     StiltHouseLayer,
     TabletLayer,
     TempleLayer,
+    TurtleLayer,
     load_script,
 )
 from history_shorts.errors import ValidationFailed
 from history_shorts.primitives import FloatImage
 from history_shorts.scene import LAYER_DRAWERS
+from history_shorts.scene.arrowheads import draw_arrowheads
 from history_shorts.scene.bamboo_village import draw_bamboo_village
 from history_shorts.scene.banners import draw_banners
 from history_shorts.scene.citadel import draw_citadel
+from history_shorts.scene.crossbow import draw_crossbow
 from history_shorts.scene.delta_map import _in_sea, draw_map, scatter_points
+from history_shorts.scene.dig_site import draw_dig_site
 from history_shorts.scene.drum import draw_drum
 from history_shorts.scene.elephant import draw_elephant
+from history_shorts.scene.excavation import draw_excavation
 from history_shorts.scene.fallen_flags import draw_fallen_flags
 from history_shorts.scene.furnace import draw_furnace
 from history_shorts.scene.gong import draw_gong
 from history_shorts.scene.horse import draw_horse
 from history_shorts.scene.lanterns import draw_lanterns
 from history_shorts.scene.lone_path import draw_lone_path
+from history_shorts.scene.mould import draw_mould
 from history_shorts.scene.plinth import draw_plinth
 from history_shorts.scene.regalia import draw_regalia
 from history_shorts.scene.sail_boat import draw_sail_boat
@@ -54,6 +65,7 @@ from history_shorts.scene.scroll import draw_scroll
 from history_shorts.scene.stilt_house import draw_stilt_house
 from history_shorts.scene.tablet import draw_tablet
 from history_shorts.scene.temple import draw_temple
+from history_shorts.scene.turtle import draw_turtle
 
 Base = Callable[[], FloatImage]
 ScriptFactory = Callable[..., Path]
@@ -480,3 +492,185 @@ def test_plinth_bounds_beam_fades_and_determinism(ctx: Any, flat_base: Base) -> 
     near_cap = np.abs(after[1100 - 200, 540] - base[1100 - 200, 540]).max()
     assert near_top < 0.02 < near_cap
     assert np.array_equal(after, draw_plinth(flat_base(), layer, ctx, 1))
+
+
+# --- arrowheads and mould (Cổ Loa video) --------------------------------------------------
+
+
+def test_arrowheads_parse_with_default_arrangement(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "arrowheads", "x": 540, "y": 1080, "scale": 2.0}
+    assert _layer(tmp_script, raw) == ArrowheadsLayer(540, 1080, 2.0, "single")
+    raw["arrangement"] = "heap"
+    assert _layer(tmp_script, raw) == ArrowheadsLayer(540, 1080, 2.0, "heap")
+    assert LAYER_DRAWERS[ArrowheadsLayer] is draw_arrowheads
+
+
+def test_arrowheads_reject_unknown_arrangement(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "arrowheads", "x": 540, "y": 1080, "scale": 2.0, "arrangement": "rain"}
+    with pytest.raises(ValidationFailed):
+        _layer(tmp_script, raw)
+
+
+# (arrangement, half width, height above the floor, depth below it) at scale 1: the light
+# pool (r 240 about -170) bounds `single`; tips reach 0.46 * 135 units round each heap item
+ARROWHEAD_BOUNDS = [
+    ("single", 242, 412, 72),
+    ("pair", 132, 288, 2),
+    ("quarter", 242, 260, 2),
+    ("heap", 292, 235, 64),
+]
+
+
+@pytest.mark.parametrize(("arrangement", "half", "up", "down"), ARROWHEAD_BOUNDS)
+def test_arrowheads_bounds_and_determinism(
+    ctx: Any, flat_base: Base, arrangement: str, half: int, up: int, down: int
+) -> None:
+    base = flat_base()
+    layer = ArrowheadsLayer(540, 1100, 1.0, arrangement)  # type: ignore[arg-type]
+    after = draw_arrowheads(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    assert ys.size > 0
+    assert ys.min() >= 1100 - up and ys.max() <= 1100 + down
+    assert xs.min() >= 540 - half and xs.max() <= 540 + half
+    assert np.array_equal(after, draw_arrowheads(flat_base(), layer, ctx, 1))
+
+
+def test_polished_arrowhead_is_brighter_than_raw(ctx: Any, flat_base: Base) -> None:
+    after = draw_arrowheads(flat_base(), ArrowheadsLayer(540, 1100, 1.0, "pair"), ctx, 1)
+    # sample both blades just under their shoulders, left polished, right raw
+    left = after[1100 - 14 - 140, 540 - 80 - 20].sum()
+    right = after[1100 - 14 - 140, 540 + 80 - 20].sum()
+    assert left > right
+
+
+def test_mould_parses(tmp_script: ScriptFactory) -> None:
+    raw = {"type": "mould", "x": 540, "y": 1095, "scale": 1.25}
+    assert _layer(tmp_script, raw) == MouldLayer(540, 1095, 1.25)
+    assert LAYER_DRAWERS[MouldLayer] is draw_mould
+
+
+def test_mould_bounds_cavity_and_determinism(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    layer = MouldLayer(540, 1100, 1.0)
+    after = draw_mould(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    # the key (radius 82 + spread 10 + ring 14) is the top; the shadow spans 250 each side
+    assert ys.min() >= 1100 - 455 - 107 and ys.max() <= 1100 + 14
+    assert xs.min() >= 540 - 252 and xs.max() <= 540 + 252
+    # the cavity in the middle piece is darker than the stone beside it
+    assert after[1100 - 250, 540].sum() < after[1100 - 250, 540 + 45].sum()
+    assert np.array_equal(after, draw_mould(flat_base(), layer, ctx, 1))
+
+
+def test_mould_without_key_draws_nothing_above_the_pieces(ctx: Any, flat_base: Base) -> None:
+    base = flat_base()
+    after = draw_mould(base.copy(), MouldLayer(540, 1100, 1.0, key=False), ctx, 1)
+    ys, _ = _changed(base, after)
+    assert ys.min() >= 1100 - 332  # the pieces are 330 tall
+    assert MouldLayer(540, 1100, 1.0).key is True
+
+
+def test_plinth_without_hooves(ctx: Any, flat_base: Base, tmp_script: ScriptFactory) -> None:
+    raw = {"type": "plinth", "x": 540, "y": 1095, "scale": 1.6, "hooves": False}
+    assert _layer(tmp_script, raw) == PlinthLayer(540, 1095, 1.6, hooves=False)
+    with_marks = draw_plinth(flat_base(), PlinthLayer(540, 1100, 1.0), ctx, 1)
+    bare = draw_plinth(flat_base(), PlinthLayer(540, 1100, 1.0, hooves=False), ctx, 1)
+    # a hoof mark sits at x -62, y -177 on the top face
+    assert bare[1100 - 177, 540 - 62].sum() > with_marks[1100 - 177, 540 - 62].sum()
+
+
+# --- dig site, crossbow, turtle, excavation (Cổ Loa video) --------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ({"type": "dig_site", "mode": "hoard"}, DigSiteLayer(540, 700, 1.0, "hoard")),
+        ({"type": "dig_site"}, DigSiteLayer(540, 700, 1.0, "buried")),
+        ({"type": "crossbow", "mode": "rack"}, CrossbowLayer(540, 700, 1.0, "rack")),
+        ({"type": "crossbow"}, CrossbowLayer(540, 700, 1.0, "claw")),
+        ({"type": "turtle", "facing": -1, "claw": False}, TurtleLayer(540, 700, 1.0, -1, False)),
+        ({"type": "turtle"}, TurtleLayer(540, 700, 1.0, 1, True)),
+        ({"type": "excavation", "mode": "trench"}, ExcavationLayer(540, 700, 1.0, "trench")),
+        ({"type": "excavation"}, ExcavationLayer(540, 700, 1.0, "site")),
+    ],
+)
+def test_co_loa_layers_parse(tmp_script: ScriptFactory, raw: dict[str, Any], expected: Any) -> None:
+    assert _layer(tmp_script, {"x": 540, "y": 700, "scale": 1.0, **raw}) == expected
+    assert type(expected) in LAYER_DRAWERS
+
+
+@pytest.mark.parametrize("layer_type", ["dig_site", "crossbow", "excavation"])
+def test_co_loa_layers_reject_unknown_mode(tmp_script: ScriptFactory, layer_type: str) -> None:
+    with pytest.raises(ValidationFailed):
+        _layer(tmp_script, {"type": layer_type, "x": 540, "y": 700, "scale": 1.0, "mode": "x"})
+
+
+# (layer, up, down, left, right) at scale 1: the soil section is 860 x 460 under the surface
+# line; pit tools reach 212 above it; a crossbow is 330 long, its volley reaches ~670.
+COLOA_BOUNDS = [
+    (DigSiteLayer(540, 700, 1.0, "buried"), 4, 461, 434, 434),
+    (DigSiteLayer(540, 700, 1.0, "pit"), 214, 461, 434, 434),
+    (DigSiteLayer(540, 700, 1.0, "hoard"), 214, 461, 434, 434),
+    (DigSiteLayer(540, 700, 1.0, "covered"), 14, 461, 434, 434),
+    (CrossbowLayer(540, 1100, 1.0, "claw"), 333, 2, 173, 173),
+    (CrossbowLayer(540, 1100, 1.0, "volley"), 673, 11, 30, 516),
+    (CrossbowLayer(540, 1100, 1.0, "rack"), 571, 2, 369, 369),
+    (CrossbowLayer(540, 1100, 1.0, "missing"), 333, 2, 173, 173),
+    (TurtleLayer(540, 1100, 1.0, 1, True), 372, 44, 263, 268),
+    (TurtleLayer(540, 1100, 1.0, -1, False), 195, 44, 269, 262),
+    (ExcavationLayer(540, 1100, 1.0, "site"), 273, 3, 483, 481),
+    (ExcavationLayer(540, 700, 1.0, "trench"), 4, 461, 434, 434),
+]
+_DRAW = {
+    DigSiteLayer: draw_dig_site,
+    CrossbowLayer: draw_crossbow,
+    TurtleLayer: draw_turtle,
+    ExcavationLayer: draw_excavation,
+}
+
+
+@pytest.mark.parametrize(("layer", "up", "down", "left", "right"), COLOA_BOUNDS)
+def test_co_loa_layers_bounds_and_determinism(
+    ctx: Any, flat_base: Base, layer: Any, up: int, down: int, left: int, right: int
+) -> None:
+    draw = _DRAW[type(layer)]
+    base = flat_base()
+    after = draw(base.copy(), layer, ctx, 1)
+    ys, xs = _changed(base, after)
+    assert ys.size > 0
+    assert ys.min() >= layer.y - up and ys.max() <= layer.y + down
+    assert xs.min() >= layer.x - left and xs.max() <= layer.x + right
+    assert np.array_equal(after, draw(flat_base(), layer, ctx, 1))
+
+
+def test_dig_site_pit_is_dark_and_the_hoard_fills_it(ctx: Any, flat_base: Base) -> None:
+    pit = draw_dig_site(flat_base(), DigSiteLayer(540, 700, 1.0, "pit"), ctx, 1)
+    hoard = draw_dig_site(flat_base(), DigSiteLayer(540, 700, 1.0, "hoard"), ctx, 1)
+    # pit spans x -40..140, depth 216; the soil at x -300 is untouched by it
+    inside = (slice(700 + 60, 700 + 200), slice(540 - 30, 540 + 130))
+    assert pit[inside].mean() < pit[700 + 30, 540 - 300].mean()
+    assert hoard[inside].mean() > pit[inside].mean()
+
+
+def test_crossbow_claw_glows_and_missing_leaves_an_empty_slot(ctx: Any, flat_base: Base) -> None:
+    claw = draw_crossbow(flat_base(), CrossbowLayer(540, 1100, 1.0, "claw"), ctx, 1)
+    gone = draw_crossbow(flat_base(), CrossbowLayer(540, 1100, 1.0, "missing"), ctx, 1)
+    trigger = (1100 - 110 + 12, 540)  # inside the trigger, 12 units below its top
+    assert claw[trigger].sum() > gone[trigger].sum()
+
+
+def test_turtle_faces_its_head_and_claw_is_optional(ctx: Any, flat_base: Base) -> None:
+    right = draw_turtle(flat_base(), TurtleLayer(540, 1100, 1.0, 1, True), ctx, 1)
+    left = draw_turtle(flat_base(), TurtleLayer(540, 1100, 1.0, -1, True), ctx, 1)
+    head = (1100 - 168, 540 + 232)
+    mirrored = (1100 - 168, 540 - 232)
+    assert right[head].sum() > right[mirrored].sum()
+    assert left[mirrored].sum() > left[head].sum()
+
+
+def test_excavation_trench_has_a_dark_ash_band(ctx: Any, flat_base: Base) -> None:
+    after = draw_excavation(flat_base(), ExcavationLayer(540, 700, 1.0, "trench"), ctx, 1)
+    ash = after[700 + 212 : 700 + 250, 540 + 350 : 540 + 420].mean()
+    above = after[700 + 120 : 700 + 170, 540 + 350 : 540 + 420].mean()
+    assert ash < above
