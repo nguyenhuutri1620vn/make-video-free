@@ -19,6 +19,8 @@ from history_shorts.narration import MAX_NARRATION_CHARS, normalise, pause_probl
 from history_shorts.scene_config import (
     PLANE_KEY,
     V23_CHARACTER_KEYS,
+    V24_CHARACTER_KEYS,
+    V24_PROPS,
     LayerScene,
     TemplateScene,
     parse_scene,
@@ -29,16 +31,19 @@ SCRIPT_SCHEMA_VERSION = "2.0"  # the version every v2.0 script declares
 NARRATED_SCHEMA_VERSION = "2.1"  # adds slide ``id`` and ``narration`` (spec A.1.2)
 LIVING_SCHEMA_VERSION = "2.2"  # adds living slides and synthesized sound cues (M9)
 ANIMATED_SCHEMA_VERSION = "2.3"  # adds redrawn scene motion and character animation (M10)
+WARRIOR_SCHEMA_VERSION = "2.4"  # adds the warrior kit fields and props (M12)
 SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = (
     SCRIPT_SCHEMA_VERSION,
     NARRATED_SCHEMA_VERSION,
     LIVING_SCHEMA_VERSION,
     ANIMATED_SCHEMA_VERSION,
+    WARRIOR_SCHEMA_VERSION,
 )
 SCHEMA_LEVELS: Mapping[str, int] = {v: n for n, v in enumerate(SUPPORTED_SCHEMA_VERSIONS)}
 NARRATED_LEVEL = 1
 LIVING_LEVEL = 2
 ANIMATED_LEVEL = 3
+WARRIOR_LEVEL = 4
 SLIDE_ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 
 MAX_TAG_CHARS = 28
@@ -477,6 +482,19 @@ def _check_v23_keys(ctx: Ctx, obj: Mapping[str, Any]) -> None:
                 where.at(key).error(message)
 
 
+def _check_v24_keys(ctx: Ctx, obj: Mapping[str, Any]) -> None:
+    message = f'requires schema_version "{WARRIOR_SCHEMA_VERSION}"'
+    for path, item in _scene_character_objects(obj):
+        where = ctx.at("scene")
+        for part in path:
+            where = where.idx(part) if isinstance(part, int) else where.at(part)
+        for key in V24_CHARACTER_KEYS:
+            if key in item:
+                where.at(key).error(message)
+        if item.get("prop") in V24_PROPS:
+            where.at("prop").error(message)
+
+
 def _parse_action(ctx: Ctx, raw: object) -> SlideAction | None:
     obj = ctx.mapping(raw, _ACTION_KEYS)
     if not obj:
@@ -509,6 +527,8 @@ def _check_version_keys(ctx: Ctx, obj: Mapping[str, Any], level: int) -> None:
         _check_layer_depths(ctx, obj)
     if level < ANIMATED_LEVEL:
         _check_v23_keys(ctx, obj)
+    if level < WARRIOR_LEVEL:
+        _check_v24_keys(ctx, obj)
 
 
 def _parse_slide(

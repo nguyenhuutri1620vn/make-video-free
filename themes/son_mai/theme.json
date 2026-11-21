@@ -9,6 +9,7 @@
     "egg": [236, 225, 200], "brown": [92, 50, 28], "brown_lt": [128, 74, 40],
     "skin_line": [96, 52, 32], "pink": [224, 140, 120], "jade": [52, 84, 70],
     "robe_general_dk": [70, 14, 10], "robe_general_alt_dk": [56, 28, 16], "robe_crew_dk": [30, 50, 42],
+    "steel": [126, 128, 122], "steel_dk": [74, 78, 78], "indigo": [46, 58, 92], "indigo_dk": [28, 34, 58],
     "egg_tone": [226, 212, 184], "egg_gap": [58, 30, 20], "sheen": [255, 210, 160],
     "shadow": [10, 4, 2], "deep_warm": [70, 20, 12], "mountain_base": [60, 14, 10],
     "peak_base": [44, 11, 8], "river_top": [40, 12, 8], "hull_dk": [40, 20, 12],

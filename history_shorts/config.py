@@ -91,6 +91,10 @@ REQUIRED_PALETTE_KEYS: tuple[str, ...] = (
 
 # Optional palette key -> required key it falls back to when absent (spec 6.2).
 PALETTE_FALLBACKS: dict[str, str] = {
+    "steel": "gold_dk",  # M12 warrior kit
+    "steel_dk": "brown",
+    "indigo": "jade",
+    "indigo_dk": "black",
     "robe_general_dk": "vermilion_dk",
     "robe_general_alt_dk": "brown",
     "robe_crew_dk": "jade",

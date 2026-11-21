@@ -26,7 +26,7 @@ DEFAULT_RIVER_HEIGHT = 290.0
 DEFAULT_GROUND_HEIGHT = 52.0
 
 ROLE_NAMES: tuple[str, ...] = ("leader", "general", "general_alt", "boat_crew")
-PROP_NAMES: tuple[str, ...] = ("flag", "spear", "oar", "none")
+PROP_NAMES: tuple[str, ...] = ("flag", "spear", "oar", "none", "sword_sheathed", "shield")
 FORMATION_NAMES: tuple[str, ...] = ("centre_pair", "line", "v_shape")
 TEMPLATE_NAMES: tuple[str, ...] = ("group", "landscape")
 OUTLINE_NAMES: tuple[str, ...] = ("gold", "gold_dk")
@@ -39,11 +39,15 @@ EXCAVATION_MODES: tuple[str, ...] = ("site", "trench")
 
 T = TypeVar("T")
 
-Prop = Literal["flag", "spear", "oar", "none"]
+Prop = Literal["flag", "spear", "oar", "none", "sword_sheathed", "shield"]
 Depth = Literal["far", "mid", "near"]
 POSE_NAMES: tuple[str, ...] = ("standing", "kneeling", "seated")  # characters.actions.POSES
 CHARACTER_ID_RE: Final = re.compile(r"[a-z0-9_]{1,32}")
 V23_CHARACTER_KEYS: tuple[str, ...] = ("id", "pose", "on", "idle")
+V24_CHARACTER_KEYS: tuple[str, ...] = ("helmet", "body", "armour", "banner")
+V24_PROPS: tuple[str, ...] = ("sword_sheathed", "shield")
+HELMET_NAMES: tuple[str, ...] = ("topknot_wrap", "viet_helmet", "northern_helmet", "cap")
+BODY_NAMES: tuple[str, ...] = ("tunic", "lamellar", "lamellar_cape")
 DEPTH_NAMES: tuple[str, ...] = ("far", "mid", "near")  # living-slide planes, back to front
 # JSON key of a layer's depth override; not ``depth``, which ``lone_path`` already uses.
 PLANE_KEY = "plane"
@@ -75,6 +79,10 @@ class CharacterSpec:
     pose: str = "standing"  # pose at the start of the slide (2.3)
     on: int | None = None  # index of the boat layer the character stands on (2.3)
     idle: bool = True  # breathes and sways on a living slide (2.3)
+    helmet: str | None = None  # headwear variant of the warrior kit (2.4)
+    body: str | None = None  # body variant of the warrior kit (2.4)
+    armour: str | None = None  # palette key of armour plates (2.4)
+    banner: str | None = None  # palette key of a held flag's cloth (2.4)
 
 
 @dataclass(frozen=True, slots=True)
@@ -632,6 +640,10 @@ def parse_character(ctx: Ctx, raw: object) -> CharacterSpec:
         pose=ctx.choice(obj, "pose", POSE_NAMES, default="standing"),
         on=_opt_int(ctx, obj, "on", lo=0),
         idle=ctx.bool_(obj, "idle", default=True),
+        helmet=_opt_choice(ctx, obj, "helmet", HELMET_NAMES),
+        body=_opt_choice(ctx, obj, "body", BODY_NAMES),
+        armour=ctx.str_(obj, "armour") if "armour" in obj else None,
+        banner=ctx.str_(obj, "banner") if "banner" in obj else None,
     )
 
 

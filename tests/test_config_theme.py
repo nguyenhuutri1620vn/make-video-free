@@ -51,7 +51,7 @@ def test_default_theme_values() -> None:
 
 def test_palette_constants_and_api() -> None:
     assert len(REQUIRED_PALETTE_KEYS) == 13
-    assert len(PALETTE_FALLBACKS) == 14
+    assert len(PALETTE_FALLBACKS) == 18  # +4 warrior keys (M12)
     assert set(PALETTE_FALLBACKS.values()) <= set(REQUIRED_PALETTE_KEYS)
     theme, _ = load_theme(DEFAULT)
     assert set(theme.palette.keys()) == set(REQUIRED_PALETTE_KEYS) | set(PALETTE_FALLBACKS)

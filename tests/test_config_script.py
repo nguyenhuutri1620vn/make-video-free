@@ -229,7 +229,7 @@ def test_top_level_errors(tmp_script: ScriptFactory) -> None:
     path = tmp_script(slides="nope", sources=[1, ""], extra={"schema_version": "1.1", "title": ""})
     assert sorted(_errors(path)) == [
         "script.json › schema_version: unsupported schema_version"
-        ' "1.1" (expected "2.0" or "2.1" or "2.2" or "2.3")',
+        ' "1.1" (expected "2.0" or "2.1" or "2.2" or "2.3" or "2.4")',
         "script.json › slides: must be an array",
         "script.json › sources[0]: must be a non-empty string or an object",
         "script.json › sources[1]: must be a non-empty string or an object",
@@ -391,7 +391,7 @@ def test_character_field_errors(tmp_script: ScriptFactory) -> None:
     assert sorted(_one_slide_errors(tmp_script, {"scene": scene})) == sorted(
         [
             prefix + "facing: must be -1 or 1",
-            prefix + "prop: must be one of flag, spear, oar, none",
+            prefix + "prop: must be one of flag, spear, oar, none, sword_sheathed, shield",
             prefix + "crest: must be true or false",
             prefix + "robe: must be a non-empty string",
             prefix + "x: must be 0–1080",

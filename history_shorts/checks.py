@@ -71,7 +71,7 @@ THEME_FONT_KEYS: Final = ("title", "subtitle", "tag")
 # Slide text fields -> theme font that renders them.
 TEXT_FIELD_FONTS: Final = (("tag", "tag"), ("title", "title"), ("subtitle", "subtitle"))
 # CharacterSpec fields that name a palette key.
-PALETTE_OVERRIDE_FIELDS: Final = ("robe", "robe_dk", "trim", "wrap")
+PALETTE_OVERRIDE_FIELDS: Final = ("robe", "robe_dk", "trim", "wrap", "armour", "banner")
 # Character heads stay inside the chrome frame. This is deliberately not the safe zone: the
 # approved ``group`` composition puts the outer generals' heads past its right edge.
 FRAME_INNER: Final = Box(

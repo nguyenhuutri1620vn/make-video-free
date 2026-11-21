@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Final, get_args
+from typing import Final
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -69,7 +69,7 @@ from history_shorts.scene_config import Prop
 from history_shorts.text import font
 from history_shorts.textures import lacquer_ground
 
-PROPS: Final[tuple[Prop, ...]] = get_args(Prop)  # flag, spear, oar, none: the columns
+PROPS: Final[tuple[Prop, ...]] = ("flag", "spear", "oar", "none")  # the columns
 FACINGS: Final[tuple[int, ...]] = (1, -1)  # per role, in this order: the rows
 
 CELL_W: Final = 270
