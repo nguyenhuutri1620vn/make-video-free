@@ -8,7 +8,7 @@ code changes.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Final
 
@@ -32,6 +32,9 @@ class RolePreset:
     crest: bool
     prop: str
     kit: str = DEFAULT_KIT
+    armour: str = "gold_dk"  # armour plates (M12)
+    banner: str = "vermilion"  # a held flag's cloth (M12)
+    variant: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +51,9 @@ class CharacterStyle:
     kit: str = DEFAULT_KIT
     variation: Variation = Variation(1.0, 1.0, 1.0)
     pose: Pose | None = None  # None: the still drawing; a Pose: jointed parts (M10)
+    armour: RGB | None = None  # None: the kit's default armour colour (M12)
+    banner: RGB | None = None  # None: the kit's default flag colour (M12)
+    variant: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
 
 
 ROLES: Mapping[str, RolePreset] = MappingProxyType(
@@ -95,7 +101,20 @@ def resolve_style(
         kit=preset.kit,
         variation=variation_for(spec.seed),
         pose=None if spec.pose == "standing" else POSES[spec.pose],
+        armour=_colour(palette, spec.armour or preset.armour),
+        banner=_colour(palette, spec.banner or preset.banner),
+        variant=_variant(spec, preset),
     )
+
+
+def _variant(spec: CharacterSpec, preset: RolePreset) -> Mapping[str, str]:
+    """The preset's part variants with the spec's ``helmet``/``body`` overrides (2.4)."""
+    chosen = dict(preset.variant)
+    if spec.helmet is not None:
+        chosen["helmet"] = spec.helmet
+    if spec.body is not None:
+        chosen["body"] = spec.body
+    return MappingProxyType(chosen)
 
 
 def preset_for(spec: CharacterSpec, roles: Mapping[str, RolePreset] | None = None) -> RolePreset:

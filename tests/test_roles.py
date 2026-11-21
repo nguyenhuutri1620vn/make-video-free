@@ -59,6 +59,8 @@ def test_defaults_resolve_to_preset_colours(role: str, palette: Any) -> None:
         palette[preset.trim] == palette["gold"],
         preset.crest,
         preset.prop,
+        armour=palette[preset.armour],
+        banner=palette[preset.banner],
     )
 
 
@@ -104,3 +106,33 @@ def test_unknown_role_raises_clear_key_error(palette: Any) -> None:
 def test_unknown_palette_key_raises_clear_key_error(palette: Any) -> None:
     with pytest.raises(KeyError, match="unknown palette key 'teal'"):
         resolve_style(CharacterSpec(role="general", robe="teal"), palette)
+
+
+def test_armour_banner_and_variant_defaults(palette: Any) -> None:  # M12
+    s = resolve_style(CharacterSpec(role="general"), palette)
+    preset = ROLES["general"]
+    assert s.armour == palette[preset.armour] and s.banner == palette[preset.banner]
+    assert dict(s.variant) == dict(preset.variant)
+
+
+def test_armour_banner_and_variant_overrides(palette: Any) -> None:
+    spec = CharacterSpec(role="general", armour="jade", banner="gold", helmet="cap", body="tunic")
+    s = resolve_style(spec, palette)
+    assert s.armour == palette["jade"] and s.banner == palette["gold"]
+    assert s.variant["helmet"] == "cap" and s.variant["body"] == "tunic"
+
+
+def test_flag_uses_banner_colour(palette: Any) -> None:
+    from history_shorts.canvas import Canvas
+    from history_shorts.characters.figure import Placement, draw_figure
+
+    def flag_pixel(banner: str) -> Any:
+        style = resolve_style(CharacterSpec(role="leader", banner=banner), palette)
+        cv = Canvas(300, 500)
+        draw_figure(cv, style, Placement(100, 480, 300, 1), palette, ("prop_back",))
+        rgb, alpha = cv.to_premul()
+        return rgb[int(480 - 1.21 * 300), int(100 + 0.33 * 300)]
+
+    gold = flag_pixel("gold")
+    assert abs(gold * 255 - palette["gold"]).max() < 3
+    assert abs(flag_pixel("vermilion") * 255 - palette["vermilion"]).max() < 3

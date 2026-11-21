@@ -237,7 +237,7 @@ def sleeves(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
         cv.color(gold).stroke(0.5)
 
 
-def _waved_flag(cv: Canvas, palette: Palette, phase: float) -> None:
+def _waved_flag(cv: Canvas, palette: Palette, phase: float, banner: RGB | None = None) -> None:
     """``ancient_female._flag`` with every point passed through the cloth wave."""
     w = ClothWave(af.PROP_X, FLAG_LENGTH, phase, FLAG_WAVE_AMP, 0.0).pt
     gold = palette["gold"]
@@ -249,7 +249,7 @@ def _waved_flag(cv: Canvas, palette: Palette, phase: float) -> None:
         c.Z()
 
     cloth(cv)
-    cv.color(palette["vermilion"]).fill()
+    cv.color(banner or palette["vermilion"]).fill()
     cloth(cv)
     cv.color(gold).stroke(0.7)
     cv.color(gold).M(*w(20, -131)).C(*w(28, -129.5), *w(35, -127.5), *w(41, -125.5)).stroke(0.35)
@@ -266,7 +266,7 @@ def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     assert segment is not None
     (x0, y0), (x1, y1) = segment
     cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
-    _waved_flag(cv, palette, _pose(style).flag_wave)
+    _waved_flag(cv, palette, _pose(style).flag_wave, style.banner)
 
 
 # The body extent split by joint, for posed FR-48 boxes; at rest the union is the kit's body.

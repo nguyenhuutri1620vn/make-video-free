@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final
 from history_shorts.canvas import Canvas
 from history_shorts.characters.kits.base import Kit, KitExtents
 from history_shorts.config import Palette
-from history_shorts.primitives import Point
+from history_shorts.primitives import RGB, Point
 
 if TYPE_CHECKING:
     from history_shorts.characters.roles import CharacterStyle
@@ -121,11 +121,11 @@ def _flag_cloth(cv: Canvas) -> None:
     ).Z()
 
 
-def _flag(cv: Canvas, palette: Palette) -> None:
+def _flag(cv: Canvas, palette: Palette, banner: RGB | None = None) -> None:
     gold = palette["gold"]
     cv.color(gold).ellipse(17, -137.5, 1.5, 1.5).fill()
     _flag_cloth(cv)
-    cv.color(palette["vermilion"]).fill()
+    cv.color(banner or palette["vermilion"]).fill()
     _flag_cloth(cv)
     cv.color(gold).stroke(0.7)
     cv.color(gold).M(20, -131).C(28, -129.5, 35, -127.5, 41, -125.5).stroke(0.35)
@@ -152,7 +152,7 @@ def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     if style.prop == "spear":
         _spear_head(cv, palette)
     elif style.prop == "flag":
-        _flag(cv, palette)
+        _flag(cv, palette, style.banner)
     elif style.prop == "oar":
         _oar(cv, palette)
 
