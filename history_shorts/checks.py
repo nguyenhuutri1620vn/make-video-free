@@ -9,6 +9,7 @@ tag and text, and pixel masks for "no character covers another character's head"
 
 from __future__ import annotations
 
+import difflib
 import logging
 from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
@@ -16,6 +17,7 @@ from typing import Final
 
 import numpy as np
 
+from history_shorts.artwork.load import library_for
 from history_shorts.characters.actions import ACTIONS
 from history_shorts.characters.figure import (
     FigureBoxes,
@@ -36,6 +38,7 @@ from history_shorts.characters.roles import (
 from history_shorts.characters.timeline import action_seconds, timeline
 from history_shorts.chrome import FRAME_INNER_INSET, seal_box, tag_box, tag_too_wide
 from history_shorts.config import (
+    ArtworkLayer,
     BoatLayer,
     CharactersLayer,
     CharacterSpec,
@@ -46,7 +49,7 @@ from history_shorts.config import (
     TemplateScene,
     Theme,
 )
-from history_shorts.errors import Issue, Issues
+from history_shorts.errors import Issue, Issues, ValidationFailed
 from history_shorts.layout import CANVAS_H, CANVAS_W
 from history_shorts.living.depth import scene_layers
 from history_shorts.primitives import Box, FloatMask
@@ -91,6 +94,7 @@ def check_all(script: Script, theme: Theme) -> list[Issue]:
     _check_kits(script, issues)
     _check_characters(script, theme, issues)
     _check_actions(script, theme, issues)
+    _check_artwork(script, theme, issues)
     return issues.items
 
 
@@ -670,3 +674,44 @@ def action_timing_problems(script: Script, durations: Sequence[float]) -> list[I
                 msg = f"ends after the slide ({end:.2f} s > {seconds:.2f} s)"
                 issues.append(Issue(script.path.name, where, msg, "error"))
     return issues
+
+
+# --------------------------------------------------------------------------------------
+# Artwork files (M11)
+# --------------------------------------------------------------------------------------
+
+
+def unknown_artwork_message(name: str, known: Sequence[str], directory: Path) -> str:
+    """``unknown artwork 'x'`` plus up to three close names, or where the library is."""
+    close = difflib.get_close_matches(name, known, n=3)
+    if close:
+        return f"unknown artwork '{name}'; did you mean: {', '.join(close)}"
+    if not known:
+        return f"unknown artwork '{name}'; no artwork in {directory}"
+    return f"unknown artwork '{name}'"
+
+
+def _check_artwork(script: Script, theme: Theme, issues: Issues) -> None:
+    """Every artwork a script names exists in the theme library and loads cleanly; each
+    file's own problems are reported once, at the file."""
+    library = library_for(theme)
+    known = library.names()
+    checked: set[str] = set()
+    for index, slide in enumerate(script.slides):
+        if not isinstance(slide.scene, LayerScene):
+            continue
+        for k, layer in enumerate(slide.scene.layers):
+            if not isinstance(layer, ArtworkLayer) or not layer.name:
+                continue
+            where = f"slides[{index}].scene.layers[{k}].name"
+            if layer.name not in known:
+                message = unknown_artwork_message(layer.name, known, library.directory)
+                issues.error(script.path.name, where, message)
+                continue
+            if layer.name in checked:
+                continue
+            checked.add(layer.name)
+            try:
+                library.get(layer.name, theme.palette)
+            except ValidationFailed as exc:
+                issues.items.extend(exc.issues.items)

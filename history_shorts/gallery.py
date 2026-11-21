@@ -19,6 +19,9 @@ from typing import Final, get_args
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from history_shorts.artwork.load import library_for
+from history_shorts.artwork.model import Artwork
+from history_shorts.artwork.path import path_bounds
 from history_shorts.canvas import Canvas
 from history_shorts.characters import ROLES, resolve_style
 from history_shorts.characters.figure import Placement, draw_figure
@@ -26,6 +29,7 @@ from history_shorts.characters.kits import kit_named
 from history_shorts.compose import GROUND_LAYER as SCENE_GROUND_LAYER
 from history_shorts.compose import DrawContext, over, rng_for
 from history_shorts.config import (
+    ArtworkLayer,
     BambooVillageLayer,
     BannersLayer,
     CharacterSpec,
@@ -302,3 +306,79 @@ def render_gallery(theme: Theme) -> Image.Image:
     img = Image.fromarray((np.clip(buffer, 0, 1) * 255).astype(np.uint8), "RGB")
     _draw_labels(img, theme, [*cells, *layer_cells()])
     return img
+
+
+# --------------------------------------------------------------------------------------
+# Artwork files (M11): previews and the library sheet
+# --------------------------------------------------------------------------------------
+
+PREVIEW_CELL_W: Final = 540  # one preview cell: half the canvas width
+PREVIEW_CELL_H: Final = 960
+PREVIEW_FILL: Final = 0.8  # the object takes this share of the cell
+PREVIEW_GROUND_Y: Final = 1500  # where the object stands on the full canvas before cropping
+SHEET_COLUMNS: Final = 2
+
+
+def _artwork_crop(art: Artwork, scale: float) -> Box:
+    """The canvas box (cell aspect) around ``art`` drawn at ``scale`` at the preview spot."""
+    bounds = [path_bounds(part.ops) for part in art.parts if part.ops]
+    x0 = min(b[0] for b in bounds) * scale + CANVAS_W / 2
+    x1 = max(b[2] for b in bounds) * scale + CANVAS_W / 2
+    y0 = min(b[1] for b in bounds) * scale + PREVIEW_GROUND_Y
+    y1 = max(b[3] for b in bounds) * scale + PREVIEW_GROUND_Y
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    half_w, half_h = PREVIEW_CELL_W / 2, PREVIEW_CELL_H / 2
+    return Box(cx - half_w, cy - half_h, cx + half_w, cy + half_h)
+
+
+def _artwork_scale(art: Artwork) -> float:
+    bounds = [path_bounds(part.ops) for part in art.parts if part.ops]
+    w = max(b[2] for b in bounds) - min(b[0] for b in bounds)
+    h = max(b[3] for b in bounds) - min(b[1] for b in bounds)
+    return min(
+        PREVIEW_FILL * PREVIEW_CELL_W / max(w, 1e-6), PREVIEW_FILL * PREVIEW_CELL_H / max(h, 1e-6)
+    )
+
+
+def artwork_cell(theme: Theme, name: str, phase: float) -> FloatImage:
+    """One preview cell: ``name`` at loop ``phase`` on the lacquer ground."""
+    from history_shorts.compose import EggshellCache
+    from history_shorts.scene.artwork import draw_artwork_at
+
+    art = library_for(theme).get(name, theme.palette)
+    scale = _artwork_scale(art)
+    layer = ArtworkLayer(name, CANVAS_W / 2, PREVIEW_GROUND_Y, scale, 1)
+    ctx = DrawContext(theme, theme.palette, theme.seed, 0, EggshellCache())
+    full = draw_artwork_at(canvas_ground(theme), layer, ctx, 1, phase)
+    box = _artwork_crop(art, scale)
+    image = Image.fromarray((np.clip(full, 0, 1) * 255).astype(np.uint8), "RGB")
+    cell = image.crop((round(box.x0), round(box.y0), round(box.x1), round(box.y1)))
+    return np.asarray(np.asarray(cell, dtype=np.float32) / 255, dtype=np.float32)
+
+
+def artwork_preview(theme: Theme, name: str, phases: int = 4) -> Image.Image:
+    """``phases`` cells side by side: the object at phase 0, 1/n, 2/n, ..."""
+    cells = [artwork_cell(theme, name, k / phases) for k in range(phases)]
+    strip = np.concatenate(cells, axis=1)
+    return Image.fromarray((np.clip(strip, 0, 1) * 255).astype(np.uint8), "RGB")
+
+
+def artwork_sheet(theme: Theme) -> Image.Image | None:
+    """Every library item at phase 0, two to a row, titled; None for an empty library."""
+    library = library_for(theme)
+    names = library.names()
+    if not names:
+        return None
+    rows = -(-len(names) // SHEET_COLUMNS)
+    sheet = Image.new("RGB", (SHEET_COLUMNS * PREVIEW_CELL_W, rows * PREVIEW_CELL_H))
+    font = label_font(theme)
+    draw = ImageDraw.Draw(sheet)
+    for k, name in enumerate(names):
+        row, column = divmod(k, SHEET_COLUMNS)
+        cell = artwork_cell(theme, name, 0.0)
+        tile = Image.fromarray((np.clip(cell, 0, 1) * 255).astype(np.uint8), "RGB")
+        x, y = column * PREVIEW_CELL_W, row * PREVIEW_CELL_H
+        sheet.paste(tile, (x, y))
+        title = library.get(name, theme.palette).title
+        draw.text((x + 16, y + 16), f"{name} · {title}", font=font, fill=theme.palette["gold_lt"])
+    return sheet

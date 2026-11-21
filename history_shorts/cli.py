@@ -458,8 +458,90 @@ def _cmd_audio_manifest(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _artwork_theme(args: argparse.Namespace) -> Theme | None:
+    try:
+        theme, warnings = load_theme(args.theme)
+    except ValidationFailed as exc:
+        _print_report(exc.issues.items)
+        return None
+    for issue in warnings:
+        print(f"WARN {issue.format()}")
+    return theme
+
+
+def _cmd_artwork_check(args: argparse.Namespace) -> int:
+    """Validate the theme's artwork library, or one file of it (M11)."""
+    from history_shorts.artwork.load import library_for
+    from history_shorts.checks import unknown_artwork_message
+
+    theme = _artwork_theme(args)
+    if theme is None:
+        return ValidationFailed.exit_code
+    library = library_for(theme)
+    names = library.names()
+    if args.name is None and not names:
+        print(f"no artwork in {library.directory}")
+        return EXIT_OK
+    if args.name is not None and args.name not in names:
+        print(f"ERROR {unknown_artwork_message(args.name, names, library.directory)}")
+        return EXIT_ERROR
+    issues: list[Issue] = []
+    for name in [args.name] if args.name else names:
+        try:
+            library.get(name, theme.palette)
+        except ValidationFailed as exc:
+            issues.extend(exc.issues.items)
+            continue
+        print(f"{name}: ok")
+    return _print_report(issues)
+
+
+def _cmd_artwork_preview(args: argparse.Namespace) -> int:
+    """Write the object at ``--phases`` loop phases side by side as one PNG (M11)."""
+    from history_shorts.artwork.load import library_for
+    from history_shorts.checks import unknown_artwork_message
+    from history_shorts.gallery import artwork_preview
+    from history_shorts.render import write_png
+
+    theme = _artwork_theme(args)
+    if theme is None:
+        return ValidationFailed.exit_code
+    library = library_for(theme)
+    if args.name not in library.names():
+        print(f"ERROR {unknown_artwork_message(args.name, library.names(), library.directory)}")
+        return EXIT_ERROR
+    try:
+        image = artwork_preview(theme, args.name, args.phases)
+    except ValidationFailed as exc:
+        return _print_report(exc.issues.items)
+    out: Path = args.out
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        write_png(image, out)
+    except OSError as exc:
+        print(f"ERROR cannot write preview to {out}: {exc.strerror or exc}")
+        return EXIT_ERROR
+    print(f"Wrote preview to {out}")
+    return EXIT_OK
+
+
+def _add_artwork_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    artwork = sub.add_parser("artwork", help="check or preview the theme's artwork files (M11)")
+    actions = artwork.add_subparsers(dest="artwork_command", required=True)
+    check = actions.add_parser("check", help="validate the artwork library or one file")
+    check.add_argument("--name", help="one artwork name (default: every file)")
+    _add_theme_option(check)
+    check.set_defaults(run=_cmd_artwork_check)
+    preview = actions.add_parser("preview", help="PNG of one artwork at several loop phases")
+    preview.add_argument("--name", required=True, help="artwork name")
+    preview.add_argument("--out", type=Path, required=True, help="output PNG")
+    preview.add_argument("--phases", type=int, default=4, choices=range(1, 13), metavar="1-12")
+    _add_theme_option(preview)
+    preview.set_defaults(run=_cmd_artwork_preview)
+
+
 def _cmd_gallery(args: argparse.Namespace) -> int:
-    from history_shorts.gallery import render_gallery
+    from history_shorts.gallery import artwork_sheet, render_gallery
     from history_shorts.render import write_png
 
     try:
@@ -474,6 +556,11 @@ def _cmd_gallery(args: argparse.Namespace) -> int:
     try:
         out.parent.mkdir(parents=True, exist_ok=True)
         write_png(image, out)
+        sheet = artwork_sheet(theme)
+        if sheet is not None:
+            sheet_path = out.with_name(f"{out.stem}_artwork.png")
+            write_png(sheet, sheet_path)
+            print(f"Wrote artwork sheet to {sheet_path}")
     except OSError as exc:
         print(f"ERROR cannot write gallery to {out}: {exc.strerror or exc}")
         return EXIT_ERROR
@@ -572,9 +659,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(
         dest="command",
         required=True,
-        metavar="{render,validate,gallery,export-narration,audio-manifest}",
+        metavar="{render,validate,gallery,artwork,export-narration,audio-manifest}",
     )
     _add_render_parser(sub)
+    _add_artwork_parser(sub)
     gallery = sub.add_parser("gallery", help="contact sheet of every role, facing and prop")
     _add_theme_option(gallery)
     gallery.add_argument(
