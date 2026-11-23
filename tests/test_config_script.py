@@ -369,9 +369,19 @@ def test_unknown_role(tmp_script: ScriptFactory) -> None:
     scene = {"template": "group", "characters": [{"role": "king"}]}
     assert _one_slide_errors(tmp_script, {"scene": scene}) == [
         "script.json › slides[0].scene.characters[0].role: "
-        "must be one of leader, general, general_alt, boat_crew"
+        "must be one of leader, general, general_alt, boat_crew, "
+        "viet_general, viet_soldier, northern_general, northern_soldier"
     ]
-    assert ROLE_NAMES == ("leader", "general", "general_alt", "boat_crew")
+    assert ROLE_NAMES == (
+        "leader",
+        "general",
+        "general_alt",
+        "boat_crew",
+        "viet_general",
+        "viet_soldier",
+        "northern_general",
+        "northern_soldier",
+    )
 
 
 def test_character_field_errors(tmp_script: ScriptFactory) -> None:
@@ -646,7 +656,8 @@ def test_empty_layers_rejected(tmp_script: ScriptFactory) -> None:
         (
             {"type": "boat", "x": 1, "y": 1, "crew": [{"role": "nope"}]},
             "crew[0].role",
-            "must be one of leader, general, general_alt, boat_crew",
+            "must be one of leader, general, general_alt, boat_crew, "
+            "viet_general, viet_soldier, northern_general, northern_soldier",
         ),
         ({"type": "lotus", "x": 1, "y": 1, "scale": -1}, "scale", "must be > 0"),
         (

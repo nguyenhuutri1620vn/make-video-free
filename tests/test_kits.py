@@ -171,8 +171,12 @@ def test_every_role_kit_exists() -> None:
         assert preset.prop in KITS[preset.kit].props, name
 
 
+FEMALE_ROLES = ("leader", "general", "general_alt", "boat_crew")
+
+
 def test_existing_roles_use_ancient_female() -> None:
-    assert {preset.kit for preset in ROLES.values()} == {"ancient_female"}
+    assert {ROLES[role].kit for role in FEMALE_ROLES} == {"ancient_female"}
+    assert {p.kit for r, p in ROLES.items() if r not in FEMALE_ROLES} == {"warrior_male"}  # M12
     assert RolePreset("egg", "brown", "gold_dk", "jade", False, "none").kit == "ancient_female"
 
 
@@ -321,14 +325,14 @@ def test_gallery_skips_props_the_role_kit_cannot_draw(monkeypatch: pytest.Monkey
         ),
     )
     monkeypatch.setattr(kits, "KITS", MappingProxyType({**KITS, "ancient_female": narrow}))
-    cells = gallery.grid_cells()
+    cells = [c for c in gallery.grid_cells() if c.role in FEMALE_ROLES]
     assert {cell.prop for cell in cells} == {"flag", "none"}
-    assert len(cells) == len(ROLES) * len(gallery.FACINGS) * 2
+    assert len(cells) == len(FEMALE_ROLES) * len(gallery.FACINGS) * 2
     # columns keep their place: "none" is still the fourth column
     assert {cell.box.x0 for cell in cells if cell.prop == "none"} == {3 * gallery.CELL_W}
 
 
 def test_gallery_has_every_cell_for_ancient_female() -> None:
-    cells = gallery.grid_cells()
-    assert len(cells) == len(ROLES) * len(gallery.FACINGS) * len(gallery.PROPS)
+    cells = [c for c in gallery.grid_cells() if c.role in FEMALE_ROLES]
+    assert len(cells) == len(FEMALE_ROLES) * len(gallery.FACINGS) * len(gallery.PROPS)
     assert np.unique([cell.prop for cell in cells]).tolist() == sorted(ANCIENT_PROPS)
