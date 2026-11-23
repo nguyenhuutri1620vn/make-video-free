@@ -33,7 +33,7 @@ from history_shorts.living.types import (
 from history_shorts.primitives import FloatImage
 from history_shorts.render import scene_expander
 from history_shorts.scene_config import Depth
-from history_shorts.script_config import ANIMATED_SCHEMA_VERSION
+from history_shorts.script_config import ANIMATED_LEVEL, SCHEMA_LEVELS
 from history_shorts.textures import tone_matrix
 
 PNG_LEVEL: Final = 1  # fast: these files are read once by FFmpeg and then deleted
@@ -140,7 +140,7 @@ def render_living(
         style, draw = scene_expander(slide, theme)
         ctx = SlideContext(script, theme, index, style, draw, False, cache)
         layers, depths = scene_layers(slide, theme)
-        redraw = script.schema_version == ANIMATED_SCHEMA_VERSION
+        redraw = SCHEMA_LEVELS.get(script.schema_version, 0) >= ANIMATED_LEVEL  # 2.3 and later
         duration = durations[index] + theme.transition.duration
         stack = build_stack(ctx, layers, depths, redraw=redraw, clip_seconds=duration)
         target = root / f"{index + 1:02d}"

@@ -80,7 +80,7 @@ def _stack(theme: Any, redraw: bool) -> Any:
 
 def test_schema_23_supported() -> None:
     assert ANIMATED_SCHEMA_VERSION == "2.3"
-    assert SUPPORTED_SCHEMA_VERSIONS[-1] == "2.3"
+    assert "2.3" in SUPPORTED_SCHEMA_VERSIONS
 
 
 def test_schema_23_script_loads(tmp_script: Any) -> None:

@@ -99,3 +99,26 @@ def test_theme_json_lists_keys() -> None:
         (Path(__file__).resolve().parents[1] / "themes/son_mai/theme.json").read_text()
     )
     assert set(NEW_KEYS) <= set(data["palette"])
+
+
+def test_24_keeps_23_motion(tmp_path: Path, theme: Any, tmp_script: ScriptFactory) -> None:
+    """A 2.4 script still gets every 2.3 feature: redrawn layers and moving characters."""
+    import dataclasses
+
+    from history_shorts.living.assets import render_living
+
+    item = {"role": "viet_soldier", "id": "a", "x": 540, "baseline": 1100, "height": 380}
+    slide = {
+        "title": "A",
+        "duration": 2,
+        "living": True,
+        "scene": {"layers": [{"type": "characters", "items": [item]}]},
+        "actions": [{"who": "a", "do": "rally", "at": 0.2}],
+    }
+    script = load_script(tmp_script(slides=[slide], extra={"schema_version": "2.4"}))[0]
+    fast = dataclasses.replace(
+        theme, living=dataclasses.replace(theme.living, loop_seconds=0.5, idle_loop_seconds=1.0)
+    )
+    (clip,) = render_living(script, fast, [2.0], tmp_path)
+    assert clip is not None
+    assert any(p.kind == "sprite" for p in clip.planes)

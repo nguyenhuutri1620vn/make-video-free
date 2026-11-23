@@ -1,0 +1,127 @@
+{
+  "schema_version": "2.4",
+  "title": "Warrior kit test",
+  "sources": [
+    "Test fixture"
+  ],
+  "slides": [
+    {
+      "title": "Thử tướng",
+      "subtitle": "Hai phe",
+      "duration": 5,
+      "living": true,
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 930,
+            "amp": 1.2
+          },
+          {
+            "type": "hills",
+            "side": "left",
+            "base": 1100,
+            "top": 900
+          },
+          {
+            "type": "characters",
+            "items": [
+              {
+                "role": "viet_general",
+                "id": "tuong_viet",
+                "x": 330,
+                "baseline": 1130,
+                "height": 430
+              },
+              {
+                "role": "northern_general",
+                "id": "tuong_bac",
+                "x": 760,
+                "baseline": 1130,
+                "height": 430,
+                "facing": -1
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "who": "tuong_viet",
+          "do": "rally",
+          "at": 0.6
+        },
+        {
+          "who": "tuong_bac",
+          "do": "bow",
+          "at": 2.4
+        }
+      ]
+    },
+    {
+      "title": "Thử lính",
+      "subtitle": "Giáo, khiên",
+      "duration": 5,
+      "living": true,
+      "transition": "dissolve",
+      "scene": {
+        "layers": [
+          {
+            "type": "mountains",
+            "y": 930,
+            "amp": 1.2
+          },
+          {
+            "type": "characters",
+            "items": [
+              {
+                "role": "viet_soldier",
+                "id": "linh_viet",
+                "x": 200,
+                "baseline": 1130,
+                "height": 380
+              },
+              {
+                "role": "viet_soldier",
+                "id": "linh_viet_2",
+                "x": 390,
+                "baseline": 1130,
+                "height": 380,
+                "helmet": "cap"
+              },
+              {
+                "role": "northern_soldier",
+                "id": "linh_bac",
+                "x": 580,
+                "baseline": 1130,
+                "height": 380,
+                "facing": -1
+              },
+              {
+                "role": "northern_soldier",
+                "id": "linh_khien",
+                "x": 870,
+                "baseline": 1130,
+                "height": 380,
+                "facing": -1,
+                "prop": "shield"
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "who": "linh_viet",
+          "do": "kneel",
+          "at": 0.5
+        },
+        {
+          "who": "linh_khien",
+          "do": "rally",
+          "at": 1.5
+        }
+      ]
+    }
+  ]
+}

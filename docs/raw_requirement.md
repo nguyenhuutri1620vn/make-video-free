@@ -184,7 +184,7 @@ Priority: **M** Must (v2.0) · **S** Should (v2.0 if time allows) · **C** Could
 | FR-47 | Formations: `centre_pair` (two front leaders 565 px, middle pair 475 px, outer pair 420 px at x ≈ 432/648, 285/795, 150/930; supports exactly 1, 2, 4 or 6 characters, as an odd extra would cover a head), `line`, `v_shape`. Back rows drawn first. Outer characters face outward so props never cross the centre. | M |
 | FR-48 | No character or prop overlaps the seal, the tag pill, a text box, or another character's head.                                     | M   |
 | FR-49 | Character variety: per-character `seed` that varies hair bun size, sash length, and hem dot spacing within ±10 %.                  | S   |
-| FR-50 | Poses `kneeling`, `seated`, `riding_elephant`; props `sword`, `drum`.                                                               | C   |
+| FR-50 | Poses `kneeling`, `seated`, `riding_elephant`; props `sword`, `drum`. (`kneeling`/`seated` via `pose` (A.5); a sheathed sword via `sword_sheathed` (A.7).)                                                               | C   |
 | FR-51 | Character parts may be authored as SVG in Inkscape and loaded instead of procedural parts (requires an SVG renderer approved under C-03). Scene objects use artwork files instead (A.6). | C |
 
 ### 5.6 Lacquer textures and finish
@@ -981,6 +981,34 @@ On a 2.3 living slide, without any new field: furnace flames flicker, temple inc
 | AC-42 | Phase 0 equals the still drawing, phase 1 equals phase 0, only moving parts change. |
 | AC-43 | Every artwork validation rule has a test; a 2.2 script with `artwork` fails. |
 | AC-44 | `artwork check`, `artwork preview` and the gallery sheet are tested. |
+
+**A.7 Warrior kit.** Milestone M12, owner-approved 2026-11-22 (design: `docs/superpowers/specs/2026-11-22-male-warrior-kit-design.md`; approved look: `docs/reference/approved/warrior_male_roles.png`, `warrior_male_faces.png`). New fields need `schema_version` `"2.4"`.
+
+#### A.7.1 Roles, props and fields
+
+| Role | Kit | Helmet | Body | Default prop |
+|------|-----|--------|------|--------------|
+| `viet_general` | `warrior_male` | `viet_helmet` (plume) | `lamellar_cape` | `flag` |
+| `viet_soldier` | `warrior_male` | `topknot_wrap` | `tunic` | `spear` |
+| `northern_general` | `warrior_male` | `northern_helmet` (tassel) | `lamellar_cape` | `sword_sheathed` |
+| `northern_soldier` | `warrior_male` | `northern_helmet` (tassel) | `lamellar` | `spear` |
+
+- New props `sword_sheathed` (at the near hip, never drawn) and `shield` (on the far forearm); each kit accepts only its own props (`ancient_female`: flag, spear, oar, none; `warrior_male`: flag, spear, sword_sheathed, shield, none).
+- Character fields: `helmet` (`topknot_wrap`, `viet_helmet`, `northern_helmet`, `cap`), `body` (`tunic`, `lamellar`, `lamellar_cape`), `armour` and `banner` (palette keys).
+- Palette keys `steel`, `steel_dk`, `indigo`, `indigo_dk` (optional; fallbacks `gold_dk`, `brown`, `jade`, `black`).
+- All male roles share one face (squarer jaw, no blush, level brows, thin lip line); sides differ only in headwear, armour, colours and banners.
+- Actions: with a spear, flag or oar the far arm gestures; with a sheathed sword, a shield or nothing the near arm does.
+
+#### A.7.2 Acceptance (M12)
+
+| ID | Criterion |
+|----|-----------|
+| AC-45 | Owner-approved reference PNGs exist for the four roles. |
+| AC-46 | Every role × facing × allowed prop draws; still and rest-pose rig match (M10 tolerance). |
+| AC-47 | Hand on shaft for spear and flag in every pose; sword at the hip; shield on the far forearm. |
+| AC-48 | All actions run on all four roles; no cracks at elbows, waist or cape. |
+| AC-49 | The face and features of all male roles are pixel-identical. |
+| AC-50 | Themes without the new palette keys still load. |
 
 ---
 
