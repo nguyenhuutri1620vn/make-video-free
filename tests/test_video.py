@@ -72,7 +72,7 @@ def test_scale_effects_halves_amplitude() -> None:
 
 def test_render_options_defaults_and_frozen(tmp_path: Path) -> None:
     opts = RenderOptions(out=tmp_path / "o.mp4", music=None)
-    assert (opts.music_volume, opts.keep_temp, opts.jobs, opts.verbose) == (0.6, False, 1, False)
+    assert (opts.music_volume, opts.keep_temp, opts.jobs, opts.verbose) == (0.25, False, 1, False)
     assert opts.sfx_volume == 1.0
     with pytest.raises(AttributeError):
         opts.jobs = 2  # type: ignore[misc]

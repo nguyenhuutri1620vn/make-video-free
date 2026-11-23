@@ -622,7 +622,7 @@ def _add_render_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser])
         "--music-volume",
         type=_volume(MAX_MUSIC_VOLUME),
         default=None,
-        help="music volume, 0 to 2 (default: 0.6)",
+        help="music volume, 0 to 2 (default: 0.25)",
     )
     render.add_argument(
         "--sfx-volume",

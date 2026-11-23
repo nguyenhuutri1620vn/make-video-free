@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 TEMP_PREFIX: Final = "history-shorts-"
 PARTIAL_SUFFIX: Final = ".partial.mp4"
-DEFAULT_MUSIC_VOLUME: Final = 0.6
+DEFAULT_MUSIC_VOLUME: Final = 0.25  # owner default (2026-11-23): music stays under the voice
 MAX_MUSIC_VOLUME: Final = 2.0
 DEFAULT_SFX_VOLUME: Final = 1.0
 MAX_SFX_VOLUME: Final = 2.0
