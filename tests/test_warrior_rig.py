@@ -174,3 +174,18 @@ def test_mirrored_shield_bearer_rally(palette: Any) -> None:  # Review Focus 4
     sleeves = _render(style, palette, -1, names=("near_sleeve",))[..., 3]
     top = np.nonzero(sleeves.max(axis=1) > 0.5)[0].min() / SCALE - 160
     assert top < -95  # the near arm is up
+
+
+def test_warrior_flag_waves(palette: Any) -> None:  # final review 1
+    rest = _render(_style(palette, "viet_general", "flag", REST), palette, names=("prop_back",))
+    wave = _render(
+        _style(palette, "viet_general", "flag", Pose(flag_wave=0.25)), palette, names=("prop_back",)
+    )
+    loop = _render(
+        _style(palette, "viet_general", "flag", Pose(flag_wave=1.0)), palette, names=("prop_back",)
+    )
+    diff = np.abs(rest - wave).max(axis=2)
+    ys, xs = np.nonzero(diff > 0.1)
+    assert len(ys) > 0
+    assert xs.min() / SCALE - 40 > 19.5  # the pole never moves
+    assert np.abs(loop - rest).max() < 0.02

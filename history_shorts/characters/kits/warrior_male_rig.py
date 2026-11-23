@@ -18,6 +18,7 @@ from history_shorts.characters.kits import warrior_male as wm
 from history_shorts.characters.kits.base import KitRig
 from history_shorts.characters.pose import Pose
 from history_shorts.characters.rig import Affine
+from history_shorts.cloth import ClothWave
 from history_shorts.config import Palette
 from history_shorts.primitives import Point
 
@@ -181,6 +182,23 @@ def near_sleeve(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
         wm.near_sleeve(cv, style, palette)
 
 
+FLAG_LENGTH: Final = 33.0  # pole to the flag's free edge
+FLAG_WAVE_AMP: Final = fr.FLAG_WAVE_AMP
+
+
+def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
+    """``warrior_male.prop_back`` with a waving flag (as the female rig)."""
+    if style.prop != "flag":
+        wm.prop_back(cv, style, palette)
+        return
+    segment = wm.shaft_segment(style.prop)
+    assert segment is not None
+    (x0, y0), (x1, y1) = segment
+    cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
+    wave = ClothWave(wm.HAND_CENTER[0], FLAG_LENGTH, _pose(style).flag_wave, FLAG_WAVE_AMP, 0.0)
+    wm.flag_cloth(cv, style, palette, wave.pt)
+
+
 SEGMENTS: Final[Mapping[str, str]] = MappingProxyType(
     {
         "cape": "root",
@@ -215,7 +233,13 @@ RIG: Final = KitRig(
     segments=SEGMENTS,
     joints=joints,
     parts=MappingProxyType(
-        {"cape": cape, "body": body, "far_sleeve": far_sleeve, "near_sleeve": near_sleeve}
+        {
+            "cape": cape,
+            "body": body,
+            "far_sleeve": far_sleeve,
+            "near_sleeve": near_sleeve,
+            "prop_back": prop_back,
+        }
     ),
     body_boxes=BODY_BOXES,
 )

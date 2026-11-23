@@ -107,10 +107,19 @@ def cape(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     cv.color(style.trim).stroke(0.8)
 
 
-def _flag_cloth(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
+Warp = Callable[[float, float], tuple[float, float]]
+
+
+def _same(x: float, y: float) -> tuple[float, float]:
+    return x, y
+
+
+def flag_cloth(cv: Canvas, style: CharacterStyle, palette: Palette, w: Warp = _same) -> None:
+    """The flag cloth; ``w`` moves its points (the rig's cloth wave), identity when still."""
     x = HAND_CENTER[0]
-    cv.M(x, -137).C(x + 11, -136, x + 21, -133, x + 33, -129)
-    cv.C(x + 28, -126, x + 25, -123, x + 30, -118).C(x + 20, -118, x + 10, -114, x, -109).Z()
+    cv.M(*w(x, -137)).C(*w(x + 11, -136), *w(x + 21, -133), *w(x + 33, -129))
+    cv.C(*w(x + 28, -126), *w(x + 25, -123), *w(x + 30, -118))
+    cv.C(*w(x + 20, -118), *w(x + 10, -114), *w(x, -109)).Z()
     cv.color(style.banner or palette["vermilion"]).fill(keep=True)
     cv.color(palette["gold"]).stroke(0.7)
     cv.color(palette["gold"]).ellipse(x, -139.5, 1.5, 1.5).fill()
@@ -133,7 +142,7 @@ def prop_back(cv: Canvas, style: CharacterStyle, palette: Palette) -> None:
     (x0, y0), (x1, y1) = segment
     cv.color(palette["gold_dk"]).M(x0, y0).L(x1, y1).stroke(0.9)
     if style.prop == "flag":
-        _flag_cloth(cv, style, palette)
+        flag_cloth(cv, style, palette)
     else:
         _spear_head(cv, style, palette)
 
