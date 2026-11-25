@@ -1,0 +1,136 @@
+{
+ "artwork": "1",
+ "title": "Lệnh truy nã",
+ "description": "A wooden notice board under a small roof, a blank paper notice with a vermilion seal and ink lines (no readable text). Original artwork, no figure.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "post_l",
+   "rect": [
+    -150,
+    -210,
+    24,
+    210,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "post_r",
+   "rect": [
+    126,
+    -210,
+    24,
+    210,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "board",
+   "rect": [
+    -160,
+    -290,
+    320,
+    200,
+    6
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1.2
+   }
+  },
+  {
+   "id": "paper",
+   "rect": [
+    -124,
+    -266,
+    248,
+    160,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "egg",
+     "egg_tone"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "ink",
+   "d": "M -100 -236 L 60 -236 M -100 -212 L 60 -212 M -100 -188 L 10 -188 M -100 -164 L 40 -164",
+   "stroke": {
+    "color": "brown",
+    "width": 3
+   }
+  },
+  {
+   "id": "seal",
+   "rect": [
+    30,
+    -148,
+    50,
+    50,
+    5
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "roof",
+   "d": "M -190 -290 L 0 -352 L 190 -290 L 170 -280 L 0 -330 L -170 -280 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  }
+ ]
+}

@@ -1,0 +1,100 @@
+{
+ "artwork": "1",
+ "title": "Dao găm",
+ "description": "A gold-hilted dagger resting on a vermilion cushion. Original artwork, no figure, no blood.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "cushion",
+   "rect": [
+    -150,
+    -40,
+    300,
+    40,
+    14
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.2
+   }
+  },
+  {
+   "id": "blade",
+   "d": "M -30 -74 L 150 -82 L 178 -72 L 150 -62 L -30 -66 Z",
+   "fill": {
+    "gradient": [
+     "egg",
+     "egg_tone"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "guard",
+   "rect": [
+    -52,
+    -96,
+    14,
+    50,
+    4
+   ],
+   "fill": {
+    "texture": "gold_leaf",
+    "tile": 8
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "grip",
+   "rect": [
+    -96,
+    -80,
+    50,
+    20,
+    8
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "pommel",
+   "ellipse": [
+    -104,
+    -70,
+    11,
+    11
+   ],
+   "fill": {
+    "texture": "gold_leaf",
+    "tile": 8
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  }
+ ]
+}

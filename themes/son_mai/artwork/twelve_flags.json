@@ -1,0 +1,461 @@
+{
+ "artwork": "1",
+ "title": "Mười hai cờ sứ quân",
+ "description": "Twelve war banners on gold poles in a row, standing for the twelve rebel lords. Original artwork, no figure.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "base",
+   "rect": [
+    -236,
+    -10,
+    472,
+    10,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "pole_-198",
+   "rect": [
+    -201,
+    -200,
+    6,
+    200,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-198",
+   "d": "M -198 -200 L -144 -188 L -156 -172 L -144 -156 L -198 -160 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_-162",
+   "rect": [
+    -165,
+    -222,
+    6,
+    222,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-162",
+   "d": "M -162 -222 L -108 -210 L -120 -194 L -108 -178 L -162 -182 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_-126",
+   "rect": [
+    -129,
+    -244,
+    6,
+    244,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-126",
+   "d": "M -126 -244 L -72 -232 L -84 -216 L -72 -200 L -126 -204 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_-90",
+   "rect": [
+    -93,
+    -200,
+    6,
+    200,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-90",
+   "d": "M -90 -200 L -36 -188 L -48 -172 L -36 -156 L -90 -160 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_-54",
+   "rect": [
+    -57,
+    -222,
+    6,
+    222,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-54",
+   "d": "M -54 -222 L 0 -210 L -12 -194 L 0 -178 L -54 -182 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_-18",
+   "rect": [
+    -21,
+    -244,
+    6,
+    244,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_-18",
+   "d": "M -18 -244 L 36 -232 L 24 -216 L 36 -200 L -18 -204 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_18",
+   "rect": [
+    15,
+    -200,
+    6,
+    200,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_18",
+   "d": "M 18 -200 L 72 -188 L 60 -172 L 72 -156 L 18 -160 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_54",
+   "rect": [
+    51,
+    -222,
+    6,
+    222,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_54",
+   "d": "M 54 -222 L 108 -210 L 96 -194 L 108 -178 L 54 -182 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_90",
+   "rect": [
+    87,
+    -244,
+    6,
+    244,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_90",
+   "d": "M 90 -244 L 144 -232 L 132 -216 L 144 -200 L 90 -204 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_126",
+   "rect": [
+    123,
+    -200,
+    6,
+    200,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_126",
+   "d": "M 126 -200 L 180 -188 L 168 -172 L 180 -156 L 126 -160 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_162",
+   "rect": [
+    159,
+    -222,
+    6,
+    222,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_162",
+   "d": "M 162 -222 L 216 -210 L 204 -194 L 216 -178 L 162 -182 Z",
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "pole_198",
+   "rect": [
+    195,
+    -244,
+    6,
+    244,
+    2
+   ],
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold_dk"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.8
+   }
+  },
+  {
+   "id": "flag_198",
+   "d": "M 198 -244 L 252 -232 L 240 -216 L 252 -200 L 198 -204 Z",
+   "fill": {
+    "gradient": [
+     "gold_lt",
+     "gold"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  }
+ ]
+}

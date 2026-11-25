@@ -1,0 +1,117 @@
+{
+ "artwork": "1",
+ "title": "Dấu hỏi",
+ "description": "A vermilion lacquer board on two posts with a gold question sign drawn as shapes, no text. Original artwork.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "post_l",
+   "rect": [
+    -96,
+    -80,
+    18,
+    80,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "post_r",
+   "rect": [
+    78,
+    -80,
+    18,
+    80,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "board",
+   "rect": [
+    -120,
+    -260,
+    240,
+    200,
+    12
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.6
+   }
+  },
+  {
+   "id": "board_inset",
+   "rect": [
+    -100,
+    -240,
+    200,
+    160,
+    8
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion_dk",
+     "vermilion"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "hook",
+   "d": "M -44 -206 C -44 -262 44 -262 44 -206 C 44 -170 0 -170 0 -134",
+   "stroke": {
+    "color": "gold",
+    "width": 16
+   }
+  },
+  {
+   "id": "dot",
+   "ellipse": [
+    0,
+    -104,
+    10,
+    10
+   ],
+   "fill": {
+    "texture": "gold_leaf",
+    "tile": 8
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  }
+ ]
+}

@@ -77,9 +77,11 @@
       "rings": 2
      },
      {
-      "type": "banners",
+      "type": "artwork",
+      "name": "twelve_flags",
+      "x": 540,
       "y": 1092,
-      "rows": 4
+      "scale": 1.1
      },
      {
       "type": "ground",
@@ -139,11 +141,10 @@
      },
      {
       "type": "artwork",
-      "name": "curtain",
+      "name": "dagger",
       "x": 540,
       "y": 1092,
-      "scale": 1.6,
-      "flip": 1
+      "scale": 1.6
      },
      {
       "type": "artwork",
@@ -277,11 +278,11 @@
       "height": 52
      },
      {
-      "type": "temple",
+      "type": "artwork",
+      "name": "wanted_board",
       "x": 540,
-      "y": 1092,
-      "scale": 1.2,
-      "incense": true
+      "y": 1095,
+      "scale": 1.4
      },
      {
       "type": "artwork",
@@ -350,9 +351,10 @@
       "height": 52
      },
      {
-      "type": "fallen_flags",
+      "type": "artwork",
+      "name": "execution_block",
       "x": 540,
-      "y": 1092,
+      "y": 1095,
       "scale": 1.4
      }
     ]
@@ -538,10 +540,11 @@
       "height": 52
      },
      {
-      "type": "tablet",
+      "type": "artwork",
+      "name": "question_board",
       "x": 540,
       "y": 1100,
-      "scale": 1.2
+      "scale": 1.4
      }
     ]
    }

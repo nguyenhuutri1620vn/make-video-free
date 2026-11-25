@@ -1,0 +1,85 @@
+{
+ "artwork": "1",
+ "title": "Chém đầu",
+ "description": "A chopping block with a broad axe resting beside it: weapons at rest, no figure, no blood. Original artwork.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "block",
+   "rect": [
+    -90,
+    -90,
+    180,
+    90,
+    8
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "block_top",
+   "ellipse": [
+    0,
+    -90,
+    90,
+    14
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "handle",
+   "rect": [
+    60,
+    -290,
+    12,
+    220,
+    5
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "head",
+   "d": "M 66 -280 C 120 -300 150 -270 140 -236 C 132 -210 90 -220 66 -236 Z",
+   "fill": {
+    "gradient": [
+     "egg",
+     "egg_tone"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1.2
+   }
+  }
+ ]
+}
