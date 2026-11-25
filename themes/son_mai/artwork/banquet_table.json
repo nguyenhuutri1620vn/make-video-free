@@ -1,0 +1,19 @@
+{
+ "artwork": "1",
+ "title": "Bàn tiệc với bình rượu",
+ "description": "A low lacquer banquet table with a wine jar and a gold cup. Original artwork, no figures.",
+ "plane": "mid",
+ "parts": [
+  {"id": "shadow", "ellipse": [0, -4, 150, 8], "fill": {"color": "shadow", "alpha": 0.45}},
+  {"id": "leg_l", "rect": [-130, -74, 14, 70], "fill": {"gradient": ["brown_lt", "brown"], "dir": "h"}},
+  {"id": "leg_r", "rect": [116, -74, 14, 70], "fill": {"gradient": ["brown_lt", "brown"], "dir": "h"}},
+  {"id": "top", "rect": [-150, -90, 300, 16, 4], "fill": {"gradient": ["vermilion", "vermilion_dk"], "dir": "v"}, "stroke": {"color": "gold", "width": 1.2}},
+  {"id": "jar", "d": "M -110 -90 C -118 -124 -98 -150 -62 -150 C -26 -150 -6 -126 -20 -90 Z", "fill": {"gradient": ["vermilion", "vermilion_dk"], "dir": "v"}, "stroke": {"color": "gold", "width": 1.2}},
+  {"id": "jar_band", "d": "M -112 -116 L -16 -116", "stroke": {"color": "gold_dk", "width": 0.9}},
+  {"id": "jar_neck", "rect": [-74, -172, 24, 26, 3], "fill": {"gradient": ["vermilion_dk", "vermilion"], "dir": "v"}, "stroke": {"color": "gold_dk", "width": 1}},
+  {"id": "jar_cap", "rect": [-70, -182, 16, 10, 2], "fill": {"texture": "gold_leaf", "tile": 8}},
+  {"id": "wine", "ellipse": [-62, -172, 12, 3], "fill": {"color": "vermilion_dk"}},
+  {"id": "cup", "d": "M 30 -96 L 70 -96 C 66 -80 58 -74 50 -74 C 42 -74 34 -80 30 -96 Z", "fill": {"gradient": ["gold_lt", "gold_dk"], "dir": "v"}, "stroke": {"color": "gold_dk", "width": 1}},
+  {"id": "cup_wine", "ellipse": [50, -96, 20, 3], "fill": {"color": "vermilion_dk"}}
+ ]
+}

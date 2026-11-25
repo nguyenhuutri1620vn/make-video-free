@@ -1,0 +1,82 @@
+{
+ "artwork": "1",
+ "title": "Máng nước",
+ "description": "A long stone water trough with still water, a few ripples and a gold rim. Original artwork, no figure.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "shadow",
+   "ellipse": [
+    0,
+    -4,
+    175,
+    10
+   ],
+   "fill": {
+    "color": "shadow",
+    "alpha": 0.5
+   }
+  },
+  {
+   "id": "body",
+   "d": "M -160 -95 L 160 -95 L 150 0 L -150 0 Z",
+   "fill": {
+    "texture": "eggshell",
+    "cell": 12
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1.2
+   }
+  },
+  {
+   "id": "water",
+   "ellipse": [
+    0,
+    -88,
+    150,
+    9
+   ],
+   "fill": {
+    "gradient": [
+     "river_top",
+     "deep"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "ripples",
+   "d": "M -90 -88 C -70 -93 -50 -83 -30 -88 M 20 -87 C 40 -91 60 -84 90 -88",
+   "stroke": {
+    "color": "gold_lt",
+    "width": 1
+   }
+  },
+  {
+   "id": "rim",
+   "rect": [
+    -164,
+    -102,
+    328,
+    9,
+    3
+   ],
+   "fill": {
+    "gradient": [
+     "gold",
+     "gold_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  }
+ ]
+}

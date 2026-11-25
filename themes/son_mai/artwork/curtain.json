@@ -1,0 +1,14 @@
+{
+ "artwork": "1",
+ "title": "Rèm che",
+ "description": "A pair of hanging lacquer curtains on a gold rod, scalloped hems, pleat lines. Original artwork, no figure behind it.",
+ "plane": "mid",
+ "parts": [
+  {"id": "left", "d": "M -150 -290 L -20 -290 L -20 -30 C -45 -50 -70 -10 -95 -30 C -120 -50 -135 -10 -150 -30 Z", "fill": {"gradient": ["vermilion", "vermilion_dk"], "dir": "v"}, "stroke": {"color": "gold", "width": 1.2}},
+  {"id": "right", "d": "M 20 -290 L 150 -290 L 150 -30 C 135 -10 120 -50 95 -30 C 70 -10 45 -50 20 -30 Z", "fill": {"gradient": ["vermilion", "vermilion_dk"], "dir": "v"}, "stroke": {"color": "gold", "width": 1.2}},
+  {"id": "pleats", "d": "M -80 -280 L -80 -40 M -50 -280 L -50 -40 M 50 -280 L 50 -40 M 80 -280 L 80 -40", "stroke": {"color": "gold_dk", "width": 0.9}},
+  {"id": "rod", "rect": [-165, -300, 330, 12, 6], "fill": {"gradient": ["gold_lt", "gold_dk"], "dir": "v"}, "stroke": {"color": "gold_dk", "width": 1}},
+  {"id": "tassel_l", "ellipse": [-150, -22, 7, 10], "fill": {"texture": "gold_leaf", "tile": 8}},
+  {"id": "tassel_r", "ellipse": [150, -22, 7, 10], "fill": {"texture": "gold_leaf", "tile": 8}}
+ ]
+}

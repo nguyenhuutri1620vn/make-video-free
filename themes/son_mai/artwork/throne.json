@@ -1,0 +1,220 @@
+{
+ "artwork": "1",
+ "title": "Ngai vàng",
+ "description": "A royal throne on a stepped dais under a tall lacquer screen with a gold crest. Original artwork, no figure.",
+ "plane": "mid",
+ "parts": [
+  {
+   "id": "dais",
+   "d": "M -170 0 L 170 0 L 150 -34 L -150 -34 Z",
+   "fill": {
+    "gradient": [
+     "vermilion_dk",
+     "deep"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "screen",
+   "rect": [
+    -112,
+    -300,
+    224,
+    244,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1.4
+   }
+  },
+  {
+   "id": "screen_inset",
+   "rect": [
+    -90,
+    -278,
+    180,
+    200,
+    3
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion_dk",
+     "vermilion"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "crest",
+   "rect": [
+    -124,
+    -322,
+    248,
+    22,
+    6
+   ],
+   "fill": {
+    "texture": "gold_leaf",
+    "tile": 20
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1.2
+   }
+  },
+  {
+   "id": "crest_band",
+   "d": "M -90 -262 L 90 -262 M -90 -70 L 90 -70",
+   "stroke": {
+    "color": "gold_dk",
+    "width": 0.9
+   }
+  },
+  {
+   "id": "seat",
+   "rect": [
+    -100,
+    -95,
+    200,
+    35,
+    4
+   ],
+   "fill": {
+    "gradient": [
+     "gold",
+     "gold_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "cushion",
+   "rect": [
+    -84,
+    -116,
+    168,
+    22,
+    9
+   ],
+   "fill": {
+    "gradient": [
+     "vermilion",
+     "vermilion_dk"
+    ],
+    "dir": "v"
+   },
+   "stroke": {
+    "color": "gold",
+    "width": 1
+   }
+  },
+  {
+   "id": "leg_l",
+   "rect": [
+    -96,
+    -60,
+    18,
+    26
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   }
+  },
+  {
+   "id": "leg_r",
+   "rect": [
+    78,
+    -60,
+    18,
+    26
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   }
+  },
+  {
+   "id": "arm_l",
+   "rect": [
+    -128,
+    -150,
+    24,
+    92,
+    6
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "arm_r",
+   "rect": [
+    104,
+    -150,
+    24,
+    92,
+    6
+   ],
+   "fill": {
+    "gradient": [
+     "brown_lt",
+     "brown"
+    ],
+    "dir": "h"
+   },
+   "stroke": {
+    "color": "gold_dk",
+    "width": 1
+   }
+  },
+  {
+   "id": "finial",
+   "ellipse": [
+    0,
+    -332,
+    9,
+    7
+   ],
+   "fill": {
+    "texture": "gold_leaf",
+    "tile": 12
+   }
+  }
+ ]
+}

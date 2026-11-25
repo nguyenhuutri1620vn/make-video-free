@@ -1,0 +1,550 @@
+{
+ "schema_version": "2.3",
+ "title": "Đinh Tiên Hoàng: đêm vua và thái tử bị giết",
+ "sources": [
+  "Ngô Sĩ Liên và các sử thần triều Lê, Đại Việt sử ký toàn thư, Ngoại kỷ, Kỷ nhà Đinh (bản dịch Viện Khoa học Xã hội Việt Nam, NXB Khoa học Xã hội, 1998). [CẦN KIỂM TRA: số trang; tên Đinh Toàn và tuổi lên ngôi (5 hay 6); trình tự và năm các sự kiện; tên quan nhiếp chính]",
+  "[CẦN BỔ SUNG NGUỒN: ba giả thuyết về Đỗ Thích và kẻ đứng sau — ghi rõ sách hoặc bài nghiên cứu]"
+ ],
+ "slides": [
+  {
+   "id": "hook",
+   "title": "Vua và thái tử\ncùng bị giết",
+   "subtitle": "trong một đêm",
+   "narration": "Trong lịch sử nước ta, có một đêm, vua và thái tử cùng bị ám sát. Đó là cha con Đinh Tiên Hoàng.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "moon",
+      "x": 540,
+      "y": 380,
+      "r": 200,
+      "rings": 2
+     },
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 300,
+      "y": 1092,
+      "scale": 1.4
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 780,
+      "y": 1092,
+      "scale": 1.4
+     }
+    ]
+   },
+   "sfx": [
+    {
+     "sound": "drum",
+     "at": 0.0,
+     "gain_db": -6
+    }
+   ]
+  },
+  {
+   "id": "con-truong",
+   "title": "Con trưởng\ndẹp 12 sứ quân",
+   "subtitle": "Đinh Liễn",
+   "narration": "Đinh Liễn là con trưởng, theo cha dẹp loạn 12 sứ quân.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "sun",
+      "x": 540,
+      "y": 520,
+      "r": 220,
+      "rings": 2
+     },
+     {
+      "type": "banners",
+      "y": 1092,
+      "rows": 4
+     },
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     }
+    ]
+   }
+  },
+  {
+   "id": "khong-phong",
+   "title": "Không được\nphong thái tử",
+   "subtitle": "Em trai được chọn",
+   "narration": "Nhưng cha ông không phong ông làm thái tử, mà phong chính em trai mình.",
+   "claim": true,
+   "source": 0,
+   "motion": "pan_up",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "regalia",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.4,
+      "screen": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "giet-em",
+   "title": "Bất mãn,\nLiễn sai giết em",
+   "subtitle": "",
+   "narration": "Bất mãn, Liễn cho người hạ sát em trai.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "curtain",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.6,
+      "flip": 1
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 180,
+      "y": 1092,
+      "scale": 1.2
+     }
+    ]
+   }
+  },
+  {
+   "id": "khong-phat",
+   "title": "Vua không phạt",
+   "subtitle": "Lập Liễn làm thái tử",
+   "narration": "Vua không trừng phạt, mà cho Đinh Liễn làm thái tử.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "dissolve",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "scroll",
+      "x": 540,
+      "y": 930,
+      "scale": 1.5
+     }
+    ]
+   }
+  },
+  {
+   "id": "bon-nam-sau",
+   "title": "4 năm sau",
+   "subtitle": "Kẻ âm mưu chờ thời cơ",
+   "narration": "4 năm sau, một quan cấp thấp âm mưu, chờ thời cơ vua dự tiệc xong.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "moon",
+      "x": 540,
+      "y": 380,
+      "r": 180,
+      "rings": 2
+     },
+     {
+      "type": "lone_path",
+      "y": 1092,
+      "depth": 360,
+      "mist": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "yen-tiec",
+   "title": "Đêm yến tiệc",
+   "subtitle": "Vua say rượu",
+   "narration": "Vua dự tiệc xong, say rượu. Kẻ kia lẻn vào phòng, giết vua và thái tử.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "banquet_table",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.8,
+      "flip": 1
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 260,
+      "y": 1092,
+      "scale": 1.3
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 820,
+      "y": 1092,
+      "scale": 1.3
+     }
+    ]
+   }
+  },
+  {
+   "id": "truy-bat",
+   "title": "Triều đình\ntruy lùng gắt gao",
+   "subtitle": "",
+   "narration": "Triều đình phát hiện, truy lùng gắt gao.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "temple",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.2,
+      "incense": true
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 200,
+      "y": 1092,
+      "scale": 1.2
+     },
+     {
+      "type": "artwork",
+      "name": "torch",
+      "x": 880,
+      "y": 1092,
+      "scale": 1.2
+     }
+    ]
+   }
+  },
+  {
+   "id": "may-nuoc",
+   "title": "Bị bắt trong máng nước",
+   "subtitle": "Nhịn đói khát 3 ngày",
+   "narration": "Cuối cùng hắn bị bắt trong máng nước, sau 3 ngày nhịn đói khát.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "water_trough",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.8,
+      "flip": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "ket-cuc",
+   "title": "Kết cục",
+   "subtitle": "",
+   "narration": "Hắn bị chém đầu.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "fallen_flags",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.4
+     }
+    ]
+   }
+  },
+  {
+   "id": "dinh-toan",
+   "title": "Đinh Toàn\nlên ngôi",
+   "subtitle": "Con trai 5 tuổi của vua",
+   "narration": "Sau đó, Đinh Toàn, con trai 5 tuổi của vua, được lên ngôi.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "throne",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.6,
+      "flip": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "thai-hau",
+   "title": "Thái hậu\nnhiếp chính",
+   "subtitle": "",
+   "narration": "Hoàng thái hậu, mẹ vua, nhiếp chính. Trong triều có quan tướng phản đối, nhưng đều thất bại.",
+   "claim": true,
+   "source": 0,
+   "motion": "pan_up",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "throne",
+      "x": 720,
+      "y": 1092,
+      "scale": 1.2,
+      "flip": 1
+     },
+     {
+      "type": "artwork",
+      "name": "curtain",
+      "x": 330,
+      "y": 1092,
+      "scale": 1.2,
+      "flip": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "nhiep-chinh-len-ngoi",
+   "title": "Quan nhiếp chính\nlên ngôi",
+   "subtitle": "Một năm sau",
+   "narration": "Một năm sau, viên quan nhiếp chính lên ngôi vua.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "artwork",
+      "name": "throne",
+      "x": 540,
+      "y": 1092,
+      "scale": 1.6,
+      "flip": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "tong",
+   "title": "Nhà Tống\nđánh sang",
+   "subtitle": "Phương Bắc",
+   "narration": "Một năm sau đó, nhà Tống phương Bắc đánh nước ta.",
+   "claim": true,
+   "source": 0,
+   "motion": "zoom_in",
+   "transition": "slideleft",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "sail_boat",
+      "x": 300,
+      "y": 1092,
+      "scale": 1.2,
+      "facing": 1
+     },
+     {
+      "type": "sail_boat",
+      "x": 780,
+      "y": 1092,
+      "scale": 1.0,
+      "facing": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "gia-thuyet",
+   "title": "Ai đứng sau?",
+   "subtitle": "Ba giả thuyết",
+   "narration": "Có giả thuyết cho rằng Đỗ Thích bị đổ tội oan, vì từng cõng vua Đinh Bộ Lĩnh khi bị truy đuổi. Có giả thuyết khác cho rằng ông là tay sai nhà Tống. Lại có giả thuyết cho rằng Lê Hoàn và hoàng hậu đứng sau, vì họ được lợi nhiều nhất.",
+   "claim": true,
+   "source": 1,
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "warm",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "scroll",
+      "x": 540,
+      "y": 930,
+      "scale": 1.5
+     }
+    ]
+   }
+  },
+  {
+   "id": "cau-hoi",
+   "title": "Ai là người đứng đầu?",
+   "subtitle": "Theo bạn?",
+   "narration": "Theo bạn, ai mới là người đứng đầu vạch ra toàn bộ kế hoạch giết vua và thái tử?",
+   "motion": "zoom_in",
+   "transition": "fade",
+   "tone": "cold",
+   "text_in": "fade",
+   "auto_sfx": false,
+   "scene": {
+    "layers": [
+     {
+      "type": "ground",
+      "y": 1092,
+      "height": 52
+     },
+     {
+      "type": "tablet",
+      "x": 540,
+      "y": 1100,
+      "scale": 1.2
+     }
+    ]
+   }
+  }
+ ]
+}
