@@ -26,6 +26,18 @@ Open both images before any visual work and compare your preview PNGs against th
 7. **No `shell=True`**; FFmpeg commands are `list[str]`. (NFR-09)
 8. **Never delete or overwrite files outside the temp dir and the `--out` path.**
 
+## Final videos (owner rule)
+
+`output/` is scratch, in the main checkout and in every worktree: drafts, retries, checkpoints, logs. The owner only wants finished videos, in **one** place: `final/` of the main checkout (`/Users/tringuyenhuu/Documents/Code/make-video-free/final/`, git-ignored). Clip Publisher reads only that folder.
+
+- When the owner approves a render, publish it (from any worktree, always with the main checkout's absolute path):
+  ```bash
+  python /Users/tringuyenhuu/Documents/Code/make-video-free/tools/publish_final.py --video output/<file>.mp4 --script examples/<name>/script.json
+  ```
+  It creates `final/<name>/` with `<name>.mp4`, `<name>.report.json`, `script.json` and `final.json`. `<name>` defaults to the script's folder; pass `--name` otherwise. Publishing the same name again replaces the previous final: one final per video.
+- Never write renders into `final/` by hand, never publish a draft the owner has not approved, and never delete anything in `final/` unless the owner asks.
+- Drafts in `output/` may be deleted freely once the final is published.
+
 ## Commands
 
 ```bash
